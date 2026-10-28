@@ -1,0 +1,315 @@
+/**
+ * ==============================================================================
+ * NALA SMART HOME - HARDWARE BRING-UP & PIN VERIFICATION (PHASE 1)
+ * Bo mạch: ESP32-S3 2.8" LCD Capacitive Touch (ES3C28P / Guition / 240x320)
+ * ==============================================================================
+ */
+
+#include <Arduino.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_NeoPixel.h>
+#include "esp_heap_caps.h"
+
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
+
+#include "pins_config.h"
+#include "protocol_defs.h"
+#include "state_machine.h"
+
+// -----------------------------------------------------------------------------
+// LGFX CONFIGURATION (ILI9341V / ST7789 qua SPI: MOSI=11, MISO=13, SCK=12, CS=10, DC=46)
+// -----------------------------------------------------------------------------
+class LGFX_Panel : public lgfx::LGFX_Device {
+    lgfx::Panel_ILI9341 _panel_instance;
+    lgfx::Bus_SPI       _bus_instance;
+    lgfx::Light_PWM     _light_instance;
+
+public:
+    LGFX_Panel() {
+        {
+            auto cfg = _bus_instance.config();
+            cfg.spi_host = LCD_SPI_HOST;
+            cfg.spi_mode = 0;
+            cfg.freq_write = 40000000;
+            cfg.freq_read  = 16000000;
+            cfg.spi_3wire  = false;
+            cfg.use_lock   = true;
+            cfg.dma_channel = SPI_DMA_CH_AUTO;
+            cfg.pin_sclk   = LCD_SPI_SCLK_PIN; // GPIO 12
+            cfg.pin_mosi   = LCD_SPI_MOSI_PIN; // GPIO 11
+            cfg.pin_miso   = LCD_SPI_MISO_PIN; // GPIO 13
+            cfg.pin_dc     = LCD_SPI_DC_PIN;   // GPIO 46
+            _bus_instance.config(cfg);
+            _panel_instance.setBus(&_bus_instance);
+        }
+        {
+            auto cfg = _panel_instance.config();
+            cfg.pin_cs           = LCD_SPI_CS_PIN; // GPIO 10
+            cfg.pin_rst          = LCD_SPI_RST_PIN;
+            cfg.pin_busy         = -1;
+            cfg.panel_width      = LCD_WIDTH;
+            cfg.panel_height     = LCD_HEIGHT;
+            cfg.offset_x         = 0;
+            cfg.offset_y         = 0;
+            cfg.offset_rotation  = 0;
+            cfg.dummy_read_pixel = 8;
+            cfg.dummy_read_bits  = 1;
+            cfg.readable         = false;
+            cfg.invert           = false;
+            cfg.rgb_order        = false;
+            cfg.dlen_16bit       = false;
+            cfg.bus_shared       = false;
+            _panel_instance.config(cfg);
+        }
+        {
+            auto cfg = _light_instance.config();
+            cfg.pin_bl      = LCD_BL_PIN; // GPIO 45
+            cfg.invert      = false;
+            cfg.freq        = LCD_BL_PWM_FREQ;
+            cfg.pwm_channel = LCD_BL_PWM_CHANNEL;
+            _light_instance.config(cfg);
+            _panel_instance.setLight(&_light_instance);
+        }
+        setPanel(&_panel_instance);
+    }
+};
+
+static LGFX_Panel tft;
+
+// -----------------------------------------------------------------------------
+// NGOẠI VI & BIẾN TRẠNG THÁI
+// -----------------------------------------------------------------------------
+static Adafruit_NeoPixel rgb_led(RGB_LED_COUNT, RGB_LED_PIN, NEO_GRB + NEO_KHZ800);
+
+static uint8_t touch_i2c_addr = 0;
+static const char* touch_chip_name = "Chua tim thay";
+static uint8_t rgb_hue = 0;
+static uint32_t last_ui_update_time = 0;
+
+// -----------------------------------------------------------------------------
+// BÀI 1: QUÉT BUS I2C (IO15 SCL, IO16 SDA)
+// -----------------------------------------------------------------------------
+void scan_i2c_bus() {
+    Serial.println("\n--- [BÀI 1] QUÉT TÌM THIẾT BỊ TRÊN BUS I2C (SCL=IO15, SDA=IO16) ---");
+    
+    // Reset IC Cảm ứng trước khi quét
+    pinMode(TOUCH_RST_PIN, OUTPUT);
+    digitalWrite(TOUCH_RST_PIN, LOW);
+    delay(20);
+    digitalWrite(TOUCH_RST_PIN, HIGH);
+    delay(50);
+
+    Wire.begin(I2C_PORT_SDA_PIN, I2C_PORT_SCL_PIN, I2C_BUS_FREQ_HZ);
+    
+    uint8_t count = 0;
+    for (uint8_t addr = 1; addr < 127; addr++) {
+        Wire.beginTransmission(addr);
+        if (Wire.endTransmission() == 0) {
+            Serial.printf(" -> Phat hien thiet bi I2C tai: 0x%02X", addr);
+            if (addr == I2C_ADDR_FT6336U) {
+                touch_i2c_addr = addr;
+                touch_chip_name = "FT6336 / FT6236";
+                Serial.print(" (Cam ung dien dung FT6336/FT6236)");
+            } else if (addr == I2C_ADDR_CST816S) {
+                touch_i2c_addr = addr;
+                touch_chip_name = "CST816S";
+                Serial.print(" (Cam ung dien dung CST816S)");
+            } else if (addr == I2C_ADDR_GT911) {
+                touch_i2c_addr = addr;
+                touch_chip_name = "GT911";
+                Serial.print(" (Cam ung dien dung GT911)");
+            } else if (addr == I2C_ADDR_ES8311) {
+                Serial.print(" (Audio Codec ES8311 OK)");
+            }
+            Serial.println();
+            count++;
+        }
+    }
+    if (count == 0) {
+        Serial.println(" [CANH BAO] Khong tim thay thiet bi I2C nao tren IO15/IO16.");
+    } else {
+        Serial.printf(" -> Tong cong tim thay: %d thiet bi I2C.\n", count);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ĐỌC TỌA ĐỘ CẢM ỨNG
+// -----------------------------------------------------------------------------
+bool read_touch_coordinates(int16_t *x, int16_t *y) {
+    if (touch_i2c_addr == 0) return false;
+
+    Wire.beginTransmission(touch_i2c_addr);
+    Wire.write(0x02); // Thanh ghi so diem cham
+    if (Wire.endTransmission() != 0) return false;
+
+    if (Wire.requestFrom((int)touch_i2c_addr, 5) == 5) {
+        uint8_t points = Wire.read() & 0x0F;
+        if (points > 0) {
+            uint8_t x_high = Wire.read();
+            uint8_t x_low  = Wire.read();
+            uint8_t y_high = Wire.read();
+            uint8_t y_low  = Wire.read();
+            *x = ((x_high & 0x0F) << 8) | x_low;
+            *y = ((y_high & 0x0F) << 8) | y_low;
+            return true;
+        }
+    }
+    return false;
+}
+
+// -----------------------------------------------------------------------------
+// BÀI 3: LED RGB SMD MẶT SAU (GPIO 42)
+// -----------------------------------------------------------------------------
+void init_rgb_led() {
+    Serial.println("\n--- [BÀI 3] KHOI TAO LED RGB SMD (GPIO 42) ---");
+    rgb_led.begin();
+    rgb_led.setBrightness(50);
+    rgb_led.show();
+    Serial.println(" -> Da khoi tao LED RGB WS2812.");
+}
+
+void update_rgb_color() {
+    uint32_t color = rgb_led.ColorHSV((uint16_t)rgb_hue * 256, 255, 200);
+    rgb_led.setPixelColor(0, color);
+    rgb_led.show();
+    rgb_hue += 3;
+}
+
+// -----------------------------------------------------------------------------
+// VẼ GIAO DIỆN KIỂM ĐỊNH LÊN MÀN HÌNH 2.8"
+// -----------------------------------------------------------------------------
+void draw_screen(int16_t touch_x, int16_t touch_y, bool is_touched) {
+    tft.startWrite();
+
+    // Thanh tieu de
+    tft.fillRect(0, 0, 240, 36, 0x001F); // Xanh duong dam
+    tft.setTextColor(TFT_WHITE);
+    tft.setTextSize(1);
+    tft.setCursor(10, 6);
+    tft.println("NALA SMART HOME");
+    tft.setCursor(10, 20);
+    tft.setTextColor(0x07E0); // Xanh la
+    tft.println("PHASE 1: HARDWARE BRING-UP");
+
+    // Khung 1: Thong so phan cung
+    tft.drawRect(5, 42, 230, 84, TFT_WHITE);
+    tft.fillRect(6, 43, 228, 82, 0x18E3);
+    tft.setTextColor(TFT_YELLOW);
+    tft.setCursor(12, 48);
+    tft.println("THONG SO PHAN CUNG:");
+    tft.setTextColor(TFT_WHITE);
+    tft.setCursor(12, 64);
+    tft.printf("SoC: ESP32-S3 (240MHz)");
+    tft.setCursor(12, 80);
+    tft.printf("Flash: %d MB", ESP.getFlashChipSize() / (1024 * 1024));
+    tft.setCursor(12, 96);
+    if (psramFound()) {
+        tft.setTextColor(0x07E0);
+        tft.printf("PSRAM: %d MB (OK)", ESP.getPsramSize() / (1024 * 1024));
+    } else {
+        tft.setTextColor(TFT_SILVER);
+        tft.println("PSRAM: Khong dung / 320KB SRAM");
+    }
+    tft.setCursor(12, 112);
+    tft.setTextColor(0x07FF);
+    tft.printf("Touch IC: %s (0x%02X)", touch_chip_name, touch_i2c_addr);
+
+    // Khung 2: Toa do cam ung cham
+    tft.drawRect(5, 132, 230, 60, TFT_WHITE);
+    tft.fillRect(6, 133, 228, 58, 0x0000);
+    tft.setTextColor(0x07FF);
+    tft.setCursor(12, 138);
+    tft.println("CAPACITIVE TOUCH PANEL:");
+    tft.setCursor(12, 156);
+    if (is_touched) {
+        tft.setTextColor(TFT_RED);
+        tft.setTextSize(2);
+        tft.printf("X:%d  Y:%d", touch_x, touch_y);
+        tft.setTextSize(1);
+    } else {
+        tft.setTextColor(TFT_SILVER);
+        tft.println("Trang thai: Cham tay vao man hinh...");
+    }
+
+    // Khung 3: Huong dan & Chân phan cung
+    tft.drawRect(5, 198, 230, 115, 0x07E0);
+    tft.fillRect(6, 199, 228, 113, 0x0841);
+    tft.setTextColor(TFT_YELLOW);
+    tft.setCursor(12, 206);
+    tft.println("XAC NHAN SO DO CHAN (ES3C28P):");
+    tft.setTextColor(TFT_WHITE);
+    tft.setCursor(12, 224);
+    tft.println("- Backlight: GPIO 45 & IO21 (ON)");
+    tft.setCursor(12, 240);
+    tft.println("- LCD SPI: MOSI:11, SCK:12, DC:46");
+    tft.setCursor(12, 256);
+    tft.println("- RGB LED: GPIO 42 (Rainbow)");
+    tft.setCursor(12, 272);
+    tft.println("- I2C Port: SCL:15, SDA:16");
+    tft.setCursor(12, 290);
+    tft.setTextColor(0x07E0);
+    tft.println(">> PHAN CUNG DA HOAT DONG! <<");
+
+    tft.endWrite();
+}
+
+// -----------------------------------------------------------------------------
+// ARDUINO SETUP
+// -----------------------------------------------------------------------------
+void setup() {
+    // 1. Bat den nen Backlight truoc tien (Bật cả GPIO 45 và IO21)
+    pinMode(LCD_BL_PIN, OUTPUT);
+    digitalWrite(LCD_BL_PIN, HIGH);
+    pinMode(LCD_BL_ALT_PIN, OUTPUT);
+    digitalWrite(LCD_BL_ALT_PIN, HIGH);
+
+    // 2. Khoi tao USB Serial CDC
+    Serial.begin(115200);
+    delay(500);
+
+    Serial.println("\n=======================================================");
+    Serial.println("  NALA SMART HOME - ESP32-S3 SAFE BRING-UP SUITE       ");
+    Serial.println("=======================================================");
+
+    // 3. Khoi tao LED RGB SMD (GPIO 42)
+    init_rgb_led();
+
+    // 4. Quet I2C Bus tim cam ung
+    scan_i2c_bus();
+
+    // 5. Khoi tao Man hinh LCD 2.8"
+    Serial.println("\n--- [BÀI 2] KHOI TAO MAN HINH 2.8\" LCD (240x320) ---");
+    tft.init();
+    tft.setRotation(0);
+    tft.setBrightness(200);
+    tft.clear(TFT_BLACK);
+    Serial.println(" -> Man hinh LCD da khoi tao thanh cong!");
+
+    Serial.println("\n=======================================================");
+    Serial.println("  SETUP HOAN TAT! DANG CHAY GIAO DIEN CHECK TRUC QUAN  ");
+    Serial.println("=======================================================\n");
+}
+
+// -----------------------------------------------------------------------------
+// ARDUINO LOOP
+// -----------------------------------------------------------------------------
+void loop() {
+    // 1. LED RGB doi mau
+    update_rgb_color();
+
+    // 2. Doc cam ung
+    int16_t touch_x = 0, touch_y = 0;
+    bool is_touched = read_touch_coordinates(&touch_x, &touch_y);
+
+    if (is_touched) {
+        Serial.printf("Touch Event -> X: %d, Y: %d\n", touch_x, touch_y);
+    }
+
+    // 3. Ve lai giao dien 30 FPS
+    if (millis() - last_ui_update_time >= 33) {
+        last_ui_update_time = millis();
+        draw_screen(touch_x, touch_y, is_touched);
+    }
+}

@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  nas_ws_hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nala_nas_ws_hub
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PORT=8765
+      - HA_WS_URL=${HA_WS_URL:-ws://192.168.1.5:8123/api/websocket}
+      - HA_TOKEN=${HA_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - STT_SERVICE_URL=http://localhost:8095/v1/audio/transcriptions
+      - TTS_SERVICE_URL=http://localhost:5000/api/tts
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./.env:/app/.env
+
+  faster_whisper_stt:
+    image: fedirz/faster-whisper-server:latest-cuda
+    container_name: nala_faster_whisper
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL=large-v3
+      - WHISPER_DEVICE=cuda
+      - WHISPER_COMPUTE_TYPE=float16
+    ports:
+      - "8095:8000"
+    profiles:
+      - voice
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  piper_tts:
+    image: rhasspy/wyoming-piper:latest
+    container_name: nala_piper_tts
+    restart: unless-stopped
+    command: ["--voice", "vi_VN-vivos-x_low"]
+    ports:
+      - "5000:5000"
+    profiles:
+      - voice
+    volumes:
+      - ./data/piper_voices:/data
+

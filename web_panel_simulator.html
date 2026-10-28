@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NALA Smart Home - 2.8" Wall Panel, Captive Portal & Web Management Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --accent-cyan: #06b6d4;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        /* Top Bar */
+        header {
+            width: 100%;
+            max-width: 1160px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            color: white;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-green);
+            display: inline-block;
+        }
+
+        /* Mode Switcher Bar */
+        .mode-bar {
+            width: 100%;
+            max-width: 1160px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #111827;
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .mode-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            background: #1f2937;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: white;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex-direction: row;
+            gap: 36px;
+            max-width: 1160px;
+            width: 100%;
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Device Frame (ESP32-S3 ES3C28P 2.8" Wall Panel) */
+        .device-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .device-casing {
+            width: 320px;
+            height: 480px;
+            background: linear-gradient(145deg, #1f242e, #141720);
+            border-radius: 28px;
+            border: 2px solid #2e384d;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Ambient RGB LED on casing */
+        .casing-led {
+            width: 10px;
+            height: 10px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            top: 14px;
+            left: 28px;
+            box-shadow: 0 0 12px #3b82f6;
+            transition: all 0.3s ease;
+        }
+
+        .casing-mic {
+            width: 6px;
+            height: 6px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 50%;
+            position: absolute;
+            top: 16px;
+            right: 28px;
+        }
+
+        .casing-speaker {
+            display: flex;
+            gap: 4px;
+            position: absolute;
+            bottom: 12px;
+        }
+
+        .speaker-slot {
+            width: 12px;
+            height: 3px;
+            background: #111;
+            border-radius: 2px;
+        }
+
+        /* 240x320 LCD Screen Viewport */
+        .screen-bezel {
+            width: 260px;
+            height: 348px;
+            background: #000;
+            border-radius: 8px;
+            border: 3px solid #0f131a;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Exact 240x320 Display Canvas */
+        .lcd-display {
+            width: 240px;
+            height: 320px;
+            background: #000;
+            position: relative;
+            cursor: crosshair;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            box-shadow: 0 0 4px rgba(255,255,255,0.05);
+        }
+
+        /* ================= SCREEN VIEW 1: CAPTIVE PORTAL AP MODE ================= */
+        .view-ap-setup {
+            width: 240px;
+            height: 320px;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 50;
+        }
+
+        .view-ap-setup.active {
+            display: flex;
+        }
+
+        .ap-header {
+            height: 42px;
+            background: #08415c;
+            padding: 6px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .ap-title { font-size: 11px; font-weight: 800; color: #fff; }
+        .ap-subtitle { font-size: 9.5px; font-weight: 700; color: #ffe000; }
+
+        .ap-box {
+            margin: 8px;
+            background: #101c2e;
+            border: 1px solid #07e055;
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ap-step-title { font-size: 9.5px; font-weight: 700; color: #ffd700; }
+        .ap-step-desc { font-size: 9px; color: #07ffff; font-weight: 600; }
+        .ap-step-sub { font-size: 8.5px; color: #cbd5e1; }
+
+        .ap-footer {
+            margin-top: auto;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .ap-mac { font-size: 8.5px; color: #94a3b8; }
+        .ap-code { font-size: 10px; font-weight: 800; color: #07e055; }
+        .ap-reset-hint { font-size: 8px; color: #64748b; }
+
+        /* ================= SCREEN VIEW 2: DASHBOARD VIEW ================= */
+        .view-dashboard {
+            width: 240px;
+            height: 320px;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .view-dashboard.active {
+            display: flex;
+        }
+
+        /* 1. Header (0..36px) */
+        .lcd-header {
+            width: 240px;
+            height: 36px;
+            background-color: #08415c;
+            color: #ffffff;
+            padding: 4px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .lcd-header-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .lcd-header-touch {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #07e055;
+            transition: color 0.1s;
+        }
+
+        .lcd-header-touch.active {
+            color: #ff3333;
+        }
+
+        /* 2. Body Tabs (36..270px) */
+        .lcd-body {
+            width: 240px;
+            height: 234px;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 6px 10px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* TAB 0: NHÀ & AI */
+        .room-title-header {
+            font-size: 10px;
+            font-weight: 700;
+            color: #06b6d4;
+            margin-bottom: 6px;
+        }
+
+        .grid-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .lcd-btn {
+            border-radius: 6px;
+            border: 1px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-light {
+            width: 105px;
+            height: 44px;
+            background: #210433;
+            color: #fff;
+        }
+
+        .btn-light.on {
+            background: #ffe000;
+            color: #000;
+            box-shadow: 0 0 10px rgba(255, 224, 0, 0.4);
+        }
+
+        .btn-fan {
+            width: 105px;
+            height: 44px;
+            background: #210433;
+            color: #fff;
+        }
+
+        .btn-fan.on {
+            background: #07ffff;
+            color: #000;
+            box-shadow: 0 0 10px rgba(7, 255, 255, 0.4);
+        }
+
+        .ai-box {
+            width: 220px;
+            height: 74px;
+            background: #101c2e;
+            border: 1px solid #425878;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .ai-status {
+            color: #ffd700;
+            font-size: 9.5px;
+            font-weight: 700;
+        }
+
+        .ai-text {
+            color: #e2e8f0;
+            font-size: 9px;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .btn-ptt {
+            width: 220px;
+            height: 44px;
+            background: #001f66;
+            border: 1px solid #fff;
+            border-radius: 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-ptt:active, .btn-ptt.recording {
+            background: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+            transform: scale(0.98);
+        }
+
+        /* TAB 1: ĐÀM THOẠI (INTERCOM) */
+        .room-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .room-btn {
+            height: 42px;
+            background: #210433;
+            border: 1px solid #fff;
+            border-radius: 6px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .room-btn.selected {
+            background: #07e055;
+            color: #000;
+            box-shadow: 0 0 10px rgba(7, 224, 85, 0.5);
+        }
+
+        .btn-all-rooms {
+            width: 220px;
+            height: 38px;
+            background: #038030;
+            border: 1px solid #fff;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 700;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .btn-all-rooms.selected {
+            background: #07e055;
+            box-shadow: 0 0 12px rgba(7, 224, 85, 0.6);
+        }
+
+        .btn-ptt-intercom {
+            width: 220px;
+            height: 44px;
+            background: #07e055;
+            border: 1px solid #fff;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 800;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* TAB 2: CÀI ĐẶT */
+        .settings-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-title {
+            color: #ffd700;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .slider-label {
+            font-size: 9px;
+            color: #fff;
+        }
+
+        .slider-bar-wrap {
+            width: 212px;
+            height: 16px;
+            border: 1px solid #fff;
+            background: #000;
+            padding: 1px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .slider-bar-fill {
+            height: 100%;
+            background: #07e055;
+            transition: width 0.05s ease;
+        }
+
+        .slider-bar-fill.bright {
+            background: #ffe000;
+        }
+
+        .dev-info-line {
+            font-size: 9px;
+            color: #06b6d4;
+        }
+
+        .dev-code-line {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #07e055;
+        }
+
+        /* 3. Bottom Tab Bar (270..320px) */
+        .lcd-tabbar {
+            width: 240px;
+            height: 50px;
+            display: flex;
+            border-top: 1px solid #fff;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: #000;
+        }
+
+        .tab-btn {
+            flex: 1;
+            height: 100%;
+            background: #182845;
+            border-right: 1px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 9.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .tab-btn:last-child {
+            border-right: none;
+        }
+
+        .tab-btn.active {
+            background: #001f66;
+            color: #38bdf8;
+            box-shadow: inset 0 -3px 0 #38bdf8;
+        }
+
+        /* Touch Marker */
+        .touch-dot {
+            width: 14px;
+            height: 14px;
+            background-color: #ef4444;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            display: none;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            z-index: 1000;
+        }
+
+        /* Control & Telemetry Panel (Right Side) */
+        .telemetry-card {
+            flex: 1;
+            min-width: 420px;
+            max-width: 580px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* NAS Web Server Provisioning Simulator Box */
+        .provision-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .provision-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .input-group input, .input-group select {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #fff;
+            font-size: 12px;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: #06b6d4;
+        }
+
+        .btn-sync {
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3);
+        }
+
+        .btn-sync:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Stats Grid */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: var(--card-bg);
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #2d3748;
+        }
+
+        .stat-label {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .action-log {
+            height: 140px;
+            background: #0a0e17;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            color: #10b981;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-time {
+            color: #64748b;
+        }
+
+        /* Mock Remote Trigger Buttons */
+        .controls-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .remote-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .remote-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .remote-btn.sec {
+            background: #374151;
+        }
+
+        .remote-btn.sec:hover {
+            background: #4b5563;
+        }
+
+        footer {
+            margin-top: 36px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="brand-title">
+            <span>NALA SMART HOME</span>
+            <span class="brand-badge">2.8" IPS TOUCH PANEL</span>
+        </div>
+        <div class="system-status">
+            <span><span class="status-dot"></span> NAS WebSocket Hub: <strong>192.168.1.114:8765</strong></span>
+            <span>Firmware: <strong>v3.3 Captive Portal & Sync</strong></span>
+        </div>
+    </header>
+
+    <!-- Interactive Mode Switcher -->
+    <div class="mode-bar">
+        <div class="mode-title">Chuyển Đổi Trạng Thái Trực Quan:</div>
+        <div class="mode-buttons">
+            <button class="mode-btn" id="btnModeAp">1. Màn Hình AP Cài Đặt (192.168.4.1)</button>
+            <button class="mode-btn active" id="btnModeDashboard">2. Màn Hình Điều Khiển (Dashboard)</button>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+
+        <!-- Device Mockup View -->
+        <div class="device-container">
+            <div class="device-casing">
+                <div class="casing-led" id="panelRgbLed"></div>
+                <div class="casing-mic"></div>
+
+                <!-- 240x320 LCD Touch Viewport -->
+                <div class="screen-bezel">
+                    <div class="lcd-display" id="lcdScreen">
+                        
+                        <!-- ================= VIEW 1: CAPTIVE PORTAL AP MODE ================= -->
+                        <div class="view-ap-setup" id="viewApSetup">
+                            <div class="ap-header">
+                                <div class="ap-title">NALA SMART HOME</div>
+                                <div class="ap-subtitle">CHE DO CAI DAT WIFI (AP)</div>
+                            </div>
+                            <div class="ap-box">
+                                <div class="ap-step-title">BUOC 1: KET NOI WIFI</div>
+                                <div class="ap-step-desc" id="apSsidText">SSID: NALA-PANEL-881C</div>
+
+                                <div class="ap-step-title" style="margin-top: 4px;">BUOC 2: MO TRINH DUYET</div>
+                                <div class="ap-step-desc">Truy cap: 192.168.4.1</div>
+
+                                <div class="ap-step-title" style="margin-top: 4px;">BUOC 3: CAI DAT</div>
+                                <div class="ap-step-sub">Chon WiFi nha & Nhap pass<br>Sau do bam LUU & KET NOI</div>
+                            </div>
+                            <div class="ap-footer">
+                                <div class="ap-mac">MAC: 44:1B:F6:CF:88:1C</div>
+                                <div class="ap-code" id="apPairCodeText">MA GHEP NOI: [881C]</div>
+                                <div class="ap-reset-hint">Giu nut BOOT 3s: Factory Reset</div>
+                            </div>
+                        </div>
+
+                        <!-- ================= VIEW 2: DASHBOARD VIEW ================= -->
+                        <div class="view-dashboard active" id="viewDashboard">
+                            <!-- 1. Header (0..36px) -->
+                            <div class="lcd-header">
+                                <div class="lcd-header-title">NALA SMART HOME</div>
+                                <div class="lcd-header-touch" id="headerTouchText">IP:192.168.1.45  M:[881C]</div>
+                            </div>
+
+                            <!-- 2. Screen Body (36..270px) -->
+                            <div class="lcd-body">
+                                <!-- TAB 0: NHÀ & AI -->
+                                <div class="tab-content active" id="tab0Content">
+                                    <div class="room-title-header" id="screenRoomName">Phong: Phong Khach - Tang Tret</div>
+                                    <div class="grid-row">
+                                        <div class="lcd-btn btn-light" id="btnLight">DEN: TAT</div>
+                                        <div class="lcd-btn btn-fan" id="btnFan">QUAT: TAT</div>
+                                    </div>
+                                    <div class="ai-box">
+                                        <div class="ai-status" id="aiStatusText">AI: San sang (IDLE)</div>
+                                        <div class="ai-text" id="aiDialogueText">Xin chao! Nhan nut ben duoi de noi chuyen voi Nala AI...</div>
+                                    </div>
+                                    <div class="btn-ptt" id="btnPttAi">NHAN GIU DE NOI VOI AI</div>
+                                </div>
+
+                                <!-- TAB 1: ĐÀM THOẠI (INTERCOM) -->
+                                <div class="tab-content" id="tab1Content">
+                                    <div class="room-grid">
+                                        <div class="room-btn selected" data-room="Tang Tret">Tang Tret</div>
+                                        <div class="room-btn" data-room="Phong Ty T1">Phong Ty T1</div>
+                                        <div class="room-btn" data-room="Phong Bep">Phong Bep</div>
+                                        <div class="room-btn" data-room="Lau 3">Lau 3</div>
+                                    </div>
+                                    <div class="btn-all-rooms" id="btnAllRooms">GOI TOAN NHA (ALL)</div>
+                                    <div class="btn-ptt-intercom" id="btnPttIntercom">GIU NUT DE NOI QUA TANG</div>
+                                </div>
+
+                                <!-- TAB 2: CÀI ĐẶT -->
+                                <div class="tab-content" id="tab2Content">
+                                    <div class="settings-container">
+                                        <div class="settings-title">CAI DAT HE THONG:</div>
+                                        <div class="slider-group">
+                                            <div class="slider-label" id="volLabel">Am luong: 80%</div>
+                                            <div class="slider-bar-wrap" id="sliderVol">
+                                                <div class="slider-bar-fill" id="volFill" style="width: 80%;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="slider-group">
+                                            <div class="slider-label" id="brightLabel">Do sang: 200</div>
+                                            <div class="slider-bar-wrap" id="sliderBright">
+                                                <div class="slider-bar-fill bright" id="brightFill" style="width: 78%;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="dev-info-line">IP: 192.168.1.45 | MAC: 44:1B:F6:CF:88:1C</div>
+                                        <div class="dev-code-line">MA GHEP NOI: [881C]</div>
+                                        <div class="dev-info-line">Server NAS: 192.168.1.114:8765</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Bottom Tab Bar (270..320px) -->
+                            <div class="lcd-tabbar">
+                                <div class="tab-btn active" data-tab="0">Nha & AI</div>
+                                <div class="tab-btn" data-tab="1">Dam Thoai</div>
+                                <div class="tab-btn" data-tab="2">Cai Dat</div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Touch Dot Cursor -->
+                        <div class="touch-dot" id="touchDot"></div>
+                    </div>
+                </div>
+
+                <div class="casing-speaker">
+                    <div class="speaker-slot"></div>
+                    <div class="speaker-slot"></div>
+                    <div class="speaker-slot"></div>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted);">Mô phỏng phần cứng LCDWiki ES3C28P 2.8" IPS (240x320)</p>
+        </div>
+
+        <!-- Telemetry & Web Management Hub -->
+        <div class="telemetry-card">
+            <div class="card-header">
+                <div class="card-title">Trung Tâm Quản Lý NAS Hub (Web Management Hub)</div>
+                <span class="status-dot"></span>
+            </div>
+
+            <!-- Provisioning Box (Đặt Tên Phòng & Đồng Bộ) -->
+            <div class="provision-card">
+                <div class="provision-title">
+                    <span>Ghép Nối & Đồng Bộ Thiết Bị (Master Switch Provisioning)</span>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Mã Ghép Nối (MAC)</label>
+                        <input type="text" id="hubPairingCode" value="881C" readonly style="color: #10b981; font-weight: 700;">
+                    </div>
+                    <div class="input-group">
+                        <label>Vị Trí Tầng</label>
+                        <select id="hubFloorSelect">
+                            <option value="Tang Tret">Tầng Trệt</option>
+                            <option value="Lau 1">Lầu 1</option>
+                            <option value="Lau 2">Lầu 2</option>
+                            <option value="Lau 3">Lầu 3</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Tên Phòng Gắn Màn Hình</label>
+                        <input type="text" id="hubRoomName" value="Phòng Khách">
+                    </div>
+                    <div class="input-group">
+                        <label>Thực Thể Home Assistant</label>
+                        <select id="hubEntitySelect">
+                            <option value="all">Đèn Phòng + Quạt Trần</option>
+                            <option value="lights_only">Chỉ Đèn Chiếu Sáng</option>
+                            <option value="whole_house">Toàn Nhà (Master Switch)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-sync" id="btnSyncToPanel">ĐỒNG BỘ CẤU HÌNH XUỐNG PANEL (WEBSOCKET SYNC)</button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="telemetry-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Tọa Độ Cảm Ứng (X, Y)</div>
+                    <div class="stat-value" id="statTouchCoord">X: --- | Y: ---</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Trạng Thái Mạng</div>
+                    <div class="stat-value" id="statNetState" style="color: #10b981;">CONNECTED</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tên Phòng Đã Gán</div>
+                    <div class="stat-value" id="statAssignedRoom" style="font-size: 13px;">Phòng Khách</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Thiết Bị Đang Bật</div>
+                    <div class="stat-value" id="statActiveDevices">Không</div>
+                </div>
+            </div>
+
+            <!-- Remote Trigger Simulation -->
+            <div class="controls-group">
+                <div class="controls-title" style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Mô Phỏng Lệnh Từ Server NAS / Home Assistant</div>
+                <div class="controls-buttons">
+                    <button class="remote-btn" id="btnSimAiResponse">AI: "Đã bật đèn theo lệnh"</button>
+                    <button class="remote-btn sec" id="btnSimToggleLight">Toggle Đèn từ HA</button>
+                    <button class="remote-btn sec" id="btnSimCallIntercom">Gọi từ Lầu 3</button>
+                    <button class="remote-btn sec" id="btnClearLog">Xóa Log</button>
+                </div>
+            </div>
+
+            <!-- Log Terminal -->
+            <div class="controls-group">
+                <div class="controls-title" style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Nhật Ký Sự Kiện Giao Tiếp (UART / WebSocket)</div>
+                <div class="action-log" id="actionLog">
+                    <div class="log-entry"><span class="log-time">[BOOT]</span> ESP32-S3 Hardware init completed.</div>
+                    <div class="log-entry"><span class="log-time">[SYSTEM]</span> MAC: 44:1B:F6:CF:88:1C | Pairing Code: 881C</div>
+                    <div class="log-entry"><span class="log-time">[NET]</span> Connected to Home WiFi (IP: 192.168.1.45).</div>
+                    <div class="log-entry"><span class="log-time">[WS]</span> Registered to NAS Hub: {"type":"register","code":"881C"}.</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>Hệ thống NALA SMART HOME – Giải pháp Điều Khiển Trung Tâm & Đàm Thoại Nội Bộ Phân Tầng</p>
+    </footer>
+
+    <!-- Interactive Simulator Script -->
+    <script>
+        let currentTab = 0;
+        let lightState = false;
+        let fanState = false;
+        let selectedRoom = "Tang Tret";
+        let speakerVol = 80;
+        let lcdBrightness = 200;
+        let isTouching = false;
+        let currentMode = "dashboard"; // "ap" or "dashboard"
+
+        // DOM elements
+        const viewApSetup = document.getElementById('viewApSetup');
+        const viewDashboard = document.getElementById('viewDashboard');
+        const btnModeAp = document.getElementById('btnModeAp');
+        const btnModeDashboard = document.getElementById('btnModeDashboard');
+
+        const lcdScreen = document.getElementById('lcdScreen');
+        const touchDot = document.getElementById('touchDot');
+        const headerTouchText = document.getElementById('headerTouchText');
+        const statTouchCoord = document.getElementById('statTouchCoord');
+        const statNetState = document.getElementById('statNetState');
+        const statAssignedRoom = document.getElementById('statAssignedRoom');
+        const statActiveDevices = document.getElementById('statActiveDevices');
+        const actionLog = document.getElementById('actionLog');
+        const panelRgbLed = document.getElementById('panelRgbLed');
+
+        const screenRoomName = document.getElementById('screenRoomName');
+        const hubRoomName = document.getElementById('hubRoomName');
+        const hubFloorSelect = document.getElementById('hubFloorSelect');
+        const btnSyncToPanel = document.getElementById('btnSyncToPanel');
+
+        const tabContents = [
+            document.getElementById('tab0Content'),
+            document.getElementById('tab1Content'),
+            document.getElementById('tab2Content')
+        ];
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        const btnLight = document.getElementById('btnLight');
+        const btnFan = document.getElementById('btnFan');
+        const aiStatusText = document.getElementById('aiStatusText');
+        const aiDialogueText = document.getElementById('aiDialogueText');
+        const btnPttAi = document.getElementById('btnPttAi');
+
+        const roomBtns = document.querySelectorAll('.room-btn');
+        const btnAllRooms = document.getElementById('btnAllRooms');
+
+        const sliderVol = document.getElementById('sliderVol');
+        const volFill = document.getElementById('volFill');
+        const volLabel = document.getElementById('volLabel');
+        const sliderBright = document.getElementById('sliderBright');
+        const brightFill = document.getElementById('brightFill');
+        const brightLabel = document.getElementById('brightLabel');
+
+        function addLog(tag, msg) {
+            const time = new Date().toTimeString().split(' ')[0];
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `<span class="log-time">[${time}] [${tag}]</span> ${msg}`;
+            actionLog.appendChild(div);
+            actionLog.scrollTop = actionLog.scrollHeight;
+        }
+
+        // Mode Switching (AP vs Dashboard)
+        btnModeAp.addEventListener('click', () => {
+            currentMode = "ap";
+            btnModeAp.classList.add('active');
+            btnModeDashboard.classList.remove('active');
+            viewApSetup.classList.add('active');
+            viewDashboard.classList.remove('active');
+            panelRgbLed.style.background = '#f59e0b';
+            panelRgbLed.style.boxShadow = '0 0 12px #f59e0b';
+            statNetState.textContent = 'AP SETUP (192.168.4.1)';
+            statNetState.style.color = '#f59e0b';
+            addLog("AP", "ESP32-S3 phat SoftAP: NALA-PANEL-881C - Mo 192.168.4.1 de cai dat");
+        });
+
+        btnModeDashboard.addEventListener('click', () => {
+            currentMode = "dashboard";
+            btnModeDashboard.classList.add('active');
+            btnModeAp.classList.remove('active');
+            viewDashboard.classList.add('active');
+            viewApSetup.classList.remove('active');
+            panelRgbLed.style.background = '#10b981';
+            panelRgbLed.style.boxShadow = '0 0 12px #10b981';
+            statNetState.textContent = 'CONNECTED (192.168.1.45)';
+            statNetState.style.color = '#10b981';
+            addLog("WIFI", "Da ket noi WiFi nha! IP: 192.168.1.45");
+        });
+
+        // Sync from NAS Web Hub
+        btnSyncToPanel.addEventListener('click', () => {
+            const room = hubRoomName.value.trim() || "Phòng Khách";
+            const floor = hubFloorSelect.options[hubFloorSelect.selectedIndex].text;
+            const fullTitle = `Phong: ${room} - ${floor}`;
+            
+            screenRoomName.textContent = fullTitle;
+            statAssignedRoom.textContent = `${room} (${floor})`;
+            
+            addLog("SYNC", `NAS Hub gui config_sync: {"room":"${room}","floor":"${floor}"}`);
+            addLog("PANEL", `Panel nhan du lieu -> Luu vao Flash & doi tieu de thanh: ${fullTitle}`);
+            
+            // Effect
+            panelRgbLed.style.background = '#06b6d4';
+            panelRgbLed.style.boxShadow = '0 0 15px #06b6d4';
+            setTimeout(() => {
+                panelRgbLed.style.background = '#10b981';
+                panelRgbLed.style.boxShadow = '0 0 12px #10b981';
+            }, 600);
+        });
+
+        // Switch Tabs on LCD
+        function setTab(idx) {
+            currentTab = idx;
+            tabContents.forEach((c, i) => c.classList.toggle('active', i === idx));
+            tabBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
+            addLog("UI", `Chuyen Tab sang Tab ${idx}`);
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tabIdx = parseInt(btn.getAttribute('data-tab'));
+                setTab(tabIdx);
+            });
+        });
+
+        // Touch Tracking
+        function handlePointer(e, isDown) {
+            const rect = lcdScreen.getBoundingClientRect();
+            const scaleX = 240 / rect.width;
+            const scaleY = 320 / rect.height;
+
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches[0]) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const x = Math.max(0, Math.min(239, Math.round((clientX - rect.left) * scaleX)));
+            const y = Math.max(0, Math.min(319, Math.round((clientY - rect.top) * scaleY)));
+
+            if (isDown) {
+                touchDot.style.left = `${(clientX - rect.left)}px`;
+                touchDot.style.top = `${(clientY - rect.top)}px`;
+                touchDot.style.display = 'block';
+
+                if (currentMode === "dashboard") {
+                    headerTouchText.textContent = `TOUCH: X:${String(x).padStart(3, ' ')}  Y:${String(y).padStart(3, ' ')}`;
+                    headerTouchText.classList.add('active');
+                }
+                statTouchCoord.textContent = `X: ${x} | Y: ${y}`;
+            } else {
+                touchDot.style.display = 'none';
+                if (currentMode === "dashboard") {
+                    headerTouchText.textContent = 'IP:192.168.1.45  M:[881C]';
+                    headerTouchText.classList.remove('active');
+                }
+            }
+        }
+
+        lcdScreen.addEventListener('mousedown', (e) => { isTouching = true; handlePointer(e, true); });
+        lcdScreen.addEventListener('mousemove', (e) => { if (isTouching) handlePointer(e, true); });
+        window.addEventListener('mouseup', (e) => { if (isTouching) { isTouching = false; handlePointer(e, false); } });
+
+        // Toggle Buttons
+        btnLight.addEventListener('click', (e) => {
+            e.stopPropagation();
+            lightState = !lightState;
+            btnLight.classList.toggle('on', lightState);
+            btnLight.textContent = lightState ? "DEN: BAT" : "DEN: TAT";
+            addLog("ACTION", `Den: ${lightState ? 'ON' : 'OFF'} -> WS Send ha_action`);
+            statActiveDevices.textContent = (lightState && fanState) ? "Đèn + Quạt" : lightState ? "Đèn" : fanState ? "Quạt" : "Không";
+        });
+
+        btnFan.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fanState = !fanState;
+            btnFan.classList.toggle('on', fanState);
+            btnFan.textContent = fanState ? "QUAT: BAT" : "QUAT: TAT";
+            addLog("ACTION", `Quat: ${fanState ? 'ON' : 'OFF'} -> WS Send ha_action`);
+            statActiveDevices.textContent = (lightState && fanState) ? "Đèn + Quạt" : lightState ? "Đèn" : fanState ? "Quạt" : "Không";
+        });
+
+        // PTT Voice
+        btnPttAi.addEventListener('mousedown', () => {
+            btnPttAi.classList.add('recording');
+            btnPttAi.textContent = "DANG LANG NGHE...";
+            aiStatusText.textContent = "AI: Dang lang nghe...";
+            aiDialogueText.textContent = "Nala dang lang nghe ban noi...";
+            addLog("AUDIO", "ES8311 I2S streaming mic PCM 16kHz...");
+        });
+
+        btnPttAi.addEventListener('mouseup', () => {
+            btnPttAi.classList.remove('recording');
+            btnPttAi.textContent = "NHAN GIU DE NOI VOI AI";
+            aiStatusText.textContent = "AI: Dang xu ly...";
+            aiDialogueText.textContent = "Nala dang suy nghi...";
+            addLog("GPU", "Faster-Whisper on GTX 1080 Ti decoding speech...");
+
+            setTimeout(() => {
+                aiStatusText.textContent = "AI: San sang (IDLE)";
+                aiDialogueText.textContent = "Nala: Da hieu yeu cau cua ban.";
+                addLog("TTS", "Piper TTS stream audio tra ve loa FM8002E");
+            }, 1200);
+        });
+
+        // Intercom
+        roomBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                roomBtns.forEach(b => b.classList.remove('selected'));
+                btnAllRooms.classList.remove('selected');
+                btn.classList.add('selected');
+                selectedRoom = btn.getAttribute('data-room');
+                addLog("INTERCOM", `Chon phong: ${selectedRoom}`);
+            });
+        });
+
+        btnAllRooms.addEventListener('click', (e) => {
+            e.stopPropagation();
+            roomBtns.forEach(b => b.classList.remove('selected'));
+            btnAllRooms.classList.add('selected');
+            selectedRoom = "TOAN NHA";
+            addLog("INTERCOM", "Chon Goi Toan Nha (All Call)");
+        });
+
+        // Sliders
+        sliderVol.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = sliderVol.getBoundingClientRect();
+            const pct = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+            volFill.style.width = pct + '%';
+            volLabel.textContent = `Am luong: ${pct}%`;
+            addLog("AUDIO", `ES8311 volume: ${pct}%`);
+        });
+
+        sliderBright.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = sliderBright.getBoundingClientRect();
+            const val = Math.max(20, Math.min(255, Math.round(20 + ((e.clientX - rect.left) / rect.width) * 235)));
+            brightFill.style.width = Math.round(((val - 20) / 235) * 100) + '%';
+            brightLabel.textContent = `Do sang: ${val}`;
+            addLog("LCD", `Backlight PWM set: ${val}`);
+        });
+
+        // Triggers
+        document.getElementById('btnSimAiResponse').addEventListener('click', () => {
+            aiStatusText.textContent = "AI: Dang noi...";
+            aiDialogueText.textContent = "Nala: Da bat den phong khach theo lenh cua ban.";
+            lightState = true;
+            btnLight.classList.add('on');
+            btnLight.textContent = "DEN: BAT";
+            addLog("AI", "AI Router executed HA Service: light.turn_on");
+        });
+
+        document.getElementById('btnSimToggleLight').addEventListener('click', () => {
+            btnLight.click();
+        });
+
+        document.getElementById('btnSimCallIntercom').addEventListener('click', () => {
+            setTab(1);
+            roomBtns.forEach(b => {
+                if (b.getAttribute('data-room') === 'Lau 3') b.classList.add('selected');
+                else b.classList.remove('selected');
+            });
+            addLog("INTERCOM", "Cuoc goi den tu Node Lau 3!");
+        });
+
+        document.getElementById('btnClearLog').addEventListener('click', () => {
+            actionLog.innerHTML = '';
+            addLog("SYSTEM", "Da lam sach nhat ky.");
+        });
+    </script>
+</body>
+</html>
