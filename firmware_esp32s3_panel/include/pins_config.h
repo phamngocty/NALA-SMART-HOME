@@ -71,8 +71,8 @@
 #define I2S_MCLK_PIN            4       // Audio I2S Master Clock
 #define I2S_BCLK_PIN            5       // Audio I2S Bit Clock
 #define I2S_LRCK_PIN            7       // Audio I2S Word Select (WS)
-#define I2S_DOUT_PIN            6       // Audio Data Out (ESP32 -> Codec DAC)
-#define I2S_DIN_PIN             8       // Audio Data In (Mic ADC -> ESP32)
+#define I2S_DOUT_PIN            8       // Audio Data Out (ESP32 TX -> ES8311 DSDIN Pin 9 / Speaker DAC)
+#define I2S_DIN_PIN             6       // Audio Data In (ES8311 ASDOUT Pin 7 / Mic ADC -> ESP32 RX)
 #define PA_EN_PIN               1       // Power Amp Enable (LOW = Bật loa FM8002E)
 
 // -----------------------------------------------------------------------------

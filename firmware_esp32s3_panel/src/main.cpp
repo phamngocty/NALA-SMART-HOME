@@ -105,7 +105,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include "ota_manager.h"
 #include "esp_ota_ops.h"
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.1.5"
+#define CURRENT_FIRMWARE_VERSION "v3.2.0"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -218,8 +218,48 @@ bool read_touch_calibrated(int16_t *x, int16_t *y) {
                 uint8_t y_low  = Wire.read();
                 int16_t raw_x = ((x_high & 0x0F) << 8) | x_low;
                 int16_t raw_y = ((y_high & 0x0F) << 8) | y_low;
-                *x = constrain((LCD_WIDTH - 1) - raw_x, 0, LCD_WIDTH - 1);
-                *y = constrain((LCD_HEIGHT - 1) - raw_y, 0, LCD_HEIGHT - 1);
+
+                switch (global_touch_mode) {
+                    case 0: // Both inverted (Chuan LCDWiki ILI9341 180 deg)
+                        *x = constrain((LCD_WIDTH - 1) - raw_x, 0, LCD_WIDTH - 1);
+                        *y = constrain((LCD_HEIGHT - 1) - raw_y, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 1: // Direct raw (Khong dao truc)
+                        *x = constrain(raw_x, 0, LCD_WIDTH - 1);
+                        *y = constrain(raw_y, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 2: // Invert X only
+                        *x = constrain((LCD_WIDTH - 1) - raw_x, 0, LCD_WIDTH - 1);
+                        *y = constrain(raw_y, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 3: // Invert Y only
+                        *x = constrain(raw_x, 0, LCD_WIDTH - 1);
+                        *y = constrain((LCD_HEIGHT - 1) - raw_y, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 4: // Swapped axes (raw_y -> x, raw_x -> y)
+                        *x = constrain(raw_y, 0, LCD_WIDTH - 1);
+                        *y = constrain(raw_x, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 5: // Swapped + Invert X
+                        *x = constrain((LCD_WIDTH - 1) - raw_y, 0, LCD_WIDTH - 1);
+                        *y = constrain(raw_x, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 6: // Swapped + Invert Y
+                        *x = constrain(raw_y, 0, LCD_WIDTH - 1);
+                        *y = constrain((LCD_HEIGHT - 1) - raw_x, 0, LCD_HEIGHT - 1);
+                        break;
+                    case 7: // Swapped + Both inverted
+                        *x = constrain((LCD_WIDTH - 1) - raw_y, 0, LCD_WIDTH - 1);
+                        *y = constrain((LCD_HEIGHT - 1) - raw_x, 0, LCD_HEIGHT - 1);
+                        break;
+                }
+
+                static unsigned long last_raw_log = 0;
+                if (millis() - last_raw_log > 120) {
+                    last_raw_log = millis();
+                    Serial.printf("[TOUCH-RAW] raw=(%d, %d) -> mapped=(%d, %d) [mode %d]\n", raw_x, raw_y, *x, *y, global_touch_mode);
+                }
+
                 xSemaphoreGive(i2c_mutex);
                 return true;
             }
@@ -264,36 +304,28 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 static unsigned long ws_ping_start_ms = 0;
 
 void run_speaker_test() {
-    Serial.println("[DIAG] Bắt đầu test Loa 1kHz (ES3C28P Hardware)...");
-    uiDashboard.set_diag_result("Loa: Đang phát thử 1kHz...", 0x38BDF8);
+    Serial.println("[DIAG] Bắt đầu test Loa (ES3C28P Hardware)...");
+    uiDashboard.set_diag_result("Loa: Đang phát thử âm thanh...", 0x38BDF8);
     rgb_led.setPixelColor(0, rgb_led.Color(0, 100, 255));
     rgb_led.show();
 
     audioEngine.mute_speaker(false);
-    audioEngine.set_speaker_volume(100);
-    delay(50);
+    audioEngine.set_speaker_volume(95);
 
-    int16_t sample_buffer[256 * 2]; // Stereo L + R
-    for (int i = 0; i < 256; i++) {
-        float angle = 2.0f * 3.14159265f * (float)(i % 16) / 16.0f;
-        int16_t val = (int16_t)(sin(angle) * 24000.0f);
-        sample_buffer[2 * i]     = val; // Left
-        sample_buffer[2 * i + 1] = val; // Right
-    }
+    // 1. Tone 1000Hz (0.5s)
+    audioEngine.play_tone(1000, 500, 0.95f);
+    delay(80);
 
-    size_t bytes_written = 0;
-    // Phát 100 chu kỳ buffer (100 * 256 mẫu / 16000Hz = 1.6 giây âm thanh)
-    for (int c = 0; c < 100; c++) {
-        i2s_write(I2S_NUM_0, sample_buffer, sizeof(sample_buffer), &bytes_written, portMAX_DELAY);
-    }
-    // Chờ 300ms để DMA buffer phát hết âm thanh qua amply trước khi ngắt chống cụt tiếng
-    delay(300);
+    // 2. Chuông đàm thoại Ding-Dong du dương
+    audioEngine.play_ringtone();
+
+    // Mute loa sau khi test xong
     audioEngine.mute_speaker(true);
+
     rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0));
     rgb_led.show();
-
-    uiDashboard.set_diag_result("Loa: Kiểm tra OK (1kHz)!", 0x10B981);
-    Serial.println("[DIAG] Test Loa thành công!");
+    uiDashboard.set_diag_result("Loa: Kiểm tra hoàn tất!", 0x10B981);
+    Serial.println("[DIAG] Hoàn tất test loa!");
 }
 
 void run_mic_test() {
@@ -1385,6 +1417,8 @@ void loop() {
             scan_i2c_bus();
         } else if (ch == 'c') {
             set_touch_calib_mode(global_touch_mode + 1);
+        } else if (ch >= '2' && ch <= '7') {
+            set_touch_calib_mode(ch - '0');
         } else if (ch == 'w') {
             Serial.println("[CMD] Live Touch Monitor for 5s... Touch screen NOW!");
             unsigned long t_end = millis() + 5000;

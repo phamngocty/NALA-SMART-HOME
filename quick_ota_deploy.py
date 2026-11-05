@@ -50,7 +50,7 @@ run_step(f"BƯỚC 2: Đang tải file firmware lên NAS Hub ({NAS_HUB_URL})..."
 with open(BIN_PATH, "rb") as f:
     firmware_bytes = f.read()
 
-version_tag = "v3.0.0"
+version_tag = "v3.2.0"
 filename = f"firmware_{version_tag.lower()}.bin"
 upload_url = f"{NAS_HUB_URL}/api/ota/upload?filename={urllib.parse.quote(filename)}&version={urllib.parse.quote(version_tag)}"
 
