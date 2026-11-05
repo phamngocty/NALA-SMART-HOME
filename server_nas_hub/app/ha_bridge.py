@@ -212,7 +212,8 @@ class HomeAssistantBridge:
                         "area_id": area_id,
                         "area_name": area_name,
                         "floor_id": floor_id,
-                        "floor_name": floor_name
+                        "floor_name": floor_name,
+                        "attributes": attrs
                     })
             return entities
 
@@ -234,34 +235,57 @@ class HomeAssistantBridge:
 
     async def call_service(self, domain: str, service: str, entity_id: str, service_data: Optional[dict] = None) -> bool:
         """Thực thi lệnh điều khiển thiết bị với độ trễ < 200ms."""
+        target_state = None
         if domain == "climate":
             cur_state = self.states.get(entity_id, {}).get("state", "off")
             if service == "toggle":
-                if cur_state == "off":
+                if cur_state in ["off", "unavailable", "unknown", ""]:
                     service = "set_hvac_mode"
                     service_data = {"hvac_mode": "cool"}
+                    target_state = "cool"
                 else:
                     service = "set_hvac_mode"
                     service_data = {"hvac_mode": "off"}
+                    target_state = "off"
+            elif service == "set_hvac_mode" and service_data and "hvac_mode" in service_data:
+                target_state = service_data["hvac_mode"]
         elif domain == "scene":
             service = "turn_on"
+            target_state = "on"
         elif domain == "cover" and service == "toggle":
             cur_state = self.states.get(entity_id, {}).get("state", "open")
             service = "close_cover" if cur_state == "open" else "open_cover"
+            target_state = "closed" if cur_state == "open" else "open"
+        elif service == "toggle":
+            cur_state = self.states.get(entity_id, {}).get("state", "off")
+            target_state = "off" if cur_state == "on" else "on"
+        elif service == "turn_on":
+            target_state = "on"
+        elif service == "turn_off":
+            target_state = "off"
 
-        if not self.authenticated or not self.ws:
-            logger.info("[MOCK/STANDALONE] HA Call: %s.%s on %s", domain, service, entity_id)
-            current = self.states.get(entity_id, {}).get("state", "off")
-            new_state = "on" if (service in ("turn_on", "cool") or (service == "toggle" and current == "off")) else "off"
-            self.states[entity_id] = {"state": new_state, "attributes": {"friendly_name": entity_id}}
+        # Optimistic state update & broadcast tới listeners ngay lập tức (< 10ms)
+        if target_state or service_data:
+            if entity_id not in self.states:
+                self.states[entity_id] = {"state": target_state or "on", "attributes": {}}
+            if target_state:
+                self.states[entity_id]["state"] = target_state
+            if service_data:
+                if "attributes" not in self.states[entity_id]:
+                    self.states[entity_id]["attributes"] = {}
+                self.states[entity_id]["attributes"].update(service_data)
+            cur_s = self.states[entity_id].get("state", "on")
             for listener in self.state_listeners:
                 try:
                     if asyncio.iscoroutinefunction(listener):
-                        asyncio.create_task(listener(entity_id, new_state, self.states[entity_id]))
+                        asyncio.create_task(listener(entity_id, cur_s, self.states[entity_id]))
                     else:
-                        listener(entity_id, new_state, self.states[entity_id])
+                        listener(entity_id, cur_s, self.states[entity_id])
                 except Exception as ex:
                     logger.error("Error invoking state listener: %s", ex)
+
+        if not self.authenticated or not self.ws:
+            logger.info("[MOCK/STANDALONE] HA Call: %s.%s on %s (target_state=%s)", domain, service, entity_id, target_state)
             return True
 
         req_id = self._next_id()
@@ -277,8 +301,66 @@ class HomeAssistantBridge:
 
         try:
             await self.ws.send_json(payload)
-            logger.info("Called HA Service: %s.%s on %s (data=%s)", domain, service, entity_id, service_data)
+            logger.info("Called HA Service: %s.%s on %s (data=%s, optimistic=%s)", domain, service, entity_id, service_data, target_state)
             return True
         except Exception as e:
             logger.error("Error calling HA service: %s", e)
             return False
+
+    async def master_turn_off_all(self, target_entities: Optional[List[str]] = None, config: Optional[dict] = None) -> dict:
+        """Tắt toàn bộ các đèn, quạt (và tùy chọn máy lạnh, switch) theo cấu hình Master All-House."""
+        cfg = config or {}
+        action_mode = cfg.get("action_mode", "turn_off_selected")
+        controlled_domains = set(cfg.get("controlled_domains", ["light", "fan"]))
+        if cfg.get("include_climate", False):
+            controlled_domains.add("climate")
+        if cfg.get("include_switch", False):
+            controlled_domains.add("switch")
+        excluded_entities = set(cfg.get("excluded_entities", []))
+        scene_entity_id = cfg.get("scene_entity_id", "")
+
+        turned_off_count = 0
+        turned_off_list = []
+
+        # 1. Kích hoạt Scene nếu cấu hình là activate_scene hoặc both
+        if action_mode in ["activate_scene", "both"] and scene_entity_id:
+            try:
+                await self.call_service("scene", "turn_on", scene_entity_id)
+                logger.info("Master All-House triggered scene: %s", scene_entity_id)
+            except Exception as e:
+                logger.error("Error activating master scene %s: %s", scene_entity_id, e)
+
+        # 2. Tắt các thực thể nếu cấu hình là turn_off_selected hoặc both
+        if action_mode in ["turn_off_selected", "both"]:
+            entities_to_check = target_entities or list(self.states.keys())
+            for eid in entities_to_check:
+                if eid in excluded_entities:
+                    continue  # Bỏ qua thiết bị nằm trong danh sách loại trừ bảo vệ
+                
+                st = self.states.get(eid, {}).get("state", "off")
+                domain = eid.split(".")[0] if "." in eid else ""
+                
+                if domain in controlled_domains:
+                    if domain == "climate":
+                        if st not in ["off", "unavailable", "unknown", ""]:
+                            try:
+                                await self.call_service("climate", "set_hvac_mode", eid, {"hvac_mode": "off"})
+                                turned_off_count += 1
+                                turned_off_list.append(eid)
+                            except Exception as e:
+                                logger.error("Error turning off climate %s: %s", eid, e)
+                    else:
+                        if st in ["on", "true", "open"]:
+                            try:
+                                await self.call_service("homeassistant", "turn_off", eid)
+                                turned_off_count += 1
+                                turned_off_list.append(eid)
+                            except Exception as e:
+                                logger.error("Error turning off entity %s in master_turn_off: %s", eid, e)
+
+        logger.info("Master Turn Off executed: %d entities turned off (%s)", turned_off_count, turned_off_list)
+        return {
+            "turned_off_count": turned_off_count,
+            "turned_off_entities": turned_off_list,
+            "scene_activated": scene_entity_id if action_mode in ["activate_scene", "both"] else None
+        }
