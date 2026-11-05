@@ -1,0 +1,369 @@
+
+--- MONITOR STARTED 2026-11-05 21:02:50 ---
+[21:09:21] [UI] sync_buttons: Loaded 5 local buttons
+[21:14:19] [UI] sync_buttons: Loaded 5 local buttons
+[21:15:30] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:15:31] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:15:31] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:15:32] [SYSTEM] Firmware v3.1.4 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:15:32] [UI] sync_buttons: Loaded 5 local buttons
+[21:16:30] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:16:31] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:16:31] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:16:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:16:33] [UI] sync_buttons: Loaded 5 local buttons
+[21:16:33] [LVGL-INDEV] PRESSED at (184, 287)
+[21:16:33] [LVGL-INDEV] PRESSED at (184, 287)
+[21:16:33] [LVGL-INDEV] RELEASED at (184, 287)
+[21:16:33] [LVGL-INDEV] PRESSED at (196, 304)
+[21:16:33] [LVGL-INDEV] PRESSED at (196, 304)
+[21:16:33] [LVGL-INDEV] RELEASED at (196, 304)
+[21:16:34] [LVGL-INDEV] PRESSED at (80, 154)
+[21:17:40] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:17:41] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:17:41] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:17:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:17:42] [UI] sync_buttons: Loaded 5 local buttons
+[21:18:18] [LVGL-INDEV] PRESSED at (208, 316)
+[21:18:18] [LVGL-INDEV] PRESSED at (208, 316)
+[21:18:18] [LVGL-INDEV] RELEASED at (208, 316)
+[21:18:19] [LVGL-INDEV] PRESSED at (208, 287)
+[21:18:19] [LVGL-INDEV] RELEASED at (208, 287)
+[21:18:55] [LVGL-INDEV] PRESSED at (0, 7)
+[21:18:55] [LVGL-INDEV] RELEASED at (27, 7)
+[21:19:00] [LVGL-INDEV] PRESSED at (69, 106)
+[21:19:30] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:19:31] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:19:31] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:19:31] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:19:35] [UI] sync_buttons: Loaded 5 local buttons
+[21:20:36] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:20:37] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:20:37] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:38] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:38] [UI] sync_buttons: Loaded 5 local buttons
+[21:20:40] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:20:40] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:20:40] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:20:41] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:20:42] [UI] sync_buttons: Loaded 5 local buttons
+[21:23:08] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:23:09] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:23:09] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:10] [UI] sync_buttons: Loaded 5 local buttons
+[21:23:20] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:23:21] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:23:21] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:23:21] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:21] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:23:21] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:23:21] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:21] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:22] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:22] [UI] sync_buttons: Loaded 5 local buttons
+[21:23:43] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:23:44] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:23:44] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:23:45] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:23:45] [UI] sync_buttons: Loaded 5 local buttons
+[21:24:58] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:24:58] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:24:58] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:24:59] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:25:00] [UI] sync_buttons: Loaded 5 local buttons
+[21:27:17] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:27:18] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:27:18] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:27:19] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:27:22] [UI] sync_buttons: Loaded 5 local buttons
+[21:28:47] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:28:47] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:28:47] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:28:48] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:28:48] [UI] sync_buttons: Loaded 5 local buttons
+[21:29:07] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:29:08] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:29:08] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:29:09] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:29:09] [UI] sync_buttons: Loaded 5 local buttons
+[21:33:07] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:33:07] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:33:07] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:08] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:38] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:33:38] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:33:38] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:33:40] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:33:40] [UI] sync_buttons: Loaded 5 local buttons
+[21:34:20] [UI] sync_buttons: Loaded 5 local buttons
+[21:38:27] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[21:38:28] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[21:38:28] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=35 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=35 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [SYSTEM] Firmware v3.1.3 | PSRAM: 0.00 MB free | Heap: 140 KB free
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=41 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=19 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=44 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=41 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=19 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=44 target=0x3fcb268c cur=0x3fcb268c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb196c cur=0x3fcb196c
+[21:38:28] [UI-EVENT] code=34 target=0x3fcb268c cur=0x3fcb268c
+[21:38:29] [UI] sync_buttons: Loaded 5 local buttons

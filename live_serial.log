@@ -1,0 +1,2463 @@
+
+--- SESSION STARTED AT 2026-11-05 22:30:38 ---
+[22:30:38] 
+[22:30:38] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:30:38] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:30:38] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:30:38] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:30:38] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:30:38] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:30:38] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:30:38] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:30:39] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:30:39] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:30:40] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:30:40] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:30:40] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:30:40] [ 17200][I][WiFiClient.cpp:539] connected(): Unexpected: RES: 0, ERR: 119
+[22:30:40] [ 17208][I][WiFiClient.cpp:539] connected(): Unexpected: RES: 0, ERR: 119
+[22:30:40] [WS] Connected to Central NAS Hub!
+[22:30:40] [WS] Da gu[LVGL-TASK] Alive! Heap: 125 KB
+[22:30:40] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:30:40] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:30:43] [LVGL-TASK] Alive! Heap: 101 KB
+[22:30:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:30:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:30:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:30:49] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:30:50] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:30:50] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:30:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:30:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:30:55] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:30:56] 
+[22:30:56] abort() was called at PC 0x420c997f on core 0
+[22:30:56] 
+[22:30:56] 
+[22:30:56] Backtrace: 0x4037810e:0x3fcc7b40 0x4037d15d:0x3fcc7b60 0x40383b65:0x3fcc7b80 0x420c997f:0x3fcc7c00 0x420c99c6:0x3fcc7c20 0x420c9007:0x3fcc7c40 0x420c8b7a:0x3fcc7c60 0x420c90dd:0x3fcc7c80 0x420c9646:0x3fcc7ca0 0x420c9679:0x3fcc7cd0 0x4201011f:0x3fcc7cf0 0x42042541:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:30:56] 
+[22:30:56] 
+[22:30:56] 
+[22:30:56] 
+[22:30:56] ELF file SHA256: 7cc6535e24e37b1e
+[22:30:56] 
+[22:30:56] Rebooting...
+[22:30:56] ESP-ROM:esp32s3-20210327
+[22:30:56] Build:Mar 27 2021
+[22:30:56] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:30:56] Saved PC:0x40377d44
+[22:30:56] SPIWP:0xee
+[22:30:56] mode:DIO, clock div:1
+[22:30:56] load:0x3fce3808,len:0x41c
+[22:30:56] load:0x403c9700,len:0x9a8
+[22:30:56] load:0x403cc700,len:0x28ac
+[22:30:56] entry 0x403c98b8
+[22:30:56] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:30:56] 
+[22:30:56] =======================================================
+[22:30:56]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:30:56] =======================================================
+[22:30:57] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:30:57] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:30:57] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:30:57] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:30:57] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:30:57] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:30:57] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:30:57] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:30:57] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:30:57] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:30:57] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:30:57] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:30:59] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:30:59] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:30:59] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:30:59] [WS] Connected to Central NAS Hub!
+[22:30:59] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:30:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:30:59] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:30:59] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:31:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:17] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:31:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:19] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:31:19] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:31:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:21] 
+[22:31:21] abort() was called at PC 0x420c997f on core 0
+[22:31:21] 
+[22:31:21] 
+[22:31:21] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:31:21] 
+[22:31:21] 
+[22:31:21] 
+[22:31:21] 
+[22:31:21] ELF file SHA256: 7cc6535e24e37b1e
+[22:31:21] 
+[22:31:21] Rebooting...
+[22:31:21] ESP-ROM:esp32s3-20210327
+[22:31:21] Build:Mar 27 2021
+[22:31:21] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:31:21] Saved PC:0x40377d44
+[22:31:21] SPIWP:0xee
+[22:31:21] mode:DIO, clock div:1
+[22:31:21] load:0x3fce3808,len:0x41c
+[22:31:21] load:0x403c9700,len:0x9a8
+[22:31:21] load:0x403cc700,len:0x28ac
+[22:31:21] entry 0x403c98b8
+[22:31:21] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:31:22] 
+[22:31:22] =======================================================
+[22:31:22]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:31:22] =======================================================
+[22:31:22] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:31:22] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:31:22] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:31:22] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:31:22] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:31:22] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:31:22] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:31:22] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:31:22] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:31:22] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:31:23] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:31:23] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:31:25] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:31:25] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:31:25] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:31:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:25] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:31:28] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:31:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:34] [LVGL-TASK] Alive! Heap: 123 KB
+[22:31:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:31:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:31:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:31:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:31:57] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:57] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:57] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.8, fan: auto
+[22:31:58] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:01] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:05] [HA-SYNC] device_tracker.fold_5 -> state: home, on: 1, temp: 0.0, room: 0.0, fan:
+[22:32:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:28] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:28] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:28] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:32:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:39] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:32:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:32:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:32:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:32:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:03] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:33:04] 
+[22:33:04] abort() was called at PC 0x420c997f on core 0
+[22:33:04] 
+[22:33:04] 
+[22:33:04] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:33:04] 
+[22:33:04] 
+[22:33:04] 
+[22:33:04] 
+[22:33:04] ELF file SHA256: 7cc6535e24e37b1e
+[22:33:04] 
+[22:33:04] Rebooting...
+[22:33:04] ESP-ROM:esp32s3-20210327
+[22:33:04] Build:Mar 27 2021
+[22:33:04] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:33:04] Saved PC:0x40377d44
+[22:33:04] SPIWP:0xee
+[22:33:04] mode:DIO, clock div:1
+[22:33:04] load:0x3fce3808,len:0x41c
+[22:33:04] load:0x403c9700,len:0x9a8
+[22:33:04] load:0x403cc700,len:0x28ac
+[22:33:04] entry 0x403c98b8
+[22:33:05] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:33:05] 
+[22:33:05] =======================================================
+[22:33:05]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:33:05] =======================================================
+[22:33:05] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:33:05] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:33:05] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:33:05] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:33:05] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:33:05] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:33:05] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:33:05] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:33:05] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:33:05] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:33:06] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:33:06] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:33:07] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:33:07] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:33:07] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:33:07] [LVGL-TASK] Alive! Heap: 127 KB
+[22:33:07] [WS] Connected to Central NAS Hub!
+[22:33:07] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:33:07] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:33:07] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:33:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:27] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:33:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:30] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:33:30] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:33:31] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:33:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:43] 
+[22:33:43] abort() was called at PC 0x420c997f on core 0
+[22:33:43] 
+[22:33:43] 
+[22:33:43] Backtrace: 0x4037810e:0x3fcc7b40 0x4037d15d:0x3fcc7b60 0x40383b65:0x3fcc7b80 0x420c997f:0x3fcc7c00 0x420c99c6:0x3fcc7c20 0x420c9007:0x3fcc7c40 0x420c8b7a:0x3fcc7c60 0x420c90dd:0x3fcc7c80 0x420c9646:0x3fcc7ca0 0x420c9679:0x3fcc7cd0 0x4201011f:0x3fcc7cf0 0x42042541:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:33:43] 
+[22:33:43] 
+[22:33:43] 
+[22:33:43] 
+[22:33:43] ELF file SHA256: 7cc6535e24e37b1e
+[22:33:43] 
+[22:33:43] Rebooting...
+[22:33:43] ESP-ROM:esp32s3-20210327
+[22:33:43] Build:Mar 27 2021
+[22:33:43] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:33:43] Saved PC:0x40377d44
+[22:33:43] SPIWP:0xee
+[22:33:43] mode:DIO, clock div:1
+[22:33:43] load:0x3fce3808,len:0x41c
+[22:33:43] load:0x403c9700,len:0x9a8
+[22:33:43] load:0x403cc700,len:0x28ac
+[22:33:43] entry 0x403c98b8
+[22:33:43] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:33:44] 
+[22:33:44] =======================================================
+[22:33:44]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:33:44] =======================================================
+[22:33:44] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:33:44] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:33:44] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:33:44] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:33:44] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:33:44] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:33:44] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:33:44] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:33:44] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:33:44] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:33:45] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:33:45] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:33:47] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:33:47] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:33:47] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:33:47] [WS] Connected to Central NAS Hub!
+[22:33:47] [WS] Da gu
+[22:33:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:50] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:33:50] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:33:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:33:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:14] [LVGL-TASK] Alive! Heap: 32 KB
+[22:34:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:18] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:34:18] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.7, fan: auto
+[22:34:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:34:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:34:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:34:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:49] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:34:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:34:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:34:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:34:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:56] [LVGL-TASK] Alive! Heap: 98 KB
+[22:34:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:34:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:13] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:35:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:16] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:35:16] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:35:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:21] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:27] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:35:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:33] 
+[22:35:33] abort() was called at PC 0x420c997f on core 0
+[22:35:33] 
+[22:35:33] 
+[22:35:33] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:35:33] 
+[22:35:33] 
+[22:35:33] 
+[22:35:33] 
+[22:35:33] ELF file SHA256: 7cc6535e24e37b1e
+[22:35:33] 
+[22:35:33] Rebooting...
+[22:35:33] ESP-ROM:esp32s3-20210327
+[22:35:33] Build:Mar 27 2021
+[22:35:33] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:35:33] Saved PC:0x40377d44
+[22:35:33] SPIWP:0xee
+[22:35:33] mode:DIO, clock div:1
+[22:35:33] load:0x3fce3808,len:0x41c
+[22:35:33] load:0x403c9700,len:0x9a8
+[22:35:33] load:0x403cc700,len:0x28ac
+[22:35:33] entry 0x403c98b8
+[22:35:33] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:35:34] 
+[22:35:34] =======================================================
+[22:35:34]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:35:34] =======================================================
+[22:35:34] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:35:34] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:35:34] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:35:34] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:35:34] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:35:34] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:35:34] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:35:34] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:35:34] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:35:34] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:35:35] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:35:35] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:35:35] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:35:35] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:35:36] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:35:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:36] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:35:36] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:35:36] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:35:37] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:35:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:40] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:35:42] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:51] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:35:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:36:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:36:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:36:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:09] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:12] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:36:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:36:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:36:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:51] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:36:59] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:37:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:03] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:37:03] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:37:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:18] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:21] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:24] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:37:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:26] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:37:26] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:37:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:33] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:45] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:46] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:46] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:48] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:37:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:51] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:37:51] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:37:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:37:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:12] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:16] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:17] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:17] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:17] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:27] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:27] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:38:30] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:38:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:42] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:38:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:38:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:38:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:39:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:21] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:32] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:33] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:35] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:39:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:38] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:39:38] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:39:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:45] [LVGL-TASK] Alive! Heap: 98 KB
+[22:39:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:39:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:55] [HA-SYNC] light.moes_matter_switch_den_4_6 -> state: on, on: 1, temp: 0.0, room: 0.0, fan:
+[22:39:55] [HA-SYNC] light.moes_matter_switch_den_3_6 -> state: on, on: 1, temp: 0.0, room: 0.0, fan:
+[22:39:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:39:59] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:40:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:02] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:02] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:40:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:26] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:37] [HA-SYNC] sensor.nhung_dep_gai_storage -> state: 0.46, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:37] [HA-SYNC] sensor.nhung_dep_gai_last_update_trigger -> state: Periodic, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:40:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:40:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:46] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:40:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:47] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:40:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:40:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:40:58] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:40:58] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:01] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:07] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:08] [HA-SYNC] sun.sun -> state: below_horizon, on: 1, temp: 0.0, room: 0.0, fan:
+[22:41:10] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:41:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.6, fan: auto
+[22:41:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:41:27] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:41:28] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:41:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:41:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:41:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:41:55] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.5, fan: auto
+[22:41:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:07] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:10] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:11] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:42:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:14] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:42:16] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:42:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:32] 
+[22:42:32] abort() was called at PC 0x420c997f on core 0
+[22:42:32] 
+[22:42:32] 
+[22:42:32] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:42:32] 
+[22:42:32] 
+[22:42:32] 
+[22:42:32] 
+[22:42:32] ELF file SHA256: 7cc6535e24e37b1e
+[22:42:32] 
+[22:42:32] Rebooting...
+[22:42:32] ESP-ROM:esp32s3-20210327
+[22:42:32] Build:Mar 27 2021
+[22:42:32] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:42:32] Saved PC:0x40377d44
+[22:42:32] SPIWP:0xee
+[22:42:32] mode:DIO, clock div:1
+[22:42:32] load:0x3fce3808,len:0x41c
+[22:42:32] load:0x403c9700,len:0x9a8
+[22:42:32] load:0x403cc700,len:0x28ac
+[22:42:32] entry 0x403c98b8
+[22:42:33] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:42:33] 
+[22:42:33] =======================================================
+[22:42:33]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:42:33] =======================================================
+[22:42:34] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:42:34] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:42:34] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:42:34] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:42:34] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:42:34] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:42:34] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:42:34] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:42:34] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:42:34] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:42:34] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:42:34] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:42:35] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:42:35] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 153 KB free
+[22:42:35] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:42:35] [LVGL-TASK] Alive! Heap: 127 KB
+[22:42:35] [WS] Connected to Central NAS Hub!
+[22:42:36] [WS] Da gu[INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:42:36] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:42:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:47] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:42:47] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:42:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:42:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:42:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:42:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:04] 
+[22:43:04] abort() was called at PC 0x420c997f on core 0
+[22:43:04] 
+[22:43:04] 
+[22:43:04] Backtrace: 0x4037810e:0x3fcc84b0 0x4037d15d:0x3fcc84d0 0x40383b65:0x3fcc84f0 0x420c997f:0x3fcc8570 0x420c99c6:0x3fcc8590 0x420c9007:0x3fcc85b0 0x420c8b7a:0x3fcc85d0 0x420c90dd:0x3fcc85f0 0x420c9646:0x3fcc8610 0x420c9679:0x3fcc8640 0x4204250f:0x3fcc8660 0x420431ae:0x3fcc86d0 0x4204324a:0x3fcc86f0 0x42008271:0x3fcc8760 0x4200c66c:0x3fcc87a0
+[22:43:04] 
+[22:43:04] 
+[22:43:04] 
+[22:43:04] 
+[22:43:04] ELF file SHA256: 7cc6535e24e37b1e
+[22:43:04] 
+[22:43:04] Rebooting...
+[22:43:04] ESP-ROM:esp32s3-20210327
+[22:43:04] Build:Mar 27 2021
+[22:43:04] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:43:04] Saved PC:0x40377d44
+[22:43:04] SPIWP:0xee
+[22:43:04] mode:DIO, clock div:1
+[22:43:04] load:0x3fce3808,len:0x41c
+[22:43:04] load:0x403c9700,len:0x9a8
+[22:43:04] load:0x403cc700,len:0x28ac
+[22:43:04] entry 0x403c98b8
+[22:43:04] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:43:05] 
+[22:43:05] =======================================================
+[22:43:05]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:43:05] =======================================================
+[22:43:05] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:43:05] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:43:05] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:43:05] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:43:05] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:43:05] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:43:05] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:43:05] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:43:05] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:43:05] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:43:06] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:43:06] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:43:08] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:43:08] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:43:08] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:43:08] [WS] Connected to Central NAS Hub!
+[22:43:08] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:43:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:08] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:43:08] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:43:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:16] 
+[22:43:16] abort() was called at PC 0x420c997f on core 0
+[22:43:16] 
+[22:43:16] 
+[22:43:16] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:43:16] 
+[22:43:16] 
+[22:43:16] 
+[22:43:16] 
+[22:43:16] ELF file SHA256: 7cc6535e24e37b1e
+[22:43:16] 
+[22:43:16] Rebooting...
+[22:43:16] ESP-ROM:esp32s3-20210327
+[22:43:16] Build:Mar 27 2021
+[22:43:16] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:43:16] Saved PC:0x40377d44
+[22:43:16] SPIWP:0xee
+[22:43:16] mode:DIO, clock div:1
+[22:43:16] load:0x3fce3808,len:0x41c
+[22:43:16] load:0x403c9700,len:0x9a8
+[22:43:16] load:0x403cc700,len:0x28ac
+[22:43:16] entry 0x403c98b8
+[22:43:17] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:43:17] 
+[22:43:17] =======================================================
+[22:43:17]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:43:17] =======================================================
+[22:43:18] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:43:18] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:43:18] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:43:18] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:43:18] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:43:18] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:43:18] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:43:18] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:43:18] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:43:18] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:43:18] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:43:18] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:43:19] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:43:19] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:43:19] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:43:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:19] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:43:20] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:43:20] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:43:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:30] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:43:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:43:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:43:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:13] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:44:13] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:44:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:14] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:44:14] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:44:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:44:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:45:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:46:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:47:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:48:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:20] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:49:20] [WS] Connected to Central NAS Hub!
+[22:49:20] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:49:20] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:49:20] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:49:20] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:49:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:23] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:49:23] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:49:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:29] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_trang_thai_man_hinh -> state: Online, on: 1, temp: 0.0, room: 0.0, fan:
+[22:49:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:49:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:49:58] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:49:58] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:50:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:01] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:50:01] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:50:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:12] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:13] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:50:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:21] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:21] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:50:24] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:24] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:50:24] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:50:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:33] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:48] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:51] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:50:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:50:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:50:54] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:50:54] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:50:54] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:50:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:15] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:18] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:20] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:51:21] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:23] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:51:23] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:51:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:51:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:51:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:51:27] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:30] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:32] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:51:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:51:33] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:36] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:39] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:42] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:45] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:54] [LVGL-TASK] Alive! Heap: 125 KB
+[22:51:57] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:04] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:52:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:09] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:52:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:10] 
+[22:52:10] abort() was called at PC 0x420c997f on core 0
+[22:52:10] 
+[22:52:10] 
+[22:52:10] Backtrace: 0x4037810e:0x3fcc7b40 0x4037d15d:0x3fcc7b60 0x40383b65:0x3fcc7b80 0x420c997f:0x3fcc7c00 0x420c99c6:0x3fcc7c20 0x420c9007:0x3fcc7c40 0x420c8b7a:0x3fcc7c60 0x420c90dd:0x3fcc7c80 0x420c9646:0x3fcc7ca0 0x420c9679:0x3fcc7cd0 0x4201011f:0x3fcc7cf0 0x42042541:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:52:10] 
+[22:52:10] 
+[22:52:10] 
+[22:52:10] 
+[22:52:10] ELF file SHA256: 7cc6535e24e37b1e
+[22:52:10] 
+[22:52:10] Rebooting...
+[22:52:10] ESP-ROM:esp32s3-20210327
+[22:52:10] Build:Mar 27 2021
+[22:52:10] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:52:10] Saved PC:0x40377d44
+[22:52:10] SPIWP:0xee
+[22:52:10] mode:DIO, clock div:1
+[22:52:10] load:0x3fce3808,len:0x41c
+[22:52:10] load:0x403c9700,len:0x9a8
+[22:52:10] load:0x403cc700,len:0x28ac
+[22:52:10] entry 0x403c98b8
+[22:52:10] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:52:11] 
+[22:52:11] =======================================================
+[22:52:11]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:52:11] =======================================================
+[22:52:11] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:52:11] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:52:11] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:52:11] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:52:11] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:52:11] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:52:11] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:52:11] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:52:11] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:52:11] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:52:11] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:52:11] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:52:12] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:52:12] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:52:13] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:52:13] [LVGL-TASK] Alive! Heap: 127 KB
+[22:52:13] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:52:13] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:52:13] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:52:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:22] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:52:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:35] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:52:35] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:52:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:52:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:52:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:52:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:52:58] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:01] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:06] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:53:07] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:53:07] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:10] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:53:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:53:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.4, fan: auto
+[22:53:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:30] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:53:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:40] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:53:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[22:53:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[22:53:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:53:46] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:53:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:53:53] [WS] Connection Closed!
+[22:53:53] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:53:53] [WS] Connected to Central NAS Hub!
+[22:53:53] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:53:53] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:53:53] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:53:54] 
+[22:53:54] abort() was called at PC 0x420c997f on core 0
+[22:53:54] 
+[22:53:54] 
+[22:53:54] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[22:53:54] 
+[22:53:54] 
+[22:53:54] 
+[22:53:54] 
+[22:53:54] ELF file SHA256: 7cc6535e24e37b1e
+[22:53:54] 
+[22:53:54] Rebooting...
+[22:53:54] ESP-ROM:esp32s3-20210327
+[22:53:54] Build:Mar 27 2021
+[22:53:54] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:53:54] Saved PC:0x40377d44
+[22:53:54] SPIWP:0xee
+[22:53:54] mode:DIO, clock div:1
+[22:53:54] load:0x3fce3808,len:0x41c
+[22:53:54] load:0x403c9700,len:0x9a8
+[22:53:54] load:0x403cc700,len:0x28ac
+[22:53:54] entry 0x403c98b8
+[22:53:54] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:53:55] 
+[22:53:55] =======================================================
+[22:53:55]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:53:55] =======================================================
+[22:53:55] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:53:55] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:53:55] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:53:55] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:53:55] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:53:55] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:53:55] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:53:55] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:53:55] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:53:55] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:53:55] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:53:55] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:53:56] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:53:56] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 153 KB free
+[22:53:57] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:53:57] [LVGL-TASK] Alive! Heap: 127 KB
+[22:53:57] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:53:57] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:53:57] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:54:00] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:06] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:54:06] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:07] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:07] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:09] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:12] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:13] 
+[22:54:13] abort() was called at PC 0x420c997f on core 0
+[22:54:13] 
+[22:54:13] 
+[22:54:13] Backtrace: 0x4037810e:0x3fcc84b0 0x4037d15d:0x3fcc84d0 0x40383b65:0x3fcc84f0 0x420c997f:0x3fcc8570 0x420c99c6:0x3fcc8590 0x420c9007:0x3fcc85b0 0x420c8b7a:0x3fcc85d0 0x420c90dd:0x3fcc85f0 0x420c9646:0x3fcc8610 0x420c9679:0x3fcc8640 0x4204250f:0x3fcc8660 0x420431ae:0x3fcc86d0 0x4204324a:0x3fcc86f0 0x42008271:0x3fcc8760 0x4200c66c:0x3fcc87a0
+[22:54:13] 
+[22:54:13] 
+[22:54:13] 
+[22:54:13] 
+[22:54:13] ELF file SHA256: 7cc6535e24e37b1e
+[22:54:13] 
+[22:54:13] Rebooting...
+[22:54:13] ESP-ROM:esp32s3-20210327
+[22:54:13] Build:Mar 27 2021
+[22:54:13] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[22:54:13] Saved PC:0x40377d44
+[22:54:13] SPIWP:0xee
+[22:54:13] mode:DIO, clock div:1
+[22:54:13] load:0x3fce3808,len:0x41c
+[22:54:13] load:0x403c9700,len:0x9a8
+[22:54:13] load:0x403cc700,len:0x28ac
+[22:54:13] entry 0x403c98b8
+[22:54:14] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[22:54:14] 
+[22:54:14] =======================================================
+[22:54:14]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[22:54:14] =======================================================
+[22:54:14] [  1199][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[22:54:14] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[22:54:14] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[22:54:14] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[22:54:14] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[22:54:14] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[22:54:14] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[22:54:14] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:54:14] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[22:54:14] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[22:54:15] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[22:54:15] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[22:54:15] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[22:54:15] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[22:54:16] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[22:54:16] [LVGL-TASK] Alive! Heap: 128 KB
+[22:54:16] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[22:54:16] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[22:54:16] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[22:54:19] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:22] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:54:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:54:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:54:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:31] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:32] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:32] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:46] [HA-SYNC] sensor.speedtest_ping -> state: 36, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:46] [HA-SYNC] sensor.speedtest_download -> state: 85.72, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:46] [LVGL-TASK] Alive! Heap: 36 KB
+[22:54:46] [HA-SYNC] sensor.speedtest_upload -> state: 92.27, on: 1, temp: 0.0, room: 0.0, fan:
+[22:54:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:54:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:54:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:54:58] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:01] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:04] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:16] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:28] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:31] [LVGL-TASK] Alive! Heap: 103 KB
+[22:55:31] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:32] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:32] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:34] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:37] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:55:46] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:49] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:55:52] [LVGL-TASK] Alive! Heap: 125 KB
+[22:55:55] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:55:55] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:55:55] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:17] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:56:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:19] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:56:20] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:56:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:40] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:40] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:56:42] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:56:42] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:56:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:56:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:56:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[22:56:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:56:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:13] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:13] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:57:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:57:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:57:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:57:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:29] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:57:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:29] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:57:30] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:57:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:51] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:51] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[22:57:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[22:57:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:57:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:03] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:58:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:58:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:58:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:14] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:17] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:25] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:58:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:58:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:58:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:30] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:58:31] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:58:32] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:58:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:43] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:58:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:58:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:58:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:58:53] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:58:53] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:56] [LVGL-TASK] Alive! Heap: 125 KB
+[22:58:59] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:02] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:59:03] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:59:05] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:08] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:11] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:59:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:59:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:20] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:23] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:26] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:29] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:32] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:35] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:38] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:41] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:41] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:59:41] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:59:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[22:59:44] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:47] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[22:59:47] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:59:50] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[22:59:50] [LVGL-TASK] Alive! Heap: 125 KB
+[22:59:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:59:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:59:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[22:59:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:08] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:13] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:13] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:29] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:36] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:00:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:39] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:00:39] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:00:41] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:50] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:00:52] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:00:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:56] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:00:56] [LVGL-TASK] Alive! Heap: 125 KB
+[23:00:59] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:00] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:01:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:03] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:01:05] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:01:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:11] [HA-SYNC] sun.sun -> state: below_horizon, on: 1, temp: 0.0, room: 0.0, fan:
+[23:01:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:26] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:01:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:29] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:01:29] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:01:29] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:30] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:01:30] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:01:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:01:35] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:01:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:48] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:01:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:01] [HA-SYNC] light.moes_matter_switch_den_1_7 -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:02:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:06] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:02:06] [LVGL-TASK] Alive! Heap: 100 KB
+[23:02:06] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:02:09] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:02:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:09] [HA-SYNC] device_tracker.fold_5 -> state: home, on: 1, temp: 0.0, room: 0.0, fan:
+[23:02:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:27] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:02:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:02:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:02:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:02:45] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:02:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:02:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:02:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:02:48] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:51] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:02:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:54] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:02:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:02:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:12] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:03:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:03:16] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:03:16] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:03:16] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:33] [LVGL-TASK] Alive! Heap: 102 KB
+[23:03:36] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:03:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:36] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:03:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:40] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:03:42] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:03:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:48] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:03:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:03:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:03:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:03:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:04:27] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:04:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:04:35] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:04:35] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:04:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:38] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:04:39] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:04:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:04:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:00] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:05:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:01] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:05:01] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:05:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:05:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:05:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:05:06] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:05:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:05:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:05:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:05:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:05:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:05:45] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:05:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:05:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:05:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:48] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:05:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:15] [LVGL-TASK] Alive! Heap: 33 KB
+[23:06:16] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:16] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:16] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:16] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:20] [HA-SYNC] climate.151732606266034_climate -> state: off, on: 0, temp: 24.0, room: 31.7, fan: auto
+[23:06:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:45] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:06:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:48] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:06:48] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:06:48] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:06:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:06:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:06:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:06:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:06:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:08] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:07:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:11] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:07:11] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:07:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:25] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:07:25] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:07:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:07:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:07:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:07:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:07:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:32] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:07:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:35] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:07:35] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:07:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:07:58] [LVGL-TASK] Alive! Heap: 24 KB
+[23:07:58] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:07:58] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:08:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:07] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:22] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:34] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:08:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:08:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:08:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:45] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:08:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:08:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:09:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:16] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:09:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:19] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:09:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:09:22] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:09:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:09:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:28] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:44] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:09:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:09:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:46] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:09:46] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:09:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:55] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:09:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:09:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:06] [HA-SYNC] binary_sensor.lechange_motion_alarm -> state: on, on: 1, temp: 0.0, room: 0.0, fan:
+[23:10:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:07] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:10:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:10] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:10:10] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:10:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:10:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:10:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:10:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:22] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:10:26] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:10:28] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:35] [HA-SYNC] binary_sensor.lechange_motion_alarm -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:10:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:10:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:10:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:10:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:11:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:11:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:28] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:31] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:11:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:34] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:11:34] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:11:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:11:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:11:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:11:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:11:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:11:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:54] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:11:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:11:57] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:11:57] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:11:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:12:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:12:07] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:12:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:12:16] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:12:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:19] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:12:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:21] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:12:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:12:22] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:28] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:37] [HA-SYNC] sensor.fold_5_ty_battery_level -> state: 20, on: 1, temp: 0.0, room: 0.0, fan:
+[23:12:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:12:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:12:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:12:54] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:12:54] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:13:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:13:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:13:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:29] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:35] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:13:35] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:52] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:13:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.0, fan: auto
+[23:13:55] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:13:55] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:13:56] [LVGL-TASK] Alive! Heap: 125 KB
+[23:13:59] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:14:05] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:14:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:08] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:16] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:14:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:20] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:14:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:14:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:14:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:14:35] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.1, fan: auto
+[23:14:35] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:41] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:14:44] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:14:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:50] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:14:56] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:05] [LVGL-TASK] Alive! Heap: 11 KB
+[23:15:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:05] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:08] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:14] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:15:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:15] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:17] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:15:20] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:15:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:35] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:41] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:44] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:45] [HA-SYNC] sensor.phamngocty2000_gmail_com_used_storage -> state: 286.791183564812, on: 1, temp: 0.0, room: 0.0, fan:
+[23:15:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:46] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:47] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:15:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:50] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:56] [LVGL-TASK] Alive! Heap: 125 KB
+[23:15:59] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:01] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:16:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:05] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:16:05] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:16:05] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:08] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:17] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:20] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:16:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:25] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:16:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:29] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:16:29] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:39] [HA-SYNC] light.moes_matter_switch_den_1_6 -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:16:40] [HA-SYNC] light.moes_matter_switch_den_3_6 -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:16:40] [HA-SYNC] light.moes_matter_switch_den_4_6 -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:16:41] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:50] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.9, fan: auto
+[23:16:53] [LVGL-TASK] Alive! Heap: 13 KB
+[23:16:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 25.9, fan: auto
+[23:16:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:16:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:16:54] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:16:56] [LVGL-TASK] Alive! Heap: 125 KB
+[23:16:59] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:02] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:09] [HA-SYNC] device_tracker.fold_5 -> state: home, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:11] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:17] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:19] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:17:20] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:22] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:23] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.3, fan: auto
+[23:17:25] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.3, fan: auto
+[23:17:26] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:32] [HA-SYNC] sensor.phong_chieu_nala_panel_d6f4_phong_chieu_phim_trang_thai_man_hinh -> state: Online, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:32] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:17:34] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:17:35] [INTERCOM] Cuộc gọi đến từ ID 0x02 (Phòng chiếu) - Đổ chuông: 1
+[23:17:35] [LVGL-TASK] Alive! Heap: 118 KB
+[23:17:38] [INTERCOM] Kết thúc cuộc gọi.
+[23:17:38] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:39] [TOUCH-RAW] raw=(62, 23) -> mapped=(177, 296) [mode 0]
+[23:17:39] [LVGL-INDEV] PRESSED at (177, 296)
+[23:17:39] [LVGL-INDEV] RELEASED at (177, 296)
+[23:17:39] [UI-EVENT] VALUE_CHANGED target=0x3fca76b4
+[23:17:39] [UI-TAB] Chuyen sang Tab 2: Đàm Thoại
+[23:17:39] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:17:39] [UI-TAB] Chuyen sang Tab 2: Đàm Thoại
+[23:17:39] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:17:39] [UI-TAB] Chuyen sang Tab 2: Đàm Thoại
+[23:17:39] [UI-EVENT] CLICKED target=0x3fca7730
+[23:17:39] [UI-EVENT] CLICKED target=0x3fca7730
+[23:17:41] [TOUCH-RAW] raw=(19, 22) -> mapped=(220, 297) [mode 0]
+[23:17:41] [LVGL-INDEV] PRESSED at (220, 297)
+[23:17:41] [LVGL-INDEV] RELEASED at (220, 297)
+[23:17:41] [UI-EVENT] VALUE_CHANGED target=0x3fca76b4
+[23:17:41] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:17:41] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:17:41] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:17:41] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:17:41] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:17:41] [UI-EVENT] CLICKED target=0x3fca7730
+[23:17:41] [UI-EVENT] CLICKED target=0x3fca7730
+[23:17:41] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:42] [TOUCH-RAW] raw=(184, 200) -> mapped=(55, 119) [mode 0]
+[23:17:42] [LVGL-INDEV] PRESSED at (55, 119)
+[23:17:42] [LVGL-INDEV] PRESSED at (55, 119)
+[23:17:42] [LVGL-INDEV] RELEASED at (55, 119)
+[23:17:42] [UI-EVENT] CLICKED target=0x3fcac638
+[23:17:42] [DIAG] Bắt đầu test Loa 1kHz (ES3C28P Hardware)...
+[23:17:43] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:17:44] [DIAG] Test Loa thành công!
+[23:17:44] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:45] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:45] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:17:47] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:50] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:17:56] [WS] Nhan lenh OTA tu NAS Hub! URL: http://192.168.1.114:8765/api/ota/firmware/firmware_latest.bin, Size: 1435792, Ver: v3.0.0
+[23:17:56] [OTA] Bat dau tien trinh OTA Firmware tu: http://192.168.1.114:8765/api/ota/firmware/firmware_latest.bin (Kich thuoc du kien: 1435792 bytes)
+[23:17:56] [1419546][W][HWCDC.cpp:467] write(): write failed due to waiting USB Host - timeout
+[23:17:56] [OTA] Content-Length: 1415776 bytes
+[23:17:56] [LVGL-TASK] Alive! Heap: 105 KB
+[23:17:59] [LVGL-TASK] Alive! Heap: 105 KB
+[23:18:05] [LVGL-TASK] Alive! Heap: 104 KB
+[23:18:05] [LVGL-TASK] Alive! Heap: 101 KB
+[23:18:07] [OTA] Cập nhật thành công trọn vẹn 1415776 bytes! Khởi động lại...
+[23:18:08] [LVGL-TASK] Alive! Heap: 116 KB
+[23:18:09] [1432734][W][WiFiGeneric.cpp:1062] _eventCallback(): Reason: 8 - ASSOC_LEAVE
+[23:18:09] ESP-ROM:esp32s3-20210327
+[23:18:09] Build:Mar 27 2021
+[23:18:09] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[23:18:09] Saved PC:0x40377d44
+[23:18:09] SPIWP:0xee
+[23:18:09] mode:DIO, clock div:1
+[23:18:09] load:0x3fce3808,len:0x41c
+[23:18:09] load:0x403c9700,len:0x9a8
+[23:18:09] load:0x403cc700,len:0x28ac
+[23:18:09] entry 0x403c98b8
+[23:18:10] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[23:18:10] 
+[23:18:10] =======================================================
+[23:18:10]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[23:18:10] =======================================================
+[23:18:10] [  1318][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[23:18:10] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[23:18:10] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[23:18:10] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[23:18:10] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[23:18:10] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[23:18:10] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[23:18:10] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:18:10] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[23:18:10] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:18:11] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[23:18:11] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[23:18:11] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[23:18:12] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[23:18:12] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[23:18:12] [LVGL-TASK] Alive! Heap: 127 KB
+[23:18:12] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[23:18:12] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[23:18:12] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[23:18:14] [TOUCH-RAW] raw=(139, 141) -> mapped=(100, 178) [mode 0]
+[23:18:14] [LVGL-INDEV] PRESSED at (100, 178)
+[23:18:14] [LVGL-INDEV] RELEASED at (100, 178)
+[23:18:14] [UI-EVENT] CLICKED target=0x3fca9190
+[23:18:14] [UI-ACTION] Clicked Button 2 (Công tắc phòng ngủ ty đèn (2)) entity=light.cong_tat_phong_ngu_ty_den_2 is_on=0
+[23:18:14] [HA] Gui toggle entity: light.cong_tat_phong_ngu_ty_den_2 (domain=light)
+[23:18:14] [HA-SYNC] light.cong_tat_phong_ngu_ty_den_2 -> state: on, on: 1, temp: 0.0, room: 0.0, fan:
+[23:18:15] [HA-SYNC] light.cong_tat_phong_ngu_ty_den_2 -> state: on, on: 1, temp: 0.0, room: 0.0, fan:
+[23:18:15] [TOUCH-RAW] raw=(148, 145) -> mapped=(91, 174) [mode 0]
+[23:18:15] [LVGL-INDEV] PRESSED at (91, 174)
+[23:18:15] [LVGL-INDEV] RELEASED at (91, 174)
+[23:18:15] [UI-EVENT] CLICKED target=0x3fca9190
+[23:18:15] [UI-ACTION] Clicked Button 2 (Công tắc phòng ngủ ty đèn (2)) entity=light.cong_tat_phong_ngu_ty_den_2 is_on=1
+[23:18:15] [HA] Gui toggle entity: light.cong_tat_phong_ngu_ty_den_2 (domain=light)
+[23:18:15] [HA-SYNC] light.cong_tat_phong_ngu_ty_den_2 -> state: off, on: 0, temp: 0.0, room: 0.0, fan:
+[23:18:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:15] [TOUCH-RAW] raw=(43, 4) -> mapped=(196, 315) [mode 0]
+[23:18:15] [LVGL-INDEV] PRESSED at (196, 315)
+[23:18:15] [LVGL-INDEV] RELEASED at (196, 315)
+[23:18:15] [UI-EVENT] VALUE_CHANGED target=0x3fca76b4
+[23:18:15] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:18:15] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:18:15] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:18:15] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:18:15] [UI-TAB] Chuyen sang Tab 3: Cài Đặt
+[23:18:15] [UI-EVENT] CLICKED target=0x3fca7730
+[23:18:15] [UI-EVENT] CLICKED target=0x3fca7730
+[23:18:17] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_trang_thai_man_hinh -> state: Online, on: 1, temp: 0.0, room: 0.0, fan:
+[23:18:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:33] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:18:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.6, fan: auto
+[23:18:43] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.6, fan: auto
+[23:18:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:18:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:18:43] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:18:45] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:18:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:18:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.6, fan: auto
+[23:19:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:19:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:19:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:19:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:17] [TOUCH-RAW] raw=(192, 22) -> mapped=(47, 297) [mode 0]
+[23:19:17] [LVGL-INDEV] PRESSED at (47, 297)
+[23:19:17] [LVGL-INDEV] PRESSED at (47, 297)
+[23:19:17] [LVGL-INDEV] RELEASED at (47, 297)
+[23:19:17] [UI-EVENT] VALUE_CHANGED target=0x3fca76b4
+[23:19:17] [UI-TAB] Chuyen sang Tab 0: Thiết Bị
+[23:19:17] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:19:17] [UI-TAB] Chuyen sang Tab 0: Thiết Bị
+[23:19:17] [UI-EVENT] VALUE_CHANGED target=0x3fca7730
+[23:19:17] [UI-TAB] Chuyen sang Tab 0: Thiết Bị
+[23:19:17] [UI-EVENT] CLICKED target=0x3fca7730
+[23:19:17] [UI-EVENT] CLICKED target=0x3fca7730
+[23:19:18] [TOUCH-RAW] raw=(183, 269) -> mapped=(56, 50) [mode 0]
+[23:19:18] [LVGL-INDEV] PRESSED at (56, 50)
+[23:19:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:18] [LVGL-INDEV] PRESSED at (56, 50)
+[23:19:18] [TOUCH-RAW] raw=(183, 269) -> mapped=(56, 50) [mode 0]
+[23:19:18] [LVGL-INDEV] RELEASED at (56, 50)
+[23:19:18] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:18] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:19] [TOUCH-RAW] raw=(176, 270) -> mapped=(63, 49) [mode 0]
+[23:19:19] [LVGL-INDEV] PRESSED at (63, 49)
+[23:19:19] [TOUCH-RAW] raw=(176, 270) -> mapped=(63, 49) [mode 0]
+[23:19:19] [LVGL-INDEV] PRESSED at (63, 49)
+[23:19:19] [LVGL-INDEV] RELEASED at (63, 49)
+[23:19:19] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:19] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:19] [TOUCH-RAW] raw=(177, 263) -> mapped=(62, 56) [mode 0]
+[23:19:19] [LVGL-INDEV] PRESSED at (62, 56)
+[23:19:19] [LVGL-INDEV] RELEASED at (62, 56)
+[23:19:19] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:19] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:20] [TOUCH-RAW] raw=(129, 261) -> mapped=(110, 58) [mode 0]
+[23:19:20] [LVGL-INDEV] PRESSED at (110, 58)
+[23:19:20] [LVGL-INDEV] RELEASED at (110, 58)
+[23:19:20] [UI-EVENT] CLICKED target=0x3fca7e94
+[23:19:21] [TOUCH-RAW] raw=(187, 263) -> mapped=(52, 56) [mode 0]
+[23:19:21] [LVGL-INDEV] PRESSED at (52, 56)
+[23:19:21] [TOUCH-RAW] raw=(187, 263) -> mapped=(52, 56) [mode 0]
+[23:19:21] [LVGL-INDEV] PRESSED at (52, 56)
+[23:19:21] [LVGL-INDEV] RELEASED at (52, 56)
+[23:19:21] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:21] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:22] [TOUCH-RAW] raw=(60, 257) -> mapped=(179, 62) [mode 0]
+[23:19:22] [LVGL-INDEV] PRESSED at (179, 62)
+[23:19:22] [LVGL-INDEV] RELEASED at (179, 62)
+[23:19:22] [UI-EVENT] CLICKED target=0x3fca8068
+[23:19:23] [TOUCH-RAW] raw=(120, 267) -> mapped=(119, 52) [mode 0]
+[23:19:23] [LVGL-INDEV] PRESSED at (119, 52)
+[23:19:23] [LVGL-INDEV] RELEASED at (119, 52)
+[23:19:23] [UI-EVENT] CLICKED target=0x3fca7e94
+[23:19:23] [TOUCH-RAW] raw=(184, 265) -> mapped=(55, 54) [mode 0]
+[23:19:24] [LVGL-INDEV] PRESSED at (55, 54)
+[23:19:24] [TOUCH-RAW] raw=(184, 265) -> mapped=(55, 54) [mode 0]
+[23:19:24] [LVGL-INDEV] PRESSED at (55, 54)
+[23:19:24] [LVGL-INDEV] RELEASED at (55, 54)
+[23:19:24] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:24] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:24] [TOUCH-RAW] raw=(57, 262) -> mapped=(182, 57) [mode 0]
+[23:19:24] [LVGL-INDEV] PRESSED at (182, 57)
+[23:19:24] [LVGL-INDEV] RELEASED at (182, 57)
+[23:19:24] [UI-EVENT] CLICKED target=0x3fca8068
+[23:19:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:25] [TOUCH-RAW] raw=(172, 265) -> mapped=(67, 54) [mode 0]
+[23:19:25] [LVGL-INDEV] PRESSED at (67, 54)
+[23:19:25] [LVGL-INDEV] RELEASED at (67, 54)
+[23:19:25] [UI-EVENT] CLICKED target=0x3fca7cb0
+[23:19:25] [UI-ACTION] Clicked TOÀN NHÀ chip!
+[23:19:27] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:19:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:30] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:19:30] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:19:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:45] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:19:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.5, fan: auto
+[23:19:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.5, fan: auto
+[23:19:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.3, fan: auto
+[23:19:54] 
+[23:19:54] abort() was called at PC 0x420c997f on core 0
+[23:19:54] 
+[23:19:54] 
+[23:19:54] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[23:19:54] 
+[23:19:54] 
+[23:19:54] 
+[23:19:54] 
+[23:19:54] ELF file SHA256: 7cc6535e24e37b1e
+[23:19:54] 
+[23:19:54] Rebooting...
+[23:19:54] ESP-ROM:esp32s3-20210327
+[23:19:54] Build:Mar 27 2021
+[23:19:54] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[23:19:54] Saved PC:0x40377d44
+[23:19:54] SPIWP:0xee
+[23:19:54] mode:DIO, clock div:1
+[23:19:54] load:0x3fce3808,len:0x41c
+[23:19:54] load:0x403c9700,len:0x9a8
+[23:19:54] load:0x403cc700,len:0x28ac
+[23:19:54] entry 0x403c98b8
+[23:19:54] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[23:19:55] 
+[23:19:55] =======================================================
+[23:19:55]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[23:19:55] =======================================================
+[23:19:55] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[23:19:55] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[23:19:55] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[23:19:55] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[23:19:55] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[23:19:55] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[23:19:55] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[23:19:55] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:19:55] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[23:19:55] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:19:55] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[23:19:55] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[23:19:56] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[23:19:56] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[23:19:57] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[23:19:57] [LVGL-TASK] Alive! Heap: 127 KB
+[23:19:57] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[23:19:57] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[23:19:57] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[23:20:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:06] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.4, fan: auto
+[23:20:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.4, fan: auto
+[23:20:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:33] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:20:36] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:20:36] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:42] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:51] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:54] [LVGL-TASK] Alive! Heap: 125 KB
+[23:20:57] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:00] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.2, fan: auto
+[23:21:03] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:03] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.2, fan: auto
+[23:21:05] 
+[23:21:05] abort() was called at PC 0x420c997f on core 0
+[23:21:05] 
+[23:21:05] 
+[23:21:05] Backtrace: 0x4037810e:0x3fcc7b40 0x4037d15d:0x3fcc7b60 0x40383b65:0x3fcc7b80 0x420c997f:0x3fcc7c00 0x420c99c6:0x3fcc7c20 0x420c9007:0x3fcc7c40 0x420c8b7a:0x3fcc7c60 0x420c90dd:0x3fcc7c80 0x420c9646:0x3fcc7ca0 0x420c9679:0x3fcc7cd0 0x4201011f:0x3fcc7cf0 0x42042541:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[23:21:05] 
+[23:21:05] 
+[23:21:05] 
+[23:21:05] 
+[23:21:05] ELF file SHA256: 7cc6535e24e37b1e
+[23:21:05] 
+[23:21:05] Rebooting...
+[23:21:05] ESP-ROM:esp32s3-20210327
+[23:21:05] Build:Mar 27 2021
+[23:21:05] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[23:21:05] Saved PC:0x40377d44
+[23:21:05] SPIWP:0xee
+[23:21:05] mode:DIO, clock div:1
+[23:21:05] load:0x3fce3808,len:0x41c
+[23:21:05] load:0x403c9700,len:0x9a8
+[23:21:05] load:0x403cc700,len:0x28ac
+[23:21:05] entry 0x403c98b8
+[23:21:05] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[23:21:06] 
+[23:21:06] =======================================================
+[23:21:06]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[23:21:06] =======================================================
+[23:21:06] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[23:21:06] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[23:21:06] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[23:21:06] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[23:21:06] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[23:21:06] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[23:21:06] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[23:21:06] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:21:06] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[23:21:06] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:21:06] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[23:21:06] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[23:21:09] [WIFI] Ket noi thanh cong! IP: 192.168.1.31
+[23:21:09] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[23:21:09] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[23:21:09] [WS] Connected to Central NAS Hub!
+[23:21:09] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[23:21:09] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:09] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[23:21:09] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[23:21:12] [HA-SYNC] sun.sun -> state: below_horizon, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:12] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:15] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:17] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_trang_thai_man_hinh -> state: Online, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:18] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_dia_chi_ip -> state: 192.168.1.31, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:18] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:21] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:27] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:28] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:21:30] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:31] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:31] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:39] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:43] 
+[23:21:43] abort() was called at PC 0x420c997f on core 0
+[23:21:43] 
+[23:21:43] 
+[23:21:43] Backtrace: 0x4037810e:0x3fcc7b90 0x4037d15d:0x3fcc7bb0 0x40383b65:0x3fcc7bd0 0x420c997f:0x3fcc7c50 0x420c99c6:0x3fcc7c70 0x420c9007:0x3fcc7c90 0x420c8b7a:0x3fcc7cb0 0x420c90dd:0x3fcc7cd0 0x420c9646:0x3fcc7cf0 0x420c9679:0x3fcc7d20 0x4204250f:0x3fcc7d40 0x420431ae:0x3fcc7db0 0x4204324a:0x3fcc7dd0 0x42008271:0x3fcc7e40 0x4200c66c:0x3fcc7e80
+[23:21:43] 
+[23:21:43] 
+[23:21:43] 
+[23:21:43] 
+[23:21:43] ELF file SHA256: 7cc6535e24e37b1e
+[23:21:43] 
+[23:21:43] Rebooting...
+[23:21:43] ESP-ROM:esp32s3-20210327
+[23:21:43] Build:Mar 27 2021
+[23:21:43] rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+[23:21:43] Saved PC:0x40377d44
+[23:21:43] SPIWP:0xee
+[23:21:43] mode:DIO, clock div:1
+[23:21:43] load:0x3fce3808,len:0x41c
+[23:21:43] load:0x403c9700,len:0x9a8
+[23:21:43] load:0x403cc700,len:0x28ac
+[23:21:43] entry 0x403c98b8
+[23:21:43] [SYSTEM] OTA Partition Validate: 0 (ESP_OK)
+[23:21:44] 
+[23:21:44] =======================================================
+[23:21:44]   NALA SMART HOME - LVGL 8.3.11 & AI VOICE PANEL
+[23:21:44] =======================================================
+[23:21:44] [  1198][I][esp32-hal-i2c.c:75] i2cInit(): Initialising I2C Master: sda=16 scl=15 freq=100000
+[23:21:44] [I2C] --- Bắt đầu quét bus I2C (SDA=16, SCL=15) ---
+[23:21:44] [I2C] -> Tìm thấy thiết bị tại 0x18 (ES8311 Audio Codec)
+[23:21:44] [I2C] -> Tìm thấy thiết bị tại 0x38 (FT6336U/FT6236 Touch)
+[23:21:44] [I2C] --- Quét xong: 2 thiết bị. Touch address: 0x38 ---
+[23:21:44] [TOUCH] FT6336 da khoi tao thanh cong (DEV_MODE=Normal, G_MODE=Polling)
+[23:21:44] [AUDIO] Initializing ES8311 Codec on ES3C28P...
+[23:21:44] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:21:44] [AUDIO] ES8311 Audio Codec ready & I2S MCLK (GPIO 4) Active!
+[23:21:44] [AUDIO] ES8311 Mic Gain Cap 5: PGA=0x1A, Scale=0x05 (+30dB), Reg0x17=0xDF (+16dB)
+[23:21:44] [SYSTEM] MAC: 44:1B:F6:CF:88:1C | Ma ghep noi: 881C
+[23:21:44] [SYSTEM] Da co WiFi: 152 Phan Van Mang -> Dang ket noi...
+[23:21:45] [WIFI] Ket noi thanh cong! IP: 192.168.1.106
+[23:21:46] [SYSTEM] Firmware v3.1.5 | PSRAM: 0.00 MB free | Heap: 155 KB free
+[23:21:46] [WS] Reconnecting to ws://192.168.1.114:8765/ws...
+[23:21:46] [LVGL-TASK] Alive! Heap: 127 KB
+[23:21:46] [WS] Da gui goi tin dang ky thiet bi len NAS Hub!
+[23:21:46] [INTERCOM] Assigned My Intercom ID: 0x01 (1)
+[23:21:46] [SYNC] Da dong bo ten phong moi: Phòng ngủ ty - tang2
+[23:21:47] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_trang_thai_man_hinh -> state: Online, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:47] [HA-SYNC] sensor.phong_ty_nala_panel_881c_phong_ty_dia_chi_ip -> state: 192.168.1.106, on: 1, temp: 0.0, room: 0.0, fan:
+[23:21:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:21:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:14] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:14] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:14] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:22:15] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:22:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:22] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:25] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:28] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:33] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:33] [HA-SYNC] media_player.fpt_atv_play_box -> state: unavailable, on: 0, temp: 0.0, room: 0.0, fan:
+[23:22:34] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:36] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:22:36] [HA-SYNC] media_player.fpt_atv_play_box -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:22:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:43] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:46] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:49] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:22:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:52] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:52] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:52] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:53] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:22:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:22:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:13] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:16] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:17] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:23:19] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:23:19] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:24] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:23:24] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:23:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:31] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:33] [HA-SYNC] camera.lechange_profile000 -> state: idle, on: 1, temp: 0.0, room: 0.0, fan:
+[23:23:35] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:35] [HA-SYNC] climate.151732606266034_climate -> state: off, on: 0, temp: 24.0, room: 31.7, fan: auto
+[23:23:37] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:40] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:49] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:53] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:23:53] [HA-SYNC] climate.151732606273611_climate -> state: cool, on: 1, temp: 25.0, room: 25.2, fan: auto
+[23:23:55] [LVGL-TASK] Alive! Heap: 125 KB
+[23:23:58] [LVGL-TASK] Alive! Heap: 125 KB
+[23:24:01] [LVGL-TASK] Alive! Heap: 125 KB
+[23:24:02] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:24:02] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:24:04] [HA-SYNC] climate.150633094640317_climate -> state: cool, on: 1, temp: 25.0, room: 26.0, fan: auto
+[23:24:04] [LVGL-TASK] Alive! Heap: 125 KB
+[23:24:06] [HA-SYNC] climate.151732606266034_climate -> state: off, on: 0, temp: 24.0, room: 31.6, fan: auto
+[23:24:07] [LVGL-TASK] Alive! Heap: 125 KB
+[23:24:10] [LVGL-TASK] Alive! Heap: 125 KB
+[23:24:13] [LVGL-TASK] Alive! Heap: 125 KB

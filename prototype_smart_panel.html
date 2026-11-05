@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NALA SMART HOME - Phác Thảo Giao Diện Màn Hình Gắn Tường 2.8" (v2)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #060911;
+            --panel-bezel: #161d2b;
+            --lcd-bg: #080c14;
+            --tab-bg: #0d1527;
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #ef4444;
+            --accent-blue: #3b82f6;
+            --card-off: #131c2e;
+            --card-on: #042f2e;
+            --border-card: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            background-image:
+                radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 12px 60px 12px;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1260px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(14px);
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1260px;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        @media (max-width: 950px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                justify-items: center;
+            }
+        }
+
+        /* 1. MOCKUP MÀN HÌNH ESP32-S3 VỎ GẮN TƯỜNG (240x320 Ratio) */
+        .panel-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: sticky;
+            top: 20px;
+        }
+
+        .panel-bezel {
+            width: 310px;
+            height: 440px;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 28px;
+            padding: 20px 16px;
+            box-shadow: 
+                0 30px 60px -15px rgba(0, 0, 0, 0.9),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2),
+                0 0 0 2px #090d16;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .panel-screws {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #334155;
+            border-radius: 50%;
+            border: 1px solid #475569;
+        }
+        .sc-tl { top: 8px; left: 8px; }
+        .sc-tr { top: 8px; right: 8px; }
+        .sc-bl { bottom: 8px; left: 8px; }
+        .sc-br { bottom: 8px; right: 8px; }
+
+        .led-indicator {
+            width: 7px;
+            height: 7px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            margin-bottom: 8px;
+            align-self: flex-end;
+            margin-right: 6px;
+        }
+
+        /* LCD Screen Active Area: 240x320 scaled to 276x368 */
+        .lcd-screen {
+            width: 276px;
+            height: 368px;
+            background: var(--lcd-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.95);
+            border: 1px solid #111827;
+        }
+
+        /* Top Header (36px) */
+        .screen-header {
+            height: 38px;
+            background: #0b1120;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .header-status {
+            font-size: 9px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-live {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        /* Screen Body (Scrollable Container) */
+        .screen-body {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+        .screen-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .screen-body::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        /* Tab Content Pages */
+        .tab-page {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+        }
+        .tab-page.active {
+            display: flex;
+        }
+
+        /* Grid Thiết Bị (Hỗ trợ vô hạn nút cuộn mượt) */
+        .device-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding-bottom: 8px;
+        }
+
+        .device-card {
+            background: var(--card-off);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 56px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            position: relative;
+        }
+        .device-card:active {
+            transform: scale(0.96);
+        }
+        .device-card.on {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.18));
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-icon {
+            font-size: 15px;
+        }
+        .card-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #475569;
+        }
+        .device-card.on .card-dot {
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        .card-name {
+            font-size: 10px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-top: 4px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .device-card.on .card-name {
+            color: #f8fafc;
+        }
+        .card-sub {
+            font-size: 8px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .device-card.on .card-sub {
+            color: #34d399;
+            font-weight: 600;
+        }
+
+        /* Banner Toàn Nhà Quick Info */
+        .room-summary-bar {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 6px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9.5px;
+            margin-bottom: 2px;
+        }
+        .btn-quick-off {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-size: 8.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* TAB 2: TOÀN NHÀ (DANH SÁCH TỪNG PHÒNG) */
+        .house-overview-banner {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(16, 185, 129, 0.2));
+            border: 1px solid #38bdf8;
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .house-stats-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+        .house-stats-sub {
+            font-size: 8.5px;
+            color: #94a3b8;
+        }
+        .btn-master-off-all {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .room-card-row {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 9px;
+            padding: 8px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .room-card-row.has-active {
+            border-color: rgba(56, 189, 248, 0.6);
+            background: rgba(15, 23, 42, 0.95);
+        }
+        .room-row-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .room-row-name {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .room-row-badge {
+            font-size: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-on {
+            color: #38bdf8;
+        }
+        .badge-off {
+            color: #64748b;
+        }
+        .btn-room-toggle-all {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 8.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-room-toggle-all:hover {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        /* TAB 3: NALA AI CHUYÊN BIỆT */
+        .ai-pulse-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+            gap: 8px;
+        }
+        .ai-orb {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #38bdf8 10%, #0284c7 60%, transparent 80%);
+            box-shadow: 0 0 25px #0284c7;
+            animation: pulse-ring 2.5s infinite ease-in-out;
+        }
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 35px #38bdf8; }
+        }
+        .ai-text-response {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 9.5px;
+            color: #cbd5e1;
+            line-height: 1.4;
+            max-height: 90px;
+            overflow-y: auto;
+        }
+        .btn-ai-ptt {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            margin-top: auto;
+        }
+        .btn-ai-ptt:active {
+            background: #16a34a;
+            transform: scale(0.98);
+        }
+
+        /* TAB 4: ĐÀM THOẠI & CÀI ĐẶT */
+        .setting-row {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+        .setting-slider {
+            width: 100%;
+            height: 5px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        /* 3. BOTTOM TAB BAR (Cao 42px) */
+        .screen-tabbar {
+            height: 44px;
+            background: var(--tab-bg);
+            border-top: 1px solid #1e293b;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            font-size: 8px;
+            font-weight: 700;
+            transition: all 0.15s ease;
+        }
+        .tab-btn .tab-icon {
+            font-size: 13px;
+        }
+        .tab-btn.active {
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+            border-top: 2px solid #38bdf8;
+        }
+
+        /* 2. CỘT PHÂN TÍCH & DUYỆT PHƯƠNG ÁN */
+        .analysis-column {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-opt {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .card-opt.selected {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+
+        .opt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .opt-name {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        .opt-badge {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .badge-rec {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .opt-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 12.5px;
+            color: #cbd5e1;
+        }
+        .opt-list li {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .btn-live-test {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 20px;">⚡</div>
+            <div>
+                <div style="font-size: 15px; font-weight: 800; color: #f8fafc;">NALA SMART HOME - KIẾN TRÚC GIAO DIỆN PANEL 2.8" (v2)</div>
+                <div style="font-size: 11.5px; color: #94a3b8;">Phác thảo tương tác trực tiếp: Tách Nala AI & Quản lý đèn toàn nhà</div>
+            </div>
+        </div>
+        <div class="brand-badge">PROTOTYPE TRỰC QUAN</div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- CỘT 1: MÔ PHỎNG MÀN HÌNH ESP32-S3 VỎ GẮN TƯỜNG -->
+        <div class="panel-wrapper">
+            <div class="panel-bezel">
+                <div class="panel-screws sc-tl"></div>
+                <div class="panel-screws sc-tr"></div>
+                <div class="panel-screws sc-bl"></div>
+                <div class="panel-screws sc-br"></div>
+
+                <div class="led-indicator"></div>
+
+                <!-- MÀN HÌNH LCD 240x320 NỘI BỘ -->
+                <div class="lcd-screen" id="lcdScreen">
+                    
+                    <!-- Header -->
+                    <div class="screen-header">
+                        <div class="header-title" id="screenTitle">
+                            <span>🏠</span> <span id="titleText">Phòng Ngủ Ty</span>
+                        </div>
+                        <div class="header-status">
+                            <span class="badge-live"></span>
+                            <span>WiFi 106</span>
+                        </div>
+                    </div>
+
+                    <!-- Screen Body -->
+                    <div class="screen-body">
+
+                        <!-- TAB 1: THIẾT BỊ PHÒNG NÀY (Hỗ trợ 5+ nút, cuộn mượt) -->
+                        <div class="tab-page active" id="pageRoom">
+                            <div class="room-summary-bar">
+                                <span style="color: #94a3b8;">Đang bật: <b style="color: #38bdf8;" id="roomActiveCount">2</b>/5 thiết bị</span>
+                                <button class="btn-quick-off" onclick="turnOffRoom()">TẮT HẾT</button>
+                            </div>
+
+                            <div class="device-grid">
+                                <!-- Nút 1: Máy lạnh -->
+                                <div class="device-card on" id="dev_climate" onclick="toggleDevice('dev_climate', 'climate')">
+                                    <div class="card-top">
+                                        <span class="card-icon">❄️</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Máy lạnh</div>
+                                    <div class="card-sub" id="climate_sub">Cool 25°C</div>
+                                </div>
+
+                                <!-- Nút 2: Đèn trần -->
+                                <div class="device-card on" id="dev_light1" onclick="toggleDevice('dev_light1', 'light')">
+                                    <div class="card-top">
+                                        <span class="card-icon">💡</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Đèn trần</div>
+                                    <div class="card-sub">Đang bật</div>
+                                </div>
+
+                                <!-- Nút 3: Đèn ngủ (Nút thứ 3) -->
+                                <div class="device-card" id="dev_light2" onclick="toggleDevice('dev_light2', 'light')">
+                                    <div class="card-top">
+                                        <span class="card-icon">💡</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Đèn ngủ</div>
+                                    <div class="card-sub">Đã tắt</div>
+                                </div>
+
+                                <!-- Nút 4: Đèn hắt trần (Nút thứ 4) -->
+                                <div class="device-card" id="dev_light3" onclick="toggleDevice('dev_light3', 'light')">
+                                    <div class="card-top">
+                                        <span class="card-icon">💡</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Đèn hắt</div>
+                                    <div class="card-sub">Đã tắt</div>
+                                </div>
+
+                                <!-- Nút 5: Đèn ban công (NÚT THỨ 5 - Ở GIAO DIỆN CŨ BỊ MẤT CHỖ!) -->
+                                <div class="device-card" id="dev_light4" onclick="toggleDevice('dev_light4', 'light')">
+                                    <div class="card-top">
+                                        <span class="card-icon">💡</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Đèn ban công</div>
+                                    <div class="card-sub">Đã tắt</div>
+                                </div>
+
+                                <!-- Nút 6: Quạt phòng (Thêm thoải mái) -->
+                                <div class="device-card" id="dev_fan" onclick="toggleDevice('dev_fan', 'fan')">
+                                    <div class="card-top">
+                                        <span class="card-icon">🌀</span>
+                                        <span class="card-dot"></span>
+                                    </div>
+                                    <div class="card-name">Quạt treo</div>
+                                    <div class="card-sub">Đã tắt</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: TOÀN NHÀ (GIÁM SÁT TOÀN BỘ CÁC PHÒNG) -->
+                        <div class="tab-page" id="pageHouse">
+                            <div class="house-overview-banner">
+                                <div>
+                                    <div class="house-stats-title">Toàn Bộ Căn Nhà</div>
+                                    <div class="house-stats-sub"><b style="color: #38bdf8;" id="totalHouseActive">3</b> Đèn & Máy lạnh đang mở</div>
+                                </div>
+                                <button class="btn-master-off-all" onclick="masterOffAll()">TẮT TẤT CẢ</button>
+                            </div>
+
+                            <!-- Phòng 1: Phòng Ngủ Ty -->
+                            <div class="room-card-row has-active" onclick="selectRoomFromHouse('Phòng Ngủ Ty', 0)">
+                                <div class="room-row-info">
+                                    <div class="room-row-name">Phòng Ngủ Ty (Tầng 2)</div>
+                                    <div class="room-row-badge badge-on" id="badge_ty">🟢 2 thiết bị đang bật</div>
+                                </div>
+                                <button class="btn-room-toggle-all" onclick="event.stopPropagation(); toggleRoomAll('ty')">Tắt phòng</button>
+                            </div>
+
+                            <!-- Phòng 2: Phòng Chiếu -->
+                            <div class="room-card-row has-active" onclick="selectRoomFromHouse('Phòng Chiếu', 1)">
+                                <div class="room-row-info">
+                                    <div class="room-row-name">Phòng Chiếu (Tầng 1)</div>
+                                    <div class="room-row-badge badge-on" id="badge_chieu">🟢 1 đèn đang bật</div>
+                                </div>
+                                <button class="btn-room-toggle-all" onclick="event.stopPropagation(); toggleRoomAll('chieu')">Tắt phòng</button>
+                            </div>
+
+                            <!-- Phòng 3: Phòng Khách -->
+                            <div class="room-card-row" onclick="selectRoomFromHouse('Phòng Khách', 2)">
+                                <div class="room-row-info">
+                                    <div class="room-row-name">Phòng Khách</div>
+                                    <div class="room-row-badge badge-off" id="badge_khach">⚪ Tất cả đã tắt</div>
+                                </div>
+                                <button class="btn-room-toggle-all" onclick="event.stopPropagation(); toggleRoomAll('khach')">Bật đèn</button>
+                            </div>
+
+                            <!-- Phòng 4: Nhà Bếp -->
+                            <div class="room-card-row" onclick="selectRoomFromHouse('Nhà Bếp', 3)">
+                                <div class="room-row-info">
+                                    <div class="room-row-name">Khu Vực Bếp</div>
+                                    <div class="room-row-badge badge-off" id="badge_bep">⚪ Tất cả đã tắt</div>
+                                </div>
+                                <button class="btn-room-toggle-all" onclick="event.stopPropagation(); toggleRoomAll('bep')">Bật đèn</button>
+                            </div>
+
+                            <!-- Phòng 5: Sân Trước -->
+                            <div class="room-card-row" onclick="selectRoomFromHouse('Sân Trước', 4)">
+                                <div class="room-row-info">
+                                    <div class="room-row-name">Sân Trước / Cổng</div>
+                                    <div class="room-row-badge badge-off" id="badge_san">⚪ Tất cả đã tắt</div>
+                                </div>
+                                <button class="btn-room-toggle-all" onclick="event.stopPropagation(); toggleRoomAll('san')">Bật đèn</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: NALA AI CHUYÊN BIỆT (KHÔNG BỊ CHÈN ÉP) -->
+                        <div class="tab-page" id="pageAi">
+                            <div class="ai-pulse-box">
+                                <div class="ai-orb" id="aiOrb"></div>
+                                <div style="font-size: 11px; font-weight: 700; color: #38bdf8;" id="aiStatus">Nala AI: Sẵn Sàng</div>
+                            </div>
+
+                            <div class="ai-text-response" id="aiResponseText">
+                                "Xin chào anh Ty! Em là Nala. Anh có thể nhấn giữ nút bên dưới để ra lệnh bật/tắt thiết bị, hỏi thời tiết hoặc điều khiển toàn nhà."
+                            </div>
+
+                            <button class="btn-ai-ptt" onmousedown="startPtt()" onmouseup="stopPtt()" ontouchstart="startPtt()" ontouchend="stopPtt()">
+                                <span>🎙️</span> <span id="pttText">GIỮ ĐỂ NÓI VỚI NALA</span>
+                            </button>
+                        </div>
+
+                        <!-- TAB 4: ĐÀM THOẠI & CÀI ĐẶT -->
+                        <div class="tab-page" id="pageSettings">
+                            <!-- Đàm thoại nhanh -->
+                            <div style="font-size: 10px; font-weight: 800; color: #38bdf8; margin-top: 2px;">INTERCOM NỘI BỘ</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <button class="btn-room-toggle-all" style="background:#0284c7; color:white; border:none; padding:8px 4px; font-size:9.5px;">📢 GỌI TẤT CẢ</button>
+                                <button class="btn-room-toggle-all" style="background:#1e293b; color:#cbd5e1; padding:8px 4px; font-size:9.5px;">📞 Phòng Chiếu</button>
+                            </div>
+
+                            <!-- Cài đặt phần cứng -->
+                            <div style="font-size: 10px; font-weight: 800; color: #38bdf8; margin-top: 6px;">CÀI ĐẶT PANEL</div>
+                            <div class="setting-row">
+                                <div class="setting-label"><span>Âm Lượng Loa:</span><b id="lblVol">85%</b></div>
+                                <input type="range" class="setting-slider" min="0" max="100" value="85" oninput="document.getElementById('lblVol').innerText = this.value + '%'">
+                            </div>
+
+                            <div class="setting-row">
+                                <div class="setting-label"><span>Độ Sáng Màn Hình:</span><b id="lblBright">90%</b></div>
+                                <input type="range" class="setting-slider" min="10" max="100" value="90" oninput="document.getElementById('lblBright').innerText = this.value + '%'">
+                            </div>
+
+                            <button class="btn-room-toggle-all" style="margin-top:4px; padding:6px; background:#1e293b; color:#38bdf8; border:1px solid #38bdf8;">🔄 KIỂM TRA CẬP NHẬT OTA</button>
+                        </div>
+
+                    </div>
+
+                    <!-- Bottom Tab Bar (4 Tabs cân đối tuyệt đối) -->
+                    <div class="screen-tabbar">
+                        <button class="tab-btn active" id="tabBtn0" onclick="switchTab(0)">
+                            <span class="tab-icon">🏠</span>
+                            <span>Thiết Bị</span>
+                        </button>
+                        <button class="tab-btn" id="tabBtn1" onclick="switchTab(1)">
+                            <span class="tab-icon">🌐</span>
+                            <span>Toàn Nhà</span>
+                        </button>
+                        <button class="tab-btn" id="tabBtn2" onclick="switchTab(2)">
+                            <span class="tab-icon">✨</span>
+                            <span>Nala AI</span>
+                        </button>
+                        <button class="tab-btn" id="tabBtn3" onclick="switchTab(3)">
+                            <span class="tab-icon">⚙️</span>
+                            <span>Cài Đặt</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 10px; text-align: center;">
+                Tỉ lệ chuẩn 240x320 ESP32-S3 LCDWiki ES3C28P<br>
+                <b>(Anh có thể bấm trực tiếp vào các nút & tab trên màn hình)</b>
+            </div>
+        </div>
+
+        <!-- CỘT 2: GIẢI PHÁP & SO SÁNH 2 PHƯƠNG ÁN DUYỆT -->
+        <div class="analysis-column">
+            
+            <div class="section-title">
+                <span>📋</span> <span>Phân Tích & Giải Pháp Đột Phá Cho Ý Kiến Của Anh</span>
+            </div>
+
+            <div style="font-size: 13.5px; color: #cbd5e1; line-height: 1.6;">
+                Anh nhận định <b>hoàn toàn chính xác</b>: Khi nhồi nhét cả <i>4 nút thiết bị + giao diện Nala AI (khung chat, vòng sóng, nút PTT)</i> vào chung 1 màn hình thì diện tích bị bóp nghẹt. Kết quả là phòng chỉ thêm được tối đa 4 nút (phòng ngủ của anh có 5 nút bị tràn mất nút thứ 5), đồng thời không có cách nào quan sát xem các phòng khác trong nhà đang bật hay tắt đèn!
+            </div>
+
+            <!-- PHƯƠNG ÁN 1 (KHUYÊN DÙNG) -->
+            <div class="card-opt selected" onclick="selectOption(1)">
+                <div class="opt-header">
+                    <div class="opt-name">🌟 Phương Án 1: Kiến Trúc 4 Tab Chuẩn (Đang hiển thị trên mô phỏng)</div>
+                    <span class="opt-badge badge-rec">KHUYÊN DÙNG TỐI ƯU</span>
+                </div>
+                <ul class="opt-list">
+                    <li>✅ <b>Tab 1 - Thiết Bị</b>: Chỉ chuyên tâm điều khiển phòng hiện tại. Sử dụng dạng lưới cuộn dọc (Scrollable Grid) <b>hỗ trợ vô hạn nút</b> (5, 8 hay 10 nút thoải mái cuộn, không bao giờ bị mất chỗ).</li>
+                    <li>✅ <b>Tab 2 - Toàn Nhà (Giải quyết 100% câu hỏi của anh)</b>: Hiển thị ngay lập tức danh sách tất cả các phòng trong nhà. Thấy rõ phòng nào đang có đèn bật (màu xanh sáng) và phòng nào đã tắt (màu xám). Kèm nút <b>Tắt Hết Cả Nhà</b> hoặc tắt riêng từng phòng chỉ với 1 chạm!</li>
+                    <li>✅ <b>Tab 3 - Nala AI Chuyên Biệt</b>: Tách riêng một không gian rộng rãi cho trợ lý AI: vòng tròn sóng âm phát sáng mượt mà, khung hội thoại hiển thị câu trả lời rõ ràng, nút PTT to bản ở đáy cực dễ bấm.</li>
+                    <li>✅ <b>Tab 4 - Cài Đặt & Đàm Thoại</b>: Tích hợp gọi nội bộ liên phòng (Intercom) và các thanh trượt chỉnh âm lượng, độ sáng, kiểm tra OTA.</li>
+                </ul>
+            </div>
+
+            <!-- PHƯƠNG ÁN 2 -->
+            <div class="card-opt" onclick="selectOption(2)">
+                <div class="opt-header">
+                    <div class="opt-name">💡 Phương Án 2: Kiến Trúc 5 Tab Độc Lập (Dùng Icon Tinh Gọn)</div>
+                    <span class="opt-badge" style="background:#1e293b; color:#94a3b8;">LỰA CHỌN THÊM</span>
+                </div>
+                <ul class="opt-list">
+                    <li>🔹 Chia thanh Tab đáy thành 5 mục: <b>[Phòng] [Nhà] [AI] [Đàm Thoại] [Cài Đặt]</b>.</li>
+                    <li>🔹 Tách biệt hoàn toàn tính năng Đàm thoại Intercom ra khỏi Cài đặt.</li>
+                    <li>⚠️ <i>Nhược điểm nhỏ</i>: Màn hình rộng 240px chia 5 tab thì mỗi tab rộng 48px, chữ tiếng Việt phải viết tắt hoặc chỉ dùng icon biểu tượng để không bị tràn mép.</li>
+                </ul>
+            </div>
+
+            <!-- VẤN ĐỀ TIẾNG ĐỘNG Ở LOA -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 14px 16px;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #f59e0b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span>🔊</span> <span>Nguyên nhân tiếng động ở loa khi chạm màn hình:</span>
+                </div>
+                <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.55;">
+                    Trên bo mạch <b>ES3C28P</b>, IC cảm ứng FT6336 và IC Audio ES8311 <b>dùng chung 1 đường bus I2C (GPIO 15, 16)</b> nằm ngay sát IC công suất amply FM8002E. Khi amply đang mở (`PA_EN = LOW`), mỗi lần chạm màn hình phát sinh xung điện dung và truyền dữ liệu I2C tốc độ cao, sóng số sẽ cảm ứng (crosstalk) sang đường analog của amply gây tiếng bụp/xẹt.
+                    <br><br>
+                    👉 <b>Giải pháp phần cứng & firmware chuẩn</b>: Khi người dùng đang ở màn hình điều khiển bình thường, ta sẽ <b>Mute hoàn toàn công suất amply (`PA_EN = HIGH`)</b>. Chỉ khi nào có cuộc gọi đàm thoại đến, hoặc khi anh nhấn giữ nút nói AI/Intercom, amply mới được kích hoạt. Như vậy màn hình sẽ <b>hoàn toàn im lặng, không có bất kỳ tiếng xẹt xẹt nào</b> khi chạm!
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let currentTab = 0;
+        let houseActiveCount = 3;
+        let roomActiveCount = 2;
+
+        function switchTab(idx) {
+            currentTab = idx;
+            const pages = ['pageRoom', 'pageHouse', 'pageAi', 'pageSettings'];
+            const titles = ['Phòng Ngủ Ty', 'Toàn Bộ Căn Nhà', 'Trợ Lý Nala AI', 'Cài Đặt & Đàm Thoại'];
+
+            pages.forEach((p, i) => {
+                const el = document.getElementById(p);
+                const btn = document.getElementById('tabBtn' + i);
+                if (i === idx) {
+                    el.classList.add('active');
+                    btn.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    btn.classList.remove('active');
+                }
+            });
+
+            document.getElementById('titleText').innerText = titles[idx];
+        }
+
+        function toggleDevice(id, type) {
+            const el = document.getElementById(id);
+            const isOn = el.classList.toggle('on');
+            const sub = el.querySelector('.card-sub');
+
+            if (type === 'climate') {
+                sub.innerText = isOn ? 'Cool 25°C' : 'Đã tắt';
+            } else {
+                sub.innerText = isOn ? 'Đang bật' : 'Đã tắt';
+            }
+
+            // Cập nhật số lượng
+            updateCounts();
+        }
+
+        function turnOffRoom() {
+            const cards = document.querySelectorAll('#pageRoom .device-card');
+            cards.forEach(c => {
+                c.classList.remove('on');
+                const sub = c.querySelector('.card-sub');
+                sub.innerText = 'Đã tắt';
+            });
+            updateCounts();
+        }
+
+        function masterOffAll() {
+            turnOffRoom();
+            document.getElementById('badge_ty').className = 'room-row-badge badge-off';
+            document.getElementById('badge_ty').innerText = '⚪ Tất cả đã tắt';
+            document.getElementById('badge_chieu').className = 'room-row-badge badge-off';
+            document.getElementById('badge_chieu').innerText = '⚪ Tất cả đã tắt';
+            document.getElementById('totalHouseActive').innerText = '0';
+        }
+
+        function toggleRoomAll(room) {
+            if (room === 'ty') {
+                turnOffRoom();
+            } else if (room === 'chieu') {
+                const b = document.getElementById('badge_chieu');
+                b.className = 'room-row-badge badge-off';
+                b.innerText = '⚪ Tất cả đã tắt';
+                updateCounts();
+            }
+        }
+
+        function selectRoomFromHouse(name, idx) {
+            document.getElementById('titleText').innerText = name;
+            switchTab(0);
+        }
+
+        function updateCounts() {
+            const onCards = document.querySelectorAll('#pageRoom .device-card.on').length;
+            document.getElementById('roomActiveCount').innerText = onCards;
+            document.getElementById('badge_ty').innerText = onCards > 0 ? `🟢 ${onCards} thiết bị đang bật` : '⚪ Tất cả đã tắt';
+            document.getElementById('badge_ty').className = onCards > 0 ? 'room-row-badge badge-on' : 'room-row-badge badge-off';
+            
+            const total = onCards + (document.getElementById('badge_chieu').classList.contains('badge-on') ? 1 : 0);
+            document.getElementById('totalHouseActive').innerText = total;
+        }
+
+        function startPtt() {
+            document.getElementById('aiOrb').style.boxShadow = '0 0 50px #10b981';
+            document.getElementById('aiStatus').innerText = 'Đang lắng nghe...';
+            document.getElementById('aiStatus').style.color = '#10b981';
+            document.getElementById('pttText').innerText = 'ĐANG THU ÂM (THẢ TAY ĐỂ GỬI)...';
+        }
+
+        function stopPtt() {
+            document.getElementById('aiOrb').style.boxShadow = '0 0 25px #0284c7';
+            document.getElementById('aiStatus').innerText = 'Nala đang xử lý...';
+            document.getElementById('aiStatus').style.color = '#38bdf8';
+            document.getElementById('pttText').innerText = 'GIỮ ĐỂ NÓI VỚI NALA';
+            setTimeout(() => {
+                document.getElementById('aiStatus').innerText = 'Nala AI: Sẵn Sàng';
+                document.getElementById('aiResponseText').innerText = '"Đã nhận lệnh của anh Ty! Em đã bật đèn và điều chỉnh nhiệt độ phòng."';
+            }, 1200);
+        }
+
+        function selectOption(opt) {
+            const cards = document.querySelectorAll('.card-opt');
+            cards.forEach((c, i) => {
+                if (i + 1 === opt) c.classList.add('selected');
+                else c.classList.remove('selected');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "action_mode": "turn_off_selected",
+  "controlled_domains": [
+    "light",
+    "fan"
+  ],
+  "include_climate": false,
+  "include_switch": false,
+  "excluded_entities": [],
+  "scene_entity_id": "",
+  "confirm_prompt": false,
+  "alert_title": "TOÀN BỘ NHÀ"
+}
+

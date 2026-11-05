@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NALA SMART HOME - Phương Án Khuyên Dùng Đã Chọn: 4 Tab Độc Lập</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #070b14;
+            --card-bg: #0f172a;
+            --border-color: #1e293b;
+            --accent-cyan: #06b6d4;
+            --accent-blue: #3b82f6;
+            --accent-amber: #f59e0b;
+            --accent-emerald: #10b981;
+            --accent-rose: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 10%, rgba(6, 182, 212, 0.09) 0%, transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(59, 130, 246, 0.09) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 16px 60px 16px;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 22px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-link {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-link:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent-cyan);
+            color: #fff;
+        }
+
+        .banner-decision {
+            width: 100%;
+            max-width: 1200px;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(59, 130, 246, 0.12));
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .banner-decision-left h1 {
+            font-size: 19px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .banner-decision-left p {
+            font-size: 13.5px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .status-tag {
+            background: rgba(2, 132, 199, 0.25);
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Showcase Layout */
+        .showcase-layout {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .showcase-layout {
+                grid-template-columns: 1fr;
+                justify-items: center;
+            }
+        }
+
+        /* Physical LCD Screen Bezel (240x320 Physical Ratio) */
+        .lcd-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .screen-bezel {
+            width: 272px;
+            height: 356px;
+            background: #1c2331;
+            border-radius: 26px;
+            padding: 16px 14px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.8),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2),
+                0 0 0 2px #0a0d14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .lcd-display {
+            width: 240px;
+            height: 320px;
+            background: #080c14;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.95);
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        /* 1. Header (0..34px) */
+        .lcd-header {
+            height: 34px;
+            background: #0b1120;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .lcd-header-left {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .clock-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .wifi-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        .lcd-header-right {
+            font-size: 8.5px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #64748b;
+        }
+
+        /* 2. Body (34..276px = 242px) */
+        .lcd-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 3. Bottom TabBar (276..320px = 44px, 4 Tabs = 60px/tab) */
+        .lcd-tabbar {
+            height: 44px;
+            background: #0d1424;
+            border-top: 1px solid #1e293b;
+            display: flex;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .tab-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .tab-btn .tab-icon {
+            font-size: 13px;
+        }
+
+        .tab-btn .tab-lbl {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        .tab-btn.active {
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15%;
+            right: 15%;
+            height: 2px;
+            background: #38bdf8;
+            border-radius: 2px;
+            box-shadow: 0 0 6px #38bdf8;
+        }
+
+        /* ================= TAB 0: THIẾT BỊ (ĐA PHÒNG & CUỘN KHÔNG GIỚI HẠN) ================= */
+        .tab-content-devices {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Room Chips Horizontal Filter Bar */
+        .room-filter-bar {
+            background: #0b1120;
+            border-bottom: 1px solid #1e293b;
+            padding: 5px 6px;
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+        .room-filter-bar::-webkit-scrollbar { display: none; }
+
+        .room-chip {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 8.5px;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .room-chip.active {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Whole House Alert & Master Off Strip */
+        .house-alert-strip {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid #1e293b;
+            padding: 4px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .alert-text-left {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 8px;
+            font-weight: 800;
+            color: #f59e0b;
+        }
+
+        .alert-dot {
+            width: 5px;
+            height: 5px;
+            background: #f59e0b;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #f59e0b;
+        }
+
+        .btn-master-off {
+            background: #ef4444;
+            color: white;
+            font-size: 7.5px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+        .btn-master-off:active { transform: scale(0.95); }
+
+        /* Scrollable Device Grid (2 Columns, Infinite scroll) */
+        .device-scroll-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+
+        .device-btn {
+            height: 48px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 5px 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .device-btn:hover { border-color: #38bdf8; }
+
+        .dev-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dev-room-badge {
+            font-size: 7px;
+            font-weight: 800;
+            color: #64748b;
+            background: #1e293b;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        .dev-name {
+            font-size: 8.5px;
+            font-weight: 700;
+            color: #f1f5f9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dev-state-txt {
+            font-size: 7.5px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        /* Device ON States */
+        .device-btn.on-light {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(202, 138, 4, 0.25));
+            border-color: #eab308;
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.2);
+        }
+        .device-btn.on-light .dev-state-txt { color: #facc15; font-weight: 700; }
+
+        .device-btn.on-fan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(8, 145, 178, 0.25));
+            border-color: #06b6d4;
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+        }
+        .device-btn.on-fan .dev-state-txt { color: #38bdf8; font-weight: 700; }
+
+        .device-btn.on-fan .dev-icon { animation: spin 2s linear infinite; display: inline-block; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* ================= TAB 1: TRỢ LÝ AI (RIÊNG BIỆT) ================= */
+        .tab-content-ai {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 8px;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .ai-pulse-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding-top: 4px;
+        }
+
+        .ai-pulse-orb {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #38bdf8 0%, #2563eb 60%, transparent 100%);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            animation: orb-breathe 2.5s infinite ease-in-out;
+        }
+
+        @keyframes orb-breathe {
+            0% { transform: scale(0.95); box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 0 24px rgba(56, 189, 248, 0.8); }
+            100% { transform: scale(0.95); box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+        }
+
+        .ai-title {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+
+        .ai-chat-history {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 6px 8px;
+            flex: 1;
+            overflow-y: auto;
+            margin: 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .chat-bubble {
+            font-size: 8.5px;
+            line-height: 1.35;
+            padding: 5px 7px;
+            border-radius: 6px;
+        }
+
+        .bubble-user {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #e0f2fe;
+            align-self: flex-end;
+            max-width: 90%;
+        }
+
+        .bubble-ai {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #334155;
+            color: #f1f5f9;
+            align-self: flex-start;
+            max-width: 95%;
+        }
+
+        .btn-ai-ptt-large {
+            height: 42px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+            transition: all 0.15s ease;
+        }
+        .btn-ai-ptt-large:active {
+            background: #ef4444;
+            border-color: #f87171;
+            transform: scale(0.98);
+        }
+
+        /* ================= TAB 2: ĐÀM THOẠI (INTERCOM) ================= */
+        .tab-content-intercom {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 8px;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .intercom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .intercom-room-btn {
+            height: 40px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+
+        .intercom-room-btn.selected {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: white;
+        }
+
+        /* ================= TAB 3: CÀI ĐẶT (SETTINGS) ================= */
+        .tab-content-settings {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 8px;
+            gap: 8px;
+            overflow-y: auto;
+        }
+
+        .setting-row {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 6px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8.5px;
+        }
+
+        /* Right Column Explanations */
+        .guide-column {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .guide-section h3 {
+            font-size: 15px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .guide-section p {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .guide-steps {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .guide-step-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .step-num {
+            background: #1e293b;
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-title">
+            <span>NALA SMART HOME</span>
+            <span class="brand-badge">PHƯƠNG ÁN KHUYÊN DÙNG ĐÃ CHỌN (4 TAB)</span>
+        </div>
+        <div class="nav-links">
+            <a href="/admin" class="btn-link">← Quay lại Web Admin</a>
+            <a href="http://192.168.1.114:8765/admin" class="btn-link">NAS Hub (114)</a>
+        </div>
+    </header>
+
+    <div class="banner-decision">
+        <div class="banner-decision-left">
+            <h1>⭐ PHƯƠNG ÁN KHUYÊN DÙNG ĐÃ CHỌN: 4 TAB ĐỘC LẬP</h1>
+            <p>
+                Tách riêng biệt Tab <strong>THIẾT BỊ</strong> và Tab <strong>TRỢ LÝ AI</strong>. Thanh chọn phòng lọc nhanh <em>(Toàn Nhà, P.Khách, P.Ngủ, Bếp, Lầu 3)</em>, thanh cảnh báo toàn nhà có nút <strong>[TẮT HẾT]</strong> 1 chạm, và lưới cuộn 2 cột thoải mái chứa 6, 8, 12 hay 20 thiết bị không lo tràn!
+            </p>
+        </div>
+        <div class="status-tag">
+            <span>✨ 4 TABS: THIẾT BỊ • AI • GỌI • CÀI ĐẶT</span>
+        </div>
+    </div>
+
+    <div class="showcase-layout">
+
+        <!-- CỘT TRÁI: MÀN HÌNH LCD 2.8" MÔ PHỎNG TƯƠNG TÁC THỰC TẾ -->
+        <div class="lcd-column">
+            <div class="screen-bezel">
+                <div class="lcd-display" id="mainLcd">
+                    
+                    <!-- 1. Header Cố Định -->
+                    <div class="lcd-header">
+                        <div class="lcd-header-left">
+                            <span class="clock-text">14:35</span>
+                            <span class="wifi-dot"></span>
+                        </div>
+                        <div class="lcd-header-right">M:[881C] ID:1</div>
+                    </div>
+
+                    <!-- 2. Body: Chứa các Tab -->
+                    <div class="lcd-body">
+                        
+                        <!-- TAB 0: THIẾT BỊ (ĐA PHÒNG & CUỘN KHÔNG GIỚI HẠN) -->
+                        <div class="tab-content-devices" id="tabPaneDevices">
+                            
+                            <!-- Hàng Chip Lọc Phòng -->
+                            <div class="room-filter-bar">
+                                <div class="room-chip active" onclick="filterRoom(this, 'all')">TOAN NHA (7)</div>
+                                <div class="room-chip" onclick="filterRoom(this, 'living')">P.Khach (2)</div>
+                                <div class="room-chip" onclick="filterRoom(this, 'bed')">P.Ngu Ty (2)</div>
+                                <div class="room-chip" onclick="filterRoom(this, 'kitchen')">P.Bep (2)</div>
+                                <div class="room-chip" onclick="filterRoom(this, 'l3')">Lau 3 (1)</div>
+                            </div>
+
+                            <!-- Thanh Tình Trạng Toàn Nhà & Tắt Hết Nhanh -->
+                            <div class="house-alert-strip">
+                                <div class="alert-text-left">
+                                    <span class="alert-dot"></span>
+                                    <span id="alertSummaryText">3 DEN & 1 QUAT DANG BAT</span>
+                                </div>
+                                <button class="btn-master-off" onclick="masterTurnOffAll()">TAT HET</button>
+                            </div>
+
+                            <!-- Lưới Thiết Bị 2 Cột Cuộn Dọc Mượt Mà (Không giới hạn 4 nút) -->
+                            <div class="device-scroll-grid" id="deviceScrollGrid">
+                                
+                                <!-- Thiết bị 1 -->
+                                <div class="device-btn on-light" data-room="living" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">💡</span>
+                                        <span class="dev-room-badge">P.KHACH</span>
+                                    </div>
+                                    <div class="dev-name">Den Chum Tran</div>
+                                    <div class="dev-state-txt">BAT (100%)</div>
+                                </div>
+
+                                <!-- Thiết bị 2 -->
+                                <div class="device-btn on-fan" data-room="living" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">🌀</span>
+                                        <span class="dev-room-badge">P.KHACH</span>
+                                    </div>
+                                    <div class="dev-name">Quat Tran</div>
+                                    <div class="dev-state-txt">BAT (So 3)</div>
+                                </div>
+
+                                <!-- Thiết bị 3 -->
+                                <div class="device-btn on-light" data-room="bed" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">💡</span>
+                                        <span class="dev-room-badge">P.NGU</span>
+                                    </div>
+                                    <div class="dev-name">Den Hat Tran</div>
+                                    <div class="dev-state-txt">BAT</div>
+                                </div>
+
+                                <!-- Thiết bị 4 -->
+                                <div class="device-btn" data-room="bed" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">💡</span>
+                                        <span class="dev-room-badge">P.NGU</span>
+                                    </div>
+                                    <div class="dev-name">Den Ngu Ban</div>
+                                    <div class="dev-state-txt">TAT</div>
+                                </div>
+
+                                <!-- Thiết bị 5 -->
+                                <div class="device-btn on-light" data-room="kitchen" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">💡</span>
+                                        <span class="dev-room-badge">P.BEP</span>
+                                    </div>
+                                    <div class="dev-name">Den Ban An</div>
+                                    <div class="dev-state-txt">BAT</div>
+                                </div>
+
+                                <!-- Thiết bị 6 -->
+                                <div class="device-btn" data-room="kitchen" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">🌀</span>
+                                        <span class="dev-room-badge">P.BEP</span>
+                                    </div>
+                                    <div class="dev-name">Quat Hut Mui</div>
+                                    <div class="dev-state-txt">TAT</div>
+                                </div>
+
+                                <!-- Thiết bị 7 -->
+                                <div class="device-btn" data-room="l3" onclick="toggleDeviceBtn(this)">
+                                    <div class="dev-head">
+                                        <span class="dev-icon" style="font-size:13px;">💡</span>
+                                        <span class="dev-room-badge">LAU 3</span>
+                                    </div>
+                                    <div class="dev-name">Den Ban Lab</div>
+                                    <div class="dev-state-txt">TAT</div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- TAB 1: TRỢ LÝ AI (RIÊNG BIỆT - RỘNG RÃI) -->
+                        <div class="tab-content-ai" id="tabPaneAi">
+                            <div class="ai-pulse-wrap">
+                                <div class="ai-pulse-orb">✨</div>
+                                <div class="ai-title">NALA AI ASSISTANT</div>
+                            </div>
+                            <div class="ai-chat-history">
+                                <div class="chat-bubble bubble-user">"Tat den phong khach giup toi"</div>
+                                <div class="chat-bubble bubble-ai">"Da tat 2 den o Phong Khach roi nhe anh Ty!"</div>
+                                <div class="chat-bubble bubble-user">"Thoi tiet hom nay the nao?"</div>
+                                <div class="chat-bubble bubble-ai">"TP.HCM troi mat, 28°C, chieu co the co mua nho."</div>
+                            </div>
+                            <div class="btn-ai-ptt-large" onmousedown="aiPttDown(this)" onmouseup="aiPttUp(this)">
+                                <span>🎙️</span>
+                                <span>GIU DE NOI VOI NALA AI</span>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: ĐÀM THOẠI (INTERCOM) -->
+                        <div class="tab-content-intercom" id="tabPaneIntercom">
+                            <div style="font-size:9px; font-weight:800; color:#38bdf8; margin-bottom:4px;">CHON PHONG CAN GOI:</div>
+                            <div class="intercom-grid">
+                                <div class="intercom-room-btn selected">Tang Tret</div>
+                                <div class="intercom-room-btn">Phong Ty T1</div>
+                                <div class="intercom-room-btn">Phong Bep</div>
+                                <div class="intercom-room-btn">Lau 3 (Lab)</div>
+                            </div>
+                            <button style="height:32px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:8.5px; font-weight:800; margin:6px 0;">GOI TOAN NHA (BROADCAST)</button>
+                            <div class="btn-ai-ptt-large" style="background:#0284c7;">
+                                <span>📞</span>
+                                <span>GIU DE NOI QUA TANG</span>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: CÀI ĐẶT -->
+                        <div class="tab-content-settings" id="tabPaneSettings">
+                            <div style="font-size:9.5px; font-weight:800; color:#38bdf8;">THONG SO HE THONG</div>
+                            <div class="setting-row">
+                                <span style="color:#cbd5e1;">Am luong loa:</span>
+                                <strong style="color:#38bdf8;">85%</strong>
+                            </div>
+                            <div class="setting-row">
+                                <span style="color:#cbd5e1;">Do sang man hinh:</span>
+                                <strong style="color:#38bdf8;">200 / 255</strong>
+                            </div>
+                            <div class="setting-row">
+                                <span style="color:#cbd5e1;">Model AI Mac Dinh:</span>
+                                <strong style="color:#10b981;">Gemini 1.5 Flash</strong>
+                            </div>
+                            <div class="setting-row">
+                                <span style="color:#cbd5e1;">Phien ban Firmware:</span>
+                                <strong style="color:#f59e0b;">v2.9.3 (LVGL 8.3)</strong>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 3. Bottom Tab Bar (4 Tabs Chuẩn - 60px/tab) -->
+                    <div class="lcd-tabbar">
+                        <div class="tab-btn active" id="tabBtnDev" onclick="switchTab('devices')">
+                            <span class="tab-icon">🏠</span>
+                            <span class="tab-lbl">THIET BI</span>
+                        </div>
+                        <div class="tab-btn" id="tabBtnAi" onclick="switchTab('ai')">
+                            <span class="tab-icon">🤖</span>
+                            <span class="tab-lbl">TRO LY AI</span>
+                        </div>
+                        <div class="tab-btn" id="tabBtnIntercom" onclick="switchTab('intercom')">
+                            <span class="tab-icon">📞</span>
+                            <span class="tab-lbl">DAM THOAI</span>
+                        </div>
+                        <div class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">
+                            <span class="tab-icon">⚙️</span>
+                            <span class="tab-lbl">CAI DAT</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <p style="font-size: 11px; color: #64748b; margin-top: 10px;">Chạm vào các Tab và nút để thử tương tác thực tế</p>
+        </div>
+
+        <!-- CỘT PHẢI: GIẢI THÍCH CHI TIẾT TẠI SAO PHƯƠNG ÁN NÀY LÀ KHUYÊN DÙNG -->
+        <div class="guide-column">
+            
+            <div class="guide-section">
+                <h3>💎 Tại Sao Phương Án Này Giải Quyết Trọn Vẹn Nhu Cầu Của Anh?</h3>
+                <div class="guide-steps">
+                    <div class="guide-step-item">
+                        <div class="step-num">1</div>
+                        <div>
+                            <strong>Không bao giờ bị giới hạn 4 nút:</strong> Lưới thiết bị dạng 2 cột cuộn mượt mà. Anh có 6, 8, 12 hay 20 thiết bị đều có chỗ hiển thị rộng rãi, chạm bấm nhạy và trực quan.
+                        </div>
+                    </div>
+                    <div class="guide-step-item">
+                        <div class="step-num">2</div>
+                        <div>
+                            <strong>Biết ngay phòng khác có quên tắt đèn không:</strong> Dòng trạng thái ở đỉnh luôn báo ngay <em>"3 ĐÈN & 1 QUẠT ĐANG BẬT"</em>. Khi bấm chọn chip từng phòng <em>(P.Ngủ, P.Khách, Bếp...)</em>, anh kiểm tra được chính xác thiết bị của từng phòng.
+                        </div>
+                    </div>
+                    <div class="guide-step-item">
+                        <div class="step-num">3</div>
+                        <div>
+                            <strong>Nút "TẮT HẾT" Master 1 Chạm:</strong> Khi chuẩn bị đi ngủ hoặc rời nhà, chỉ cần 1 cú chạm là tắt toàn bộ đèn và quạt trong nhà, không cần vào từng phòng bấm tắt lẻ.
+                        </div>
+                    </div>
+                    <div class="guide-step-item">
+                        <div class="step-num">4</div>
+                        <div>
+                            <strong>Trợ Lý AI Rộng Rãi:</strong> Tách sang Tab riêng giúp AI có không gian hiển thị lịch sử chat dài từ Gemini, không bị cắt cụt chữ như bản cũ.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guide-section" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <h3>⚙️ Kế Hoạch Triển Khai Firmware ESP32-S3 (LVGL 8.3)</h3>
+                <p>
+                    Kiến trúc này chuyển đổi sang LVGL 8.3 cực kỳ sạch và mượt mà:
+                    <br>• Dùng `lv_tabview` 4 tab (chiều cao đáy 44px).
+                    <br>• Tab Thiết Bị dùng `lv_obj_t* cont_grid` bật `LV_SCROLL_DIR_VER` với `lv_btn` 2 cột.
+                    <br>• Hàng Chip phòng dùng `lv_btnmatrix` hoặc danh sách nút chip cuộn ngang.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Switch Bottom Tabs
+        function switchTab(tabKey) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tabPaneDevices').style.display = 'none';
+            document.getElementById('tabPaneAi').style.display = 'none';
+            document.getElementById('tabPaneIntercom').style.display = 'none';
+            document.getElementById('tabPaneSettings').style.display = 'none';
+
+            if (tabKey === 'devices') {
+                document.getElementById('tabPaneDevices').style.display = 'flex';
+                document.getElementById('tabBtnDev').classList.add('active');
+            } else if (tabKey === 'ai') {
+                document.getElementById('tabPaneAi').style.display = 'flex';
+                document.getElementById('tabBtnAi').classList.add('active');
+            } else if (tabKey === 'intercom') {
+                document.getElementById('tabPaneIntercom').style.display = 'flex';
+                document.getElementById('tabBtnIntercom').classList.add('active');
+            } else if (tabKey === 'settings') {
+                document.getElementById('tabPaneSettings').style.display = 'flex';
+                document.getElementById('tabBtnSettings').classList.add('active');
+            }
+        }
+
+        // Filter Room Chips
+        function filterRoom(chip, roomKey) {
+            document.querySelectorAll('.room-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+
+            const devices = document.querySelectorAll('#deviceScrollGrid .device-btn');
+            devices.forEach(d => {
+                if (roomKey === 'all') {
+                    d.style.display = 'flex';
+                } else if (d.getAttribute('data-room') === roomKey) {
+                    d.style.display = 'flex';
+                } else {
+                    d.style.display = 'none';
+                }
+            });
+        }
+
+        // Toggle Single Device
+        function toggleDeviceBtn(el) {
+            const isLight = el.querySelector('.dev-icon').innerText.includes('💡');
+            const isFan = el.querySelector('.dev-icon').innerText.includes('🌀');
+            const stateTxt = el.querySelector('.dev-state-txt');
+
+            if (isLight) {
+                el.classList.toggle('on-light');
+                stateTxt.innerText = el.classList.contains('on-light') ? 'BAT' : 'TAT';
+            } else if (isFan) {
+                el.classList.toggle('on-fan');
+                stateTxt.innerText = el.classList.contains('on-fan') ? 'BAT (So 3)' : 'TAT';
+            }
+            updateSummary();
+        }
+
+        // Master Turn Off All
+        function masterTurnOffAll() {
+            const devices = document.querySelectorAll('#deviceScrollGrid .device-btn');
+            devices.forEach(d => {
+                d.classList.remove('on-light', 'on-fan');
+                const txt = d.querySelector('.dev-state-txt');
+                if (txt) txt.innerText = 'TAT';
+            });
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const onLights = document.querySelectorAll('#deviceScrollGrid .on-light').length;
+            const onFans = document.querySelectorAll('#deviceScrollGrid .on-fan').length;
+            const summaryText = document.getElementById('alertSummaryText');
+            if (onLights === 0 && onFans === 0) {
+                summaryText.innerText = 'DA TAT HET CAC PHONG';
+                summaryText.style.color = '#10b981';
+            } else {
+                summaryText.innerText = `${onLights} DEN & ${onFans} QUAT DANG BAT`;
+                summaryText.style.color = '#f59e0b';
+            }
+        }
+
+        // AI PTT Button Simulation
+        function aiPttDown(el) {
+            el.style.background = '#ef4444';
+            el.querySelector('span:nth-child(2)').innerText = 'DANG THU AM GIONG NOI...';
+        }
+
+        function aiPttUp(el) {
+            el.style.background = 'linear-gradient(135deg, #0284c7, #2563eb)';
+            el.querySelector('span:nth-child(2)').innerText = 'GIU DE NOI VOI NALA AI';
+        }
+    </script>
+</body>
+</html>
