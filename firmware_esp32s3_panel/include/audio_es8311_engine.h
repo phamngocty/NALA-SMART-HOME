@@ -102,7 +102,7 @@ public:
         write_reg(0x1B, 0x0A); // ADC High pass filter
         write_reg(0x1C, 0x6A); // ADC EQ
         write_reg(0x37, 0x48); // DAC EQ Bypass
-        write_reg(0x44, 0x58); // Internal reference signal (ADCL + DACR)
+        write_reg(0x44, 0x08); // ADC Serial Data output normal (Mono ADC mapped to L + R slots)
         write_reg(0x45, 0x00); // GP control
 
         // 7. Mở DAC & Thiết lập âm lượng mặc định
@@ -269,10 +269,12 @@ private:
         i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
         i2s_set_pin(I2S_NUM_0, &pin_config);
 
-        // DUAL-ROUTING DOUT: Xuất dữ liệu I2S DOUT đồng thời ra CẢ GPIO 8 VÀ GPIO 6 qua GPIO Matrix!
-        // Đảm bảo dù phần cứng cắm DOUT ở chân 8 hay chân 6 thì âm thanh DAC đều nhận được 100%!
-        esp_rom_gpio_connect_out_signal(8, I2S0O_SD_OUT_IDX, false, false);
-        esp_rom_gpio_connect_out_signal(6, I2S0O_SD_OUT_IDX, false, false);
+
+
+        // Định tuyến GPIO Matrix: DOUT (GPIO 8) cho Speaker DAC
+        esp_rom_gpio_connect_out_signal(I2S_DOUT_PIN, I2S0O_SD_OUT_IDX, false, false);
+        gpio_set_direction((gpio_num_t)I2S_DIN_PIN, GPIO_MODE_INPUT);
+        esp_rom_gpio_connect_in_signal(I2S_DIN_PIN, I2S0I_SD_IN_IDX, false);
 
         i2s_zero_dma_buffer(I2S_NUM_0);
     }

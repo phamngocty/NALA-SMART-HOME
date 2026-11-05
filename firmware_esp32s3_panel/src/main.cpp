@@ -105,7 +105,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include "ota_manager.h"
 #include "esp_ota_ops.h"
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.2.0"
+#define CURRENT_FIRMWARE_VERSION "v3.2.1"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -370,6 +370,7 @@ void run_mic_test() {
     int16_t stereo_chunk[256 * 2]; // 256 stereo pairs = 1024 bytes
     size_t recorded = 0;
     int64_t sum_sq_l = 0;
+    int64_t sum_sq_r = 0;
     int16_t peak_val = 0;
     int zero_retries = 0;
 
@@ -392,7 +393,10 @@ void run_mic_test() {
 
         for (size_t i = 0; i < frames_got; i++) {
             // ES8311 Mono ADC chuẩn phần cứng ES3C28P xuất dữ liệu trên kênh Trái (Left)
-            int16_t raw_sample = stereo_chunk[i * 2];
+            int16_t sample_l = stereo_chunk[i * 2];
+            int16_t sample_r = stereo_chunk[i * 2 + 1];
+            sum_sq_r += ((int32_t)sample_r * sample_r);
+            int16_t raw_sample = (abs((int)sample_l) >= abs((int)sample_r)) ? sample_l : sample_r;
 
             // Fade-in 50ms đầu (800 mẫu) triệt tiêu hoàn toàn xung điện áp lúc vừa bật mic
             size_t sample_idx = recorded + i;
@@ -400,7 +404,7 @@ void run_mic_test() {
                 raw_sample = (int16_t)((int32_t)raw_sample * (int32_t)sample_idx / 800);
             }
 
-            sum_sq_l += ((int32_t)raw_sample * raw_sample);
+            sum_sq_l += ((int32_t)sample_l * sample_l);
 
             // Khuếch đại kỹ thuật số giọng nói theo cài đặt NVS kèm soft limiter chống vỡ tiếng
             int32_t boosted = (int32_t)raw_sample * sw_boost;
@@ -414,7 +418,9 @@ void run_mic_test() {
     }
 
     int rms_l = (recorded > 0) ? (int)sqrt(sum_sq_l / recorded) : 0;
-    Serial.printf("[DIAG] Mic thu %d mẫu | L_RMS=%d, Boost=%dx, Peak=%d\n", recorded, rms_l, sw_boost, peak_val);
+    int rms_r = (recorded > 0) ? (int)sqrt(sum_sq_r / recorded) : 0;
+    int max_rms = max(rms_l, rms_r);
+    Serial.printf("[DIAG] Mic thu %d mẫu | L_RMS=%d, R_RMS=%d, Boost=%dx, Peak=%d\n", recorded, rms_l, rms_r, sw_boost, peak_val);
 
     int64_t sum_dc = 0;
     for (size_t i = 0; i < recorded; i++) sum_dc += test_buf[i];
@@ -464,7 +470,7 @@ void run_mic_test() {
     rgb_led.show();
 
     char res_str[64];
-    if (rms_l > 40 || peak_val > 1000) {
+    if (max_rms > 30 || peak_val > 800) {
         snprintf(res_str, sizeof(res_str), "Mic: Tốt (Tín hiệu: %d)", peak_val);
         uiDashboard.set_diag_result(res_str, 0x10B981);
     } else {
@@ -1119,7 +1125,9 @@ void handle_mic_streaming() {
 
             // ES8311 Mono ADC xuất âm thanh trên kênh Trái (Left)
             for (size_t s = 0; s < AUDIO_FRAME_SAMPLES; s++) {
-                int16_t raw_sample = stereo_raw[s * 2];
+                int16_t sample_l = stereo_raw[s * 2];
+                int16_t sample_r = stereo_raw[s * 2 + 1];
+                int16_t raw_sample = (abs((int)sample_l) >= abs((int)sample_r)) ? sample_l : sample_r;
 
                 // Khuếch đại giọng nói kỹ thuật số theo cài đặt NVS kèm soft limiter chống vỡ tiếng
                 int32_t boosted = (int32_t)raw_sample * sw_boost;
