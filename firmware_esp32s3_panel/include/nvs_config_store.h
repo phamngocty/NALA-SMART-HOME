@@ -20,6 +20,8 @@ struct SystemConfig_t {
     uint8_t lcd_brightness;
     uint8_t mic_gain_db;
     char ai_model[16];    // "gemini" or "deepseek"
+    bool ring_on_call;    // Đổ chuông trước khi nhận cuộc gọi (true = Đổ chuông, false = Nhận trực tiếp)
+    uint8_t room_view_timeout; // Thời gian tự động trở về phòng chính (giây, mặc định 15, 0 = tắt)
 };
 
 class NVSConfigStore {
@@ -41,10 +43,20 @@ public:
         if (prefs.isKey("ssid")) {
             prefs.getString("ssid", config.wifi_ssid, sizeof(config.wifi_ssid));
         } else {
-            config.wifi_ssid[0] = '\0'; // Chưa cấu hình WiFi
+            strcpy(config.wifi_ssid, "152 Phan Van Mang");
         }
 
-        prefs.getString("pass", config.wifi_pass, sizeof(config.wifi_pass));
+        if (prefs.isKey("pass")) {
+            prefs.getString("pass", config.wifi_pass, sizeof(config.wifi_pass));
+            // Tự động sửa lỗi gõ nhầm chữ hoa 'N' thành 'n' cho mạng 152 Phan Van Mang
+            if (strcmp(config.wifi_pass, "62N105568") == 0) {
+                strcpy(config.wifi_pass, "62n105568");
+                prefs.putString("pass", config.wifi_pass);
+                Serial.println("[NVS] Da tu dong sua mat khau WiFi: 62N105568 -> 62n105568");
+            }
+        } else {
+            strcpy(config.wifi_pass, "62n105568");
+        }
         prefs.getString("ws_url", config.nas_ws_url, sizeof(config.nas_ws_url));
         if (strlen(config.nas_ws_url) == 0) strcpy(config.nas_ws_url, "ws://192.168.1.114:8765/ws");
 
@@ -71,10 +83,14 @@ public:
 
         config.speaker_volume = prefs.getUChar("vol", 80);
         config.lcd_brightness = prefs.getUChar("bright", 200);
-        config.mic_gain_db = prefs.getUChar("mic_gain", 12);
+        uint8_t saved_mic_gain = prefs.getUChar("mic_gain", 5);
+        config.mic_gain_db = (saved_mic_gain >= 1 && saved_mic_gain <= 7) ? saved_mic_gain : 5;
 
         prefs.getString("ai_model", config.ai_model, sizeof(config.ai_model));
         if (strlen(config.ai_model) == 0) strcpy(config.ai_model, "gemini");
+
+        config.ring_on_call = prefs.getBool("ring_call", true); // Mặc định BẬT đổ chuông
+        config.room_view_timeout = prefs.getUChar("rm_timeout", 15); // Mặc định 15 giây
     }
 
     bool is_wifi_configured() const {
@@ -94,6 +110,8 @@ public:
         prefs.putUChar("bright", config.lcd_brightness);
         prefs.putUChar("mic_gain", config.mic_gain_db);
         prefs.putString("ai_model", config.ai_model);
+        prefs.putBool("ring_call", config.ring_on_call);
+        prefs.putUChar("rm_timeout", config.room_view_timeout);
         dirty = false;
         Serial.println("[NVS] Configuration saved to Flash!");
     }
@@ -105,6 +123,15 @@ public:
     }
 
     SystemConfig_t& get() { return config; }
+
+    void set_mic_gain(uint8_t gain) {
+        config.mic_gain_db = constrain(gain, 1, 7);
+        mark_dirty();
+    }
+
+    uint8_t get_mic_gain() const {
+        return config.mic_gain_db;
+    }
 
     void mark_dirty() {
         dirty = true;

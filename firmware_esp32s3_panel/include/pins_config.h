@@ -15,7 +15,7 @@
 // -----------------------------------------------------------------------------
 #define I2C_PORT_SCL_PIN        15      // SCL (in rõ trên FPC & PCB)
 #define I2C_PORT_SDA_PIN        16      // SDA (in rõ trên FPC & PCB)
-#define I2C_BUS_FREQ_HZ         400000  // 400kHz Fast Mode
+#define I2C_BUS_FREQ_HZ         100000  // 100kHz Standard Mode for rock-solid FT6336 + ES8311
 
 // Capacitive Touch & Audio Codec I2C Addresses
 #define TOUCH_RST_PIN           18      // Active LOW Reset

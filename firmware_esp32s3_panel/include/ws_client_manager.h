@@ -20,6 +20,7 @@ using namespace websockets;
 typedef void (*TextCallback_t)(const String& type, const JsonDocument& doc);
 typedef void (*BinaryCallback_t)(const uint8_t* data, size_t len);
 typedef void (*ConnectCallback_t)();
+typedef void (*DisconnectCallback_t)();
 
 class WSClientManager {
 private:
@@ -31,14 +32,30 @@ private:
     TextCallback_t on_text_cb;
     BinaryCallback_t on_binary_cb;
     ConnectCallback_t on_connect_cb;
+    DisconnectCallback_t on_disconnect_cb;
+    SemaphoreHandle_t ws_mutex;
+    QueueHandle_t tx_queue;
 
 public:
-    WSClientManager() : connected(false), last_reconnect_attempt(0), last_rx_time(0), on_text_cb(nullptr), on_binary_cb(nullptr), on_connect_cb(nullptr) {}
+    WSClientManager() : connected(false), last_reconnect_attempt(0), last_rx_time(0), 
+                        on_text_cb(nullptr), on_binary_cb(nullptr), on_connect_cb(nullptr), on_disconnect_cb(nullptr) {
+        ws_mutex = xSemaphoreCreateMutex();
+        tx_queue = xQueueCreate(24, sizeof(char*));
+    }
 
-    void set_callbacks(TextCallback_t text_cb, BinaryCallback_t bin_cb, ConnectCallback_t conn_cb = nullptr) {
+    void clear_tx_queue() {
+        if (tx_queue == NULL) return;
+        char* m = NULL;
+        while (xQueueReceive(tx_queue, &m, 0) == pdTRUE) {
+            if (m) free(m);
+        }
+    }
+
+    void set_callbacks(TextCallback_t text_cb, BinaryCallback_t bin_cb, ConnectCallback_t conn_cb = nullptr, DisconnectCallback_t disconn_cb = nullptr) {
         on_text_cb = text_cb;
         on_binary_cb = bin_cb;
         on_connect_cb = conn_cb;
+        on_disconnect_cb = disconn_cb;
     }
 
     bool is_connected() const { return connected; }
@@ -69,8 +86,12 @@ public:
                     this->on_connect_cb();
                 }
             } else if (event == WebsocketsEvent::ConnectionClosed) {
+                bool was_conn = this->connected;
                 this->connected = false;
                 Serial.println("[WS] Connection Closed!");
+                if (was_conn && this->on_disconnect_cb) {
+                    this->on_disconnect_cb();
+                }
             }
         });
     }
@@ -79,8 +100,21 @@ public:
         if (WiFi.status() == WL_CONNECTED) {
             if (client.available()) {
                 client.poll();
+                if (tx_queue != NULL) {
+                    char* msg_to_send = NULL;
+                    while (xQueueReceive(tx_queue, &msg_to_send, 0) == pdTRUE) {
+                        if (msg_to_send) {
+                            client.send(msg_to_send);
+                            free(msg_to_send);
+                        }
+                    }
+                }
             } else {
-                connected = false;
+                if (connected) {
+                    connected = false;
+                    clear_tx_queue();
+                    if (on_disconnect_cb) on_disconnect_cb();
+                }
                 if (millis() - last_reconnect_attempt >= 3000) {
                     last_reconnect_attempt = millis();
                     Serial.printf("[WS] Reconnecting to %s...\n", server_url.c_str());
@@ -91,14 +125,20 @@ public:
     }
 
     void send_text(const String& json_str) {
-        if (connected) {
-            client.send(json_str);
+        if (!connected || tx_queue == NULL) return;
+        char* copy = strdup(json_str.c_str());
+        if (copy) {
+            if (xQueueSend(tx_queue, &copy, 0) != pdTRUE) {
+                free(copy);
+                Serial.println("[WS-TX] Queue full! Dropped message.");
+            }
         }
     }
 
     void send_binary(const uint8_t* data, size_t len) {
-        if (connected) {
+        if (connected && ws_mutex && xSemaphoreTake(ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             client.sendBinary((const char*)data, len);
+            xSemaphoreGive(ws_mutex);
         }
     }
 };
