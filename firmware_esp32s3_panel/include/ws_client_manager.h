@@ -137,6 +137,14 @@ public:
         }
     }
 
+    void send_text_direct(const String& json_str) {
+        if (connected && ws_mutex && xSemaphoreTake(ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            client.send(json_str);
+            client.poll();
+            xSemaphoreGive(ws_mutex);
+        }
+    }
+
     void send_binary(const uint8_t* data, size_t len) {
         if (connected && ws_mutex && xSemaphoreTake(ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             client.sendBinary((const char*)data, len);

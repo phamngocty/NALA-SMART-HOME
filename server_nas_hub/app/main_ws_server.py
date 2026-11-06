@@ -1526,13 +1526,80 @@ async def get_ota_status(request: Request):
         return JSONResponse({"available": False, "error": str(e)})
 
 @app.get("/api/ota/firmware/{filename}")
-async def download_firmware(filename: str):
-    """Endpoint để ESP32-S3 tải stream file firmware binary qua HTTP GET."""
+async def download_firmware(filename: str, request: Request, code: Optional[str] = None):
+    """Endpoint để ESP32-S3 tải stream file firmware binary qua HTTP GET, đồng thời phát sóng tiến độ theo thời gian thực tới Web Admin."""
     safe_name = os.path.basename(filename)
     file_path = os.path.join(FIRMWARE_DIR, safe_name)
     if not os.path.exists(file_path):
         return JSONResponse({"status": "error", "message": "Firmware file not found"}, status_code=404)
-    return FileResponse(file_path, media_type="application/octet-stream", filename=safe_name)
+
+    file_size = os.path.getsize(file_path)
+
+    # Nếu không có query param code, tự động tìm code dựa theo client IP
+    if not code:
+        client_ip = request.client.host if request.client else ""
+        for c, dev in devices_db.items():
+            if dev.get("ip") == client_ip:
+                code = c
+                break
+
+    target_code = code.upper() if code else ""
+    logger.info("ESP32 [%s] bắt đầu tải OTA firmware: %s (%d bytes)", target_code or "Unknown", safe_name, file_size)
+
+    async def file_sender():
+        sent_bytes = 0
+        last_pct = -1
+        last_time = time.time()
+
+        if target_code:
+            await broadcast_to_admins({
+                "type": "ota_progress",
+                "pairing_code": target_code,
+                "progress": 1,
+                "status": "downloading",
+                "message": "Thiết bị đã kết nối, bắt đầu truyền dữ liệu firmware..."
+            })
+
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(32768)  # 32KB
+                if not chunk:
+                    break
+                sent_bytes += len(chunk)
+                pct = int((sent_bytes * 100) / file_size) if file_size > 0 else 50
+                if pct > 99:
+                    pct = 99
+
+                now = time.time()
+                if (pct >= last_pct + 2 or now - last_time >= 0.4) and target_code:
+                    last_pct = pct
+                    last_time = now
+                    await broadcast_to_admins({
+                        "type": "ota_progress",
+                        "pairing_code": target_code,
+                        "progress": pct,
+                        "status": "downloading",
+                        "message": f"Đang truyền nạp: {pct}% ({round(sent_bytes / 1024)} KB / {round(file_size / 1024)} KB)"
+                    })
+
+                yield chunk
+                await asyncio.sleep(0.001)
+
+        if target_code:
+            await broadcast_to_admins({
+                "type": "ota_progress",
+                "pairing_code": target_code,
+                "progress": 100,
+                "status": "flashing",
+                "message": "Đã truyền đủ 100% file! Màn hình đang ghi Flash và khởi động lại..."
+            })
+
+    headers = {
+        "Content-Length": str(file_size),
+        "Content-Disposition": f'attachment; filename="{safe_name}"',
+        "Accept-Ranges": "bytes"
+    }
+    return StreamingResponse(file_sender(), media_type="application/octet-stream", headers=headers)
 
 @app.post("/api/ota/start")
 async def start_ota_update(req: OTAStartRequest, request: Request):
@@ -1549,16 +1616,6 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
         host = f"192.168.1.114:{PORT}"
 
     filename = req.firmware_filename or "firmware_latest.bin"
-    firmware_url = f"http://{host}/api/ota/firmware/{filename}"
-
-    ota_msg = {
-        "type": "ota_start",
-        "url": firmware_url,
-        "size": meta.get("size_bytes", 0),
-        "md5": meta.get("md5", ""),
-        "version": meta.get("version", "v2.5.0")
-    }
-
     target_code = req.target.strip()
     sent_count = 0
 
@@ -1566,6 +1623,13 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
         for code, ws in list(active_sockets.items()):
             if not code.startswith("web_admin") and code != "default_panel":
                 try:
+                    ota_msg = {
+                        "type": "ota_start",
+                        "url": f"http://{host}/api/ota/firmware/{filename}?code={code}",
+                        "size": meta.get("size_bytes", 0),
+                        "md5": meta.get("md5", ""),
+                        "version": meta.get("version", "v2.5.0")
+                    }
                     await ws.send_json(ota_msg)
                     sent_count += 1
                     logger.info("Sent OTA command to Panel [%s]", code)
@@ -1579,6 +1643,14 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
                 target_ws = active_sockets.get(dev.get("device_id")) or active_sockets.get(dev.get("mac"))
         if target_ws:
             try:
+                firmware_url = f"http://{host}/api/ota/firmware/{filename}?code={target_code.upper()}"
+                ota_msg = {
+                    "type": "ota_start",
+                    "url": firmware_url,
+                    "size": meta.get("size_bytes", 0),
+                    "md5": meta.get("md5", ""),
+                    "version": meta.get("version", "v2.5.0")
+                }
                 await target_ws.send_json(ota_msg)
                 sent_count = 1
                 logger.info("Sent OTA command to Panel [%s]", target_code)
@@ -1592,7 +1664,7 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
         "target": target_code,
         "sent_count": sent_count,
         "version": meta.get("version"),
-        "url": firmware_url
+        "url": f"http://{host}/api/ota/firmware/{filename}"
     })
 
     return JSONResponse({

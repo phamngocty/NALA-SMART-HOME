@@ -84,7 +84,7 @@ public:
             display->endWrite();
 
             if (ws) {
-                ws->send_text("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"HTTP Error " + String(httpCode) + "\"}");
+                ws->send_text_direct("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"HTTP Error " + String(httpCode) + "\"}");
             }
             delay(4000);
             is_ota_running = false;
@@ -109,7 +109,7 @@ public:
             display->endWrite();
 
             if (ws) {
-                ws->send_text("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"Flash error: " + String(Update.errorString()) + "\"}");
+                ws->send_text_direct("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"Flash error: " + String(Update.errorString()) + "\"}");
             }
             delay(4000);
             is_ota_running = false;
@@ -156,7 +156,7 @@ public:
                             String prog_json = "{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + 
                                                "\",\"progress\":" + String(pct) + 
                                                ",\"status\":\"downloading\",\"message\":\"Đang ghi Flash: " + String(pct) + "%\"}";
-                            if (ws) ws->send_text(prog_json);
+                            if (ws) ws->send_text_direct(prog_json);
                         }
                     }
                 }
@@ -181,7 +181,7 @@ public:
                 display->endWrite();
 
                 if (ws) {
-                    ws->send_text("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":100,\"status\":\"success\",\"message\":\"Nạp Flash hoàn tất! Đang khởi động lại...\"}");
+                    ws->send_text_direct("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":100,\"status\":\"success\",\"message\":\"Nạp Flash hoàn tất! Đang khởi động lại...\"}");
                 }
 
                 delay(1500);
@@ -202,7 +202,7 @@ public:
         display->endWrite();
 
         if (ws) {
-            ws->send_text("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"Nạp Flash thất bại: " + String(Update.errorString()) + "\"}");
+            ws->send_text_direct("{\"type\":\"ota_progress\",\"pairing_code\":\"" + pairing_code + "\",\"progress\":0,\"status\":\"error\",\"message\":\"Nạp Flash thất bại: " + String(Update.errorString()) + "\"}");
         }
 
         delay(4000);
