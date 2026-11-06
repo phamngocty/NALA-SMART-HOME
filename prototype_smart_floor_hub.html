@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NALA SMART HOME - Phác Thảo Cây Phân Tầng & Nút Toàn Nhà (Local Prototype)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #050811;
+            --panel-bezel: #161e2e;
+            --lcd-bg: #070b14;
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #ef4444;
+            --accent-purple: #a855f7;
+            --card-off: #111827;
+            --card-on: #064e3b;
+            --border-card: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.08) 0%, transparent 45%);
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 12px 60px 12px;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 22px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(14px);
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            margin-bottom: 22px;
+        }
+
+        .header-title-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1300px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        @media (max-width: 980px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                justify-items: center;
+            }
+        }
+
+        /* 1. MOCKUP MÀN HÌNH ESP32-S3 VỎ GẮN TƯỜNG (240x320) */
+        .panel-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: sticky;
+            top: 20px;
+        }
+
+        .panel-bezel {
+            width: 300px;
+            height: 440px;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 28px;
+            padding: 20px 16px;
+            box-shadow: 
+                0 30px 60px -15px rgba(0, 0, 0, 0.9),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2),
+                0 0 0 2px #090d16;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .panel-screws {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #334155;
+            border-radius: 50%;
+            border: 1px solid #475569;
+        }
+        .sc-tl { top: 8px; left: 8px; }
+        .sc-tr { top: 8px; right: 8px; }
+        .sc-bl { bottom: 8px; left: 8px; }
+        .sc-br { bottom: 8px; right: 8px; }
+
+        .led-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        /* KHUNG HIỂN THỊ CHUẨN 240x320 PIXEL ESP32-S3 */
+        .lcd-screen {
+            width: 240px;
+            height: 320px;
+            background-color: var(--lcd-bg);
+            border-radius: 8px;
+            border: 2px solid #000;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* HEADER MÀN HÌNH */
+        .screen-header {
+            height: 38px;
+            background: #0d1527;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            overflow: hidden;
+        }
+
+        .header-title-text {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #f8fafc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+
+        .remote-badge {
+            font-size: 9px;
+            font-weight: 800;
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            padding: 1px 4px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-header-house {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: all 0.2s;
+        }
+        .btn-header-house:hover, .btn-header-house.active {
+            background: #0284c7;
+            color: #fff;
+        }
+
+        .btn-header-home {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 2px;
+            animation: pulseHome 2s infinite;
+        }
+        @keyframes pulseHome {
+            0%, 100% { border-color: rgba(16, 185, 129, 0.5); }
+            50% { border-color: rgba(16, 185, 129, 1); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+        }
+
+        /* AUTO RETURN COUNTDOWN STRIP */
+        .countdown-strip {
+            height: 18px;
+            background: #1e1b4b;
+            border-bottom: 1px solid #312e81;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            font-size: 9.5px;
+            color: #c7d2fe;
+            font-weight: 600;
+        }
+        .countdown-progress {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        /* BODY MÀN HÌNH CUỘN DỌC */
+        .screen-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 8px;
+            position: relative;
+        }
+        .screen-body::-webkit-scrollbar {
+            width: 3px;
+        }
+        .screen-body::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+
+        /* VIEW 1: LƯỚI THIẾT BỊ PHÒNG */
+        .room-status-bar {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 5px 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+        }
+
+        .device-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+        }
+
+        .btn-card {
+            background: var(--card-off);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 8px 7px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 64px;
+        }
+        .btn-card:active {
+            transform: scale(0.96);
+        }
+        .btn-card.on {
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(4, 47, 46, 0.9));
+            border-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+        .btn-card.climate-card.on {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.9));
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-icon {
+            font-size: 16px;
+        }
+        .card-led {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #475569;
+        }
+        .btn-card.on .card-led {
+            background: #34d399;
+            box-shadow: 0 0 6px #34d399;
+        }
+        .btn-card.climate-card.on .card-led {
+            background: #38bdf8;
+            box-shadow: 0 0 6px #38bdf8;
+        }
+
+        .card-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-top: 4px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-subtitle {
+            font-size: 9.5px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .btn-card.on .card-subtitle {
+            color: #6ee7b7;
+        }
+        .btn-card.climate-card.on .card-subtitle {
+            color: #7dd3fc;
+        }
+
+        /* VIEW 2: CÂY PHÂN TẦNG TOÀN NHÀ (SMART FLOOR & ROOM HUB) */
+        .house-quick-strip {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .house-quick-strip .title {
+            font-size: 10px;
+            font-weight: 800;
+            color: #38bdf8;
+            text-transform: uppercase;
+        }
+        .house-quick-strip .sub {
+            font-size: 9px;
+            color: #94a3b8;
+        }
+        .btn-master-off {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 5px;
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 3px 6px;
+            cursor: pointer;
+        }
+
+        .floor-section {
+            margin-bottom: 8px;
+        }
+        .floor-header {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-floor-off {
+            font-size: 8.5px;
+            color: #f59e0b;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .room-row-card {
+            background: #101726;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 7px 8px;
+            margin-top: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .room-row-card:hover {
+            border-color: #38bdf8;
+            background: #172338;
+        }
+        .room-row-card.is-current-room {
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(14, 165, 233, 0.08);
+        }
+        .room-row-card.has-active {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), rgba(16, 23, 38, 0.9));
+        }
+
+        .room-row-left {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .room-name-line {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .home-tag {
+            font-size: 8.5px;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.2);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        .room-devices-summary {
+            font-size: 9.5px;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+        .room-row-card.has-active .room-devices-summary {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .room-row-right {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-active-cnt {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            white-space: nowrap;
+        }
+        .badge-off-cnt {
+            font-size: 9px;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 4px;
+            background: rgba(148, 163, 184, 0.1);
+            color: #64748b;
+        }
+
+        /* BOTTOM BAR MÀN HÌNH */
+        .screen-tabbar {
+            height: 38px;
+            background: #0d1527;
+            border-top: 1px solid #1e293b;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .tab-btn .tab-ico {
+            font-size: 13px;
+        }
+
+        /* 2. CỘT PHÂN TÍCH & KẾ HOẠCH NÂNG CAO */
+        .plan-column {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+        }
+
+        .section-header-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .section-main-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .desc-text {
+            color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* INTERACTION SIMULATION BOX */
+        .simulator-control-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin-bottom: 24px;
+        }
+
+        .sim-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .sim-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .select-custom, .input-custom {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        /* FEATURE SUGGESTION CARDS */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 16px;
+        }
+        @media (max-width: 768px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background: #0d1527;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+        .feature-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+        .feature-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .feature-icon-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(56, 189, 248, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .feature-card-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+        .feature-card-desc {
+            font-size: 12.5px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .code-snippet {
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #38bdf8;
+            overflow-x: auto;
+            margin-top: 12px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title-main">
+            <span style="font-size: 22px;">🏡</span>
+            <div>
+                <h1 style="font-size: 17px; font-weight: 800; color: #fff;">NALA SMART HOME - KIẾN TRÚC NÚT "TOÀN NHÀ"</h1>
+                <p style="font-size: 12px; color: #94a3b8;">Phác thảo Local UI/UX & Cây Phân Tầng Thông Minh (Không can thiệp FW v3.2.1)</p>
+            </div>
+        </div>
+        <div class="brand-badge">BẢN MÔ PHỎNG LOCAL</div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- CỘT 1: MÔ PHỎNG VẬT LÝ ESP32-S3 (240x320) -->
+        <div class="panel-wrapper">
+            <div class="panel-bezel">
+                <div class="panel-screws sc-tl"></div>
+                <div class="panel-screws sc-tr"></div>
+                <div class="panel-screws sc-bl"></div>
+                <div class="panel-screws sc-br"></div>
+
+                <div class="led-indicator" id="boardLed"></div>
+
+                <!-- MÀN HÌNH LCD 240x320 -->
+                <div class="lcd-screen" id="lcdScreen">
+                    
+                    <!-- 1. Header Màn Hình -->
+                    <div class="screen-header">
+                        <div class="header-title-box">
+                            <span id="headerIco">🛏️</span>
+                            <span class="header-title-text" id="headerTitle">Phòng Ngủ Ty</span>
+                            <span class="remote-badge" id="remoteBadge" style="display: none;">Xem từ xa</span>
+                        </div>
+                        <div class="header-actions">
+                            <!-- Nút Quay Về Phòng Chính -->
+                            <button class="btn-header-home" id="btnReturnHome" onclick="returnToHomeRoom()">
+                                <span>🏠</span> <span>Về Ty</span>
+                            </button>
+                            <!-- Nút Toàn Nhà -->
+                            <button class="btn-header-house" id="btnToggleHouse" onclick="toggleHouseView()">
+                                <span>🌐</span> <span id="houseBtnLabel">Toàn Nhà</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Countdown Strip (Khi đang xem phòng khác) -->
+                    <div class="countdown-strip" id="countdownStrip">
+                        <span>⏳ Tự về phòng chính:</span>
+                        <span class="countdown-progress" id="countdownVal">15s</span>
+                    </div>
+
+                    <!-- 3. Screen Body (Nội dung thay đổi linh hoạt) -->
+                    <div class="screen-body" id="screenBody">
+                        <!-- Nội dung được render động bằng JS -->
+                    </div>
+
+                    <!-- 4. Bottom Tab Bar -->
+                    <div class="screen-tabbar">
+                        <button class="tab-btn active" id="tab0" onclick="switchNavTab(0)">
+                            <span class="tab-ico">💡</span>
+                            <span>Thiết Bị</span>
+                        </button>
+                        <button class="tab-btn" id="tab1" onclick="switchNavTab(1)">
+                            <span class="tab-ico">🌐</span>
+                            <span>Toàn Nhà</span>
+                        </button>
+                        <button class="tab-btn" id="tab2" onclick="switchNavTab(2)">
+                            <span class="tab-ico">✨</span>
+                            <span>Nala AI</span>
+                        </button>
+                        <button class="tab-btn" id="tab3" onclick="switchNavTab(3)">
+                            <span class="tab-ico">⚙️</span>
+                            <span>Cài Đặt</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: #64748b; margin-top: 10px; text-align: center;">
+                Tỉ lệ chuẩn 240x320 ESP32-S3 LCDWiki ES3C28P<br>
+                <b style="color: #38bdf8;">(Anh hãy bấm trực tiếp vào các nút trên màn hình để trải nghiệm)</b>
+            </div>
+        </div>
+
+        <!-- CỘT 2: KẾ HOẠCH & TÍNH NĂNG ĐỀ XUẤT -->
+        <div class="plan-column">
+            
+            <div class="section-header-tag">
+                <span>💡</span> <span>Kế Hoạch & Thiết Kế Đột Phá</span>
+            </div>
+            <h2 class="section-main-title">Cây Phân Tầng Thông Minh (Smart Floor & Room Hub)</h2>
+            
+            <p class="desc-text">
+                Ý tưởng của anh về <b>Nút Toàn Nhà</b> giải quyết bài toán cốt lõi nhất của Smart Home: 
+                <i>"Làm thế nào để đứng tại 1 phòng bất kỳ (ví dụ Phòng ngủ Ty) mà vẫn kiểm soát được toàn bộ căn nhà, nhìn thấy ngay phòng nào đang quên tắt máy lạnh hay đèn, và điều khiển từ xa ngay lập tức mà không phải chạy đi từng phòng?"</i>
+            </p>
+
+            <!-- BẢNG ĐIỀU KHIỂN GIẢ LẬP ĐỂ ANH TEST TRỰC TIẾP TRÊN WEB -->
+            <div class="simulator-control-card">
+                <div class="sim-title">
+                    <span>🎛️</span> <span>Bảng Thử Nghiệm Tương Tác Local</span>
+                </div>
+                <div class="sim-controls-grid">
+                    <div class="control-group">
+                        <label>Thời Gian Tự Quay Về Phòng Chính:</label>
+                        <select class="select-custom" id="simTimeoutSelect" onchange="changeTimeoutSetting(this.value)">
+                            <option value="5">5 Giây (Test nhanh)</option>
+                            <option value="10">10 Giây</option>
+                            <option value="15" selected>15 Giây (Khuyên dùng chuẩn Web)</option>
+                            <option value="30">30 Giây</option>
+                            <option value="0">Không tự quay về (Giữ nguyên)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Giả lập bật/tắt thiết bị phòng khác:</label>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="toggleMockOtherRoom('Phòng ngủ mẹ')" style="background:#1e293b; color:#fbbf24; border:1px solid #475569; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                                Bật/Tắt P.Mẹ
+                            </button>
+                            <button onclick="toggleMockOtherRoom('Phòng chiếu')" style="background:#1e293b; color:#fbbf24; border:1px solid #475569; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                                Bật/Tắt P.Chiếu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5 GỢI Ý TÍNH NĂNG THÔNG MINH CHO NÚT TOÀN NHÀ -->
+            <h3 style="font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 12px; display:flex; align-items:center; gap:8px;">
+                <span>🌟</span> <span>5 Gợi Ý Tính Năng Thông Minh Cho Nút "Toàn Nhà"</span>
+            </h3>
+
+            <div class="feature-grid">
+                <!-- Tính năng 1 -->
+                <div class="feature-card">
+                    <div class="feature-card-header">
+                        <div class="feature-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">⚡</div>
+                        <div class="feature-card-title">1. Thuật toán đẩy phòng có thiết bị BẬT lên đầu</div>
+                    </div>
+                    <div class="feature-card-desc">
+                        Khi bấm <b>Toàn Nhà</b>, các phòng đang mở máy lạnh hoặc đèn tự động nhảy lên đầu trang kèm badge phát sáng màu cam. Anh không cần cuộn tìm, chỉ cần liếc mắt 0.5s là thấy ngay phòng nào đang hoạt động.
+                    </div>
+                </div>
+
+                <!-- Tính năng 2 -->
+                <div class="feature-card">
+                    <div class="feature-card-header">
+                        <div class="feature-icon-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">🔄</div>
+                        <div class="feature-card-title">2. Thanh đếm ngược & Tự về phòng chính</div>
+                    </div>
+                    <div class="feature-card-desc">
+                        Khi đang xem phòng khác (ví dụ Phòng ngủ mẹ), dải countdown phía trên sẽ đếm lùi (15s). Nếu anh chạm vào nút bấm để điều khiển, timer tự reset để anh tiếp tục dùng. Hết thời gian thì tự động trượt êm về phòng chính.
+                    </div>
+                </div>
+
+                <!-- Tính năng 3 -->
+                <div class="feature-card">
+                    <div class="feature-card-header">
+                        <div class="feature-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">🏢</div>
+                        <div class="feature-card-title">3. Tắt nhanh theo Tầng (Floor Fast-Kill)</div>
+                    </div>
+                    <div class="feature-card-desc">
+                        Trên tiêu đề mỗi tầng (Tầng 1, Tầng 2, Sân vườn) có nút nhỏ <b>"Tắt tầng"</b>. Chỉ cần 1 chạm là tắt toàn bộ đèn/quạt của tầng dưới khi chuẩn bị đi ngủ ở tầng trên mà không làm ảnh hưởng các tầng khác.
+                    </div>
+                </div>
+
+                <!-- Tính năng 4 -->
+                <div class="feature-card">
+                    <div class="feature-card-header">
+                        <div class="feature-icon-badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">🌙</div>
+                        <div class="feature-card-title">4. Chế độ Ban Đêm Thông Minh (Goodnight)</div>
+                    </div>
+                    <div class="feature-card-desc">
+                        Tích hợp phím tắt nhanh trong trang Toàn Nhà: Tắt sạch toàn bộ đèn phòng khách, phòng ăn, phòng chiếu và hành lang; tự động khóa cửa và chuyển máy lạnh các phòng ngủ về 26°C êm dịu.
+                    </div>
+                </div>
+            </div>
+
+            <!-- GÓC KỸ THUẬT: CẤU TRÚC JSON GIAO TIẾP VỚI SERVER NAS -->
+            <h3 style="font-size: 15px; font-weight: 800; color: #fff; margin: 24px 0 10px 0; display:flex; align-items:center; gap:8px;">
+                <span>📡</span> <span>Cấu Trúc Gói Tin JSON Đồng Bộ Cây Phân Tầng (Server NAS ➔ ESP32)</span>
+            </h3>
+            <p style="font-size: 13px; color: #94a3b8;">
+                Server NAS Hub đã có sẵn API và WebSocket đồng bộ cây phân tầng. Khi áp dụng lên màn hình, chỉ cần gửi gói tin JSON gọn gàng:
+            </p>
+
+            <div class="code-snippet">
+{
+  "type": "all_rooms_sync",
+  "home_room": "Phòng ngủ ty",
+  "room_view_timeout": 15,
+  "floors": [
+    {
+      "floor_id": "tang2",
+      "floor_name": "Tầng 2",
+      "active_count": 2,
+      "rooms": [
+        { "name": "Phòng ngủ ty", "active_count": 2, "is_home": true, "buttons_count": 5 },
+        { "name": "Phòng ngủ mẹ", "active_count": 1, "is_home": false, "buttons_count": 3 }
+      ]
+    },
+    {
+      "floor_id": "tang1",
+      "floor_name": "Tầng 1",
+      "active_count": 1,
+      "rooms": [
+        { "name": "Phòng chiếu", "active_count": 1, "buttons_count": 2 },
+        { "name": "Phòng khách", "active_count": 0, "buttons_count": 3 }
+      ]
+    }
+  ]
+}
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // =========================================================================
+        // DATA MODEL: DANH SÁCH THỰC TẾ TRÊN HỆ THỐNG CỦA ANH
+        // =========================================================================
+        const HOME_ROOM_NAME = "Phòng ngủ ty";
+        let currentRoom = HOME_ROOM_NAME;
+        let isHouseView = false;
+        let currentTab = 0; // 0: Thiết bị, 1: Toàn nhà, 2: AI, 3: Cài đặt
+        let roomTimeoutSec = 15;
+        let countdownTimer = null;
+        let remainingSec = 0;
+
+        // Cơ sở dữ liệu cây phân tầng & thiết bị
+        const houseData = {
+            floors: [
+                {
+                    id: "tang2",
+                    name: "TẦNG 2",
+                    rooms: [
+                        {
+                            name: "Phòng ngủ ty",
+                            is_home: true,
+                            devices: [
+                                { id: "ty_ac", name: "Máy lạnh ty", type: "climate", sub: "Cool 25°C", state: true, icon: "❄️" },
+                                { id: "ty_l1", name: "Đèn trần", type: "light", sub: "Đang bật", state: true, icon: "💡" },
+                                { id: "ty_l2", name: "Đèn ngủ (2)", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "ty_l3", name: "Đèn hắt (3)", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "ty_l4", name: "Đèn ban công (4)", type: "light", sub: "Đã tắt", state: false, icon: "💡" }
+                            ]
+                        },
+                        {
+                            name: "Phòng ngủ mẹ",
+                            is_home: false,
+                            devices: [
+                                { id: "me_ac", name: "Máy lạnh mẹ", type: "climate", sub: "Cool 26°C", state: true, icon: "❄️" },
+                                { id: "me_l1", name: "Đèn ngủ mẹ", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "me_l2", name: "Đèn trần", type: "light", sub: "Đã tắt", state: false, icon: "💡" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: "tang1",
+                    name: "TẦNG 1",
+                    rooms: [
+                        {
+                            name: "Phòng chiếu",
+                            is_home: false,
+                            devices: [
+                                { id: "pc_ac", name: "Máy lạnh chiếu", type: "climate", sub: "Đã tắt", state: false, icon: "❄️" },
+                                { id: "pc_l1", name: "Đèn cầu thang", type: "light", sub: "Đang bật", state: true, icon: "💡" }
+                            ]
+                        },
+                        {
+                            name: "Phòng khách",
+                            is_home: false,
+                            devices: [
+                                { id: "pk_l1", name: "Đèn chùm", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "pk_l2", name: "Quạt trần", type: "fan", sub: "Đã tắt", state: false, icon: "🌀" },
+                                { id: "pk_l3", name: "Đèn trang trí", type: "light", sub: "Đã tắt", state: false, icon: "💡" }
+                            ]
+                        },
+                        {
+                            name: "Bếp & Ăn",
+                            is_home: false,
+                            devices: [
+                                { id: "bep_l1", name: "Đèn bàn ăn", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "bep_l2", name: "Đèn bếp nấu", type: "light", sub: "Đã tắt", state: false, icon: "💡" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: "ngoai",
+                    name: "SÂN VƯỜN & CỔNG",
+                    rooms: [
+                        {
+                            name: "Sân trước",
+                            is_home: false,
+                            devices: [
+                                { id: "san_l1", name: "Đèn cổng", type: "light", sub: "Đã tắt", state: false, icon: "💡" },
+                                { id: "san_l2", name: "Đèn sân", type: "light", sub: "Đã tắt", state: false, icon: "💡" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // Tính tổng số thiết bị bật trong 1 phòng
+        function getRoomActiveCount(room) {
+            return room.devices.filter(d => d.state).length;
+        }
+
+        // Tìm object room theo tên
+        function findRoomByName(name) {
+            for (let f of houseData.floors) {
+                for (let r of f.rooms) {
+                    if (r.name === name) return r;
+                }
+            }
+            return null;
+        }
+
+        // =========================================================================
+        // RENDER GIAO DIỆN MÀN HÌNH CHUẨN 240x320
+        // =========================================================================
+        function renderScreen() {
+            const body = document.getElementById("screenBody");
+            const headerTitle = document.getElementById("headerTitle");
+            const headerIco = document.getElementById("headerIco");
+            const remoteBadge = document.getElementById("remoteBadge");
+            const btnReturnHome = document.getElementById("btnReturnHome");
+            const btnToggleHouse = document.getElementById("btnToggleHouse");
+            const countdownStrip = document.getElementById("countdownStrip");
+            const boardLed = document.getElementById("boardLed");
+
+            // 1. Cập nhật TabBar
+            for (let i = 0; i < 4; i++) {
+                const tabEl = document.getElementById(`tab${i}`);
+                if (tabEl) {
+                    if (isHouseView) {
+                        tabEl.classList.toggle("active", i === 1);
+                    } else {
+                        tabEl.classList.toggle("active", i === currentTab);
+                    }
+                }
+            }
+
+            // 2. Chế độ hiển thị CÂY PHÂN TẦNG (TOÀN NHÀ)
+            if (isHouseView) {
+                headerIco.innerText = "🌐";
+                headerTitle.innerText = "Toàn Bộ Căn Nhà";
+                remoteBadge.style.display = "none";
+                btnReturnHome.style.display = (currentRoom !== HOME_ROOM_NAME) ? "flex" : "none";
+                btnToggleHouse.classList.add("active");
+                countdownStrip.style.display = "none";
+                boardLed.style.background = "#38bdf8";
+                boardLed.style.boxShadow = "0 0 10px #38bdf8";
+
+                // Tính tổng thiết bị bật cả nhà
+                let totalActive = 0;
+                houseData.floors.forEach(f => f.rooms.forEach(r => totalActive += getRoomActiveCount(r)));
+
+                let html = `
+                    <div class="house-quick-strip">
+                        <div>
+                            <div class="title">Toàn Nhà Thông Minh</div>
+                            <div class="sub">Đang bật: <b style="color:#fbbf24;">${totalActive}</b> thiết bị</div>
+                        </div>
+                        <button class="btn-master-off" onclick="masterTurnOffAll()">TẮT TẤT CẢ</button>
+                    </div>
+                `;
+
+                // Render từng tầng kèm thuật toán: ĐẨY PHÒNG ĐANG BẬT LÊN ĐẦU
+                houseData.floors.forEach(floor => {
+                    // Sắp xếp các phòng trong tầng: Phòng có thiết bị bật lên đầu
+                    const sortedRooms = [...floor.rooms].sort((a, b) => {
+                        const cntA = getRoomActiveCount(a);
+                        const cntB = getRoomActiveCount(b);
+                        return cntB - cntA;
+                    });
+
+                    let floorActiveTotal = 0;
+                    floor.rooms.forEach(r => floorActiveTotal += getRoomActiveCount(r));
+
+                    html += `
+                        <div class="floor-section">
+                            <div class="floor-header">
+                                <span>${floor.name} (${floorActiveTotal} BẬT)</span>
+                                ${floorActiveTotal > 0 ? `<button class="btn-floor-off" onclick="turnOffFloor('${floor.id}')">Tắt tầng</button>` : ''}
+                            </div>
+                    `;
+
+                    sortedRooms.forEach(room => {
+                        const activeCnt = getRoomActiveCount(room);
+                        const hasActive = activeCnt > 0;
+                        const isCurrent = (room.name === currentRoom);
+
+                        html += `
+                            <div class="room-row-card ${hasActive ? 'has-active' : ''} ${isCurrent ? 'is-current-room' : ''}" onclick="selectRoom('${room.name}')">
+                                <div class="room-row-left">
+                                    <div class="room-name-line">
+                                        <span>${room.is_home ? '🛏️' : '🚪'}</span>
+                                        <span>${room.name}</span>
+                                        ${room.is_home ? '<span class="home-tag">Phòng chính</span>' : ''}
+                                    </div>
+                                    <div class="room-devices-summary">
+                                        ${hasActive ? `🟢 Đang bật: ${activeCnt}/${room.devices.length} thiết bị` : `⚪ ${room.devices.length} thiết bị đã tắt`}
+                                    </div>
+                                </div>
+                                <div class="room-row-right">
+                                    ${hasActive 
+                                        ? `<span class="badge-active-cnt">${activeCnt} BẬT</span>` 
+                                        : `<span class="badge-off-cnt">TẮT</span>`}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                });
+
+                body.innerHTML = html;
+                return;
+            }
+
+            // 3. Chế độ hiển thị PHÒNG THIẾT BỊ (Phòng hiện tại hoặc Phòng từ xa)
+            btnToggleHouse.classList.remove("active");
+            const roomObj = findRoomByName(currentRoom);
+            const isRemote = (currentRoom !== HOME_ROOM_NAME);
+
+            headerIco.innerText = isRemote ? "🚪" : "🛏️";
+            headerTitle.innerText = currentRoom;
+            remoteBadge.style.display = isRemote ? "inline-block" : "none";
+            btnReturnHome.style.display = isRemote ? "flex" : "none";
+            countdownStrip.style.display = isRemote && roomTimeoutSec > 0 ? "flex" : "none";
+
+            if (isRemote) {
+                boardLed.style.background = "#f59e0b";
+                boardLed.style.boxShadow = "0 0 10px #f59e0b";
+            } else {
+                boardLed.style.background = "#10b981";
+                boardLed.style.boxShadow = "0 0 10px #10b981";
+            }
+
+            if (!roomObj) {
+                body.innerHTML = `<div style="color:#ef4444; font-size:12px; padding:10px;">Không tìm thấy phòng!</div>`;
+                return;
+            }
+
+            const activeCnt = getRoomActiveCount(roomObj);
+            let html = `
+                <div class="room-status-bar">
+                    <span style="color:#94a3b8;">Đang bật: <b style="color:#38bdf8;">${activeCnt}</b>/${roomObj.devices.length} thiết bị</span>
+                    ${activeCnt > 0 ? `<button onclick="turnOffCurrentRoom()" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); border-radius:4px; font-size:9.5px; padding:2px 6px; font-weight:700; cursor:pointer;">TẮT HẾT</button>` : ''}
+                </div>
+                <div class="device-grid-2col">
+            `;
+
+            roomObj.devices.forEach(dev => {
+                const isClimate = (dev.type === "climate");
+                html += `
+                    <div class="btn-card ${isClimate ? 'climate-card' : ''} ${dev.state ? 'on' : ''}" onclick="toggleDevice('${dev.id}')">
+                        <div class="btn-card-top">
+                            <span class="card-icon">${dev.icon}</span>
+                            <span class="card-led"></span>
+                        </div>
+                        <div>
+                            <div class="card-title">${dev.name}</div>
+                            <div class="card-subtitle">${dev.state ? (isClimate ? dev.sub : 'Đang bật') : 'Đã tắt'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            body.innerHTML = html;
+        }
+
+        // =========================================================================
+        // LOGIC ĐIỀU HƯỚNG & HÀNH ĐỘNG
+        // =========================================================================
+        function toggleHouseView() {
+            isHouseView = !isHouseView;
+            if (isHouseView) {
+                stopCountdown();
+            } else if (currentRoom !== HOME_ROOM_NAME && roomTimeoutSec > 0) {
+                startCountdown();
+            }
+            renderScreen();
+        }
+
+        function switchNavTab(tabIdx) {
+            currentTab = tabIdx;
+            if (tabIdx === 1) {
+                isHouseView = true;
+                stopCountdown();
+            } else if (tabIdx === 0) {
+                isHouseView = false;
+                if (currentRoom !== HOME_ROOM_NAME && roomTimeoutSec > 0) {
+                    startCountdown();
+                }
+            } else {
+                alert(`Mô phỏng Tab ${tabIdx}: Trong bản demo này, chúng ta tập trung vào tương tác Tab Thiết Bị và Nút Toàn Nhà!`);
+                return;
+            }
+            renderScreen();
+        }
+
+        function selectRoom(roomName) {
+            currentRoom = roomName;
+            isHouseView = false;
+            currentTab = 0;
+
+            if (currentRoom !== HOME_ROOM_NAME && roomTimeoutSec > 0) {
+                startCountdown();
+            } else {
+                stopCountdown();
+            }
+            renderScreen();
+        }
+
+        function returnToHomeRoom() {
+            currentRoom = HOME_ROOM_NAME;
+            isHouseView = false;
+            currentTab = 0;
+            stopCountdown();
+            renderScreen();
+        }
+
+        // =========================================================================
+        // LOGIC ĐẾM NGƯỢC TỰ QUAY VỀ PHÒNG CHÍNH (AUTO RETURN TIMER)
+        // =========================================================================
+        function startCountdown() {
+            stopCountdown();
+            if (roomTimeoutSec <= 0) return;
+            remainingSec = roomTimeoutSec;
+            updateCountdownUI();
+
+            countdownTimer = setInterval(() => {
+                remainingSec--;
+                updateCountdownUI();
+                if (remainingSec <= 0) {
+                    stopCountdown();
+                    returnToHomeRoom();
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        function resetCountdown() {
+            if (currentRoom !== HOME_ROOM_NAME && roomTimeoutSec > 0) {
+                remainingSec = roomTimeoutSec;
+                updateCountdownUI();
+            }
+        }
+
+        function updateCountdownUI() {
+            const el = document.getElementById("countdownVal");
+            if (el) el.innerText = `${remainingSec}s`;
+        }
+
+        function changeTimeoutSetting(val) {
+            roomTimeoutSec = parseInt(val);
+            if (currentRoom !== HOME_ROOM_NAME) {
+                if (roomTimeoutSec > 0) startCountdown();
+                else stopCountdown();
+                renderScreen();
+            }
+        }
+
+        // =========================================================================
+        // ĐIỀU KHIỂN THIẾT BỊ BẬT / TẮT
+        // =========================================================================
+        function toggleDevice(devId) {
+            const roomObj = findRoomByName(currentRoom);
+            if (!roomObj) return;
+            const dev = roomObj.devices.find(d => d.id === devId);
+            if (dev) {
+                dev.state = !dev.state;
+                resetCountdown(); // Chạm vào thiết bị thì reset timer để không bị ngắt
+                renderScreen();
+            }
+        }
+
+        function turnOffCurrentRoom() {
+            const roomObj = findRoomByName(currentRoom);
+            if (!roomObj) return;
+            roomObj.devices.forEach(d => d.state = false);
+            resetCountdown();
+            renderScreen();
+        }
+
+        function turnOffFloor(floorId) {
+            const floor = houseData.floors.find(f => f.id === floorId);
+            if (floor) {
+                floor.rooms.forEach(r => r.devices.forEach(d => d.state = false));
+                renderScreen();
+            }
+        }
+
+        function masterTurnOffAll() {
+            if (confirm("Xác nhận tắt TOÀN BỘ đèn và máy lạnh trong căn nhà?")) {
+                houseData.floors.forEach(f => f.rooms.forEach(r => r.devices.forEach(d => d.state = false)));
+                renderScreen();
+            }
+        }
+
+        // Nút giả lập từ bên ngoài
+        function toggleMockOtherRoom(targetRoom) {
+            const r = findRoomByName(targetRoom);
+            if (r && r.devices.length > 0) {
+                const anyOn = r.devices.some(d => d.state);
+                r.devices.forEach(d => d.state = !anyOn);
+                renderScreen();
+            }
+        }
+
+        // Khởi động
+        window.onload = () => {
+            renderScreen();
+        };
+    </script>
+</body>
+</html>
