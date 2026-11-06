@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phác Thảo Màn Hình Chờ ESP32-S3 2.8" (Giữ Nguyên Bố Cục Gốc) - Nala Smart Home</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #060911;
+            color: #f1f5f9;
+        }
+        .font-clock {
+            font-family: 'Outfit', sans-serif;
+        }
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 2px;
+        }
+        /* Screen Bezel Glow */
+        .panel-shadow {
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.1);
+        }
+        /* Glass reflection */
+        .glass-glare {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 35%, transparent 60%);
+        }
+        /* Pulse dot */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.9); }
+        }
+        .pulse-sec {
+            animation: pulse-glow 1s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <span class="text-xl">🛡️</span>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+                        PHÁC THẢO MÀN HÌNH CHỜ STANDBY • GIỮ 100% BỐ CỤC GỐC
+                    </h1>
+                    <p class="text-xs text-slate-400">Thiết bị: ESP32-S3 2.8" Portrait (240×320) • Thư viện ESP32Time + Lớp phủ độc lập (Zero-Risk)</p>
+                </div>
+            </div>
+
+            <!-- Top Action Badges -->
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    Đảm bảo KHÔNG lỗi giao diện cũ
+                </span>
+                <button onclick="toggleTechModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 flex items-center gap-1.5">
+                    <span>📖</span> Code mẫu ESP32Time
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+        <!-- LEFT COLUMN: Real Physical Simulation of ESP32 240x320 Panel (6 Cols) -->
+        <div class="lg:col-span-6 flex flex-col items-center">
+            
+            <!-- Inactivity / State Monitor -->
+            <div class="w-full max-w-[340px] flex items-center justify-between mb-3 px-2 text-xs text-slate-400">
+                <div class="flex items-center gap-2">
+                    <span>Chế độ:</span>
+                    <span id="screenStateBadge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        🌙 MÀN HÌNH CHỜ (STANDBY)
+                    </span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span>Chờ sau:</span>
+                    <span id="timerCountdown" class="font-mono-num font-bold text-cyan-400">30s</span>
+                    <button onclick="simulateScreenTouch()" class="ml-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 border border-slate-700 text-[11px]">
+                        👆 Chạm
+                    </button>
+                </div>
+            </div>
+
+            <!-- Physical Enclosure of ESP32-S3 2.8" LCDWiki ES3C28P -->
+            <div class="relative p-5 sm:p-6 bg-gradient-to-b from-slate-800 via-slate-900 to-black rounded-[36px] border-2 border-slate-700/80 panel-shadow w-full max-w-[340px] flex flex-col items-center">
+                
+                <!-- Enclosure Top Bar: Camera/Mic & Hardware Status LED -->
+                <div class="w-full flex items-center justify-between pb-3 px-2">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-700 flex items-center justify-center">
+                            <div class="w-1 h-1 rounded-full bg-cyan-500/60"></div>
+                        </div>
+                        <span class="text-[9px] font-mono tracking-widest text-slate-500 uppercase">ES3C28P • 240×320 IPS</span>
+                    </div>
+
+                    <!-- Hardware RGB LED -->
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] text-slate-500">LED:</span>
+                        <div id="hardwareLed" class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#38bdf8] transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- EXACT 240 x 320 LCD SCREEN CONTAINER -->
+                <!-- ======================================================== -->
+                <div id="realLcdDisplay" onclick="simulateScreenTouch()" class="relative w-[240px] h-[320px] bg-[#080C14] rounded-xl overflow-hidden cursor-pointer select-none transition-all duration-500 border border-slate-800 shadow-inner group">
+                    
+                    <!-- Glass Reflection Layer -->
+                    <div class="absolute inset-0 glass-glare pointer-events-none z-30"></div>
+
+                    <!-- ======================================================== -->
+                    <!-- LAYER 1: BASE SYSTEM DASHBOARD (EXACT CURRENT FIRMWARE) -->
+                    <!-- BẢO TOÀN 100% BỐ CỤC GỐC, KHÔNG THAY ĐỔI 1 PIXEL -->
+                    <!-- ======================================================== -->
+                    <div id="baseDashboardLayer" class="absolute inset-0 flex flex-col z-10">
+
+                        <!-- 1. Header trên cùng (Cao 38px, Rộng 240px) -->
+                        <div class="h-[38px] w-full bg-[#0D1527] border-b border-[#1E293B] px-2 py-1 flex flex-col justify-between shrink-0">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[12px] font-bold text-[#38BDF8] truncate">NALA: Phòng ngủ tỷ</span>
+                                <span class="text-[11px] font-bold text-[#10B981]">Online</span>
+                            </div>
+                            <div class="text-[9px] text-[#94A3B8] font-mono truncate">
+                                IP: 192.168.1.115 | Mã: [881C]
+                            </div>
+                        </div>
+
+                        <!-- 2. Nội dung Tab Content (Cao 246px) -->
+                        <div class="flex-1 bg-[#080C14] p-1.5 flex flex-col overflow-hidden">
+                            
+                            <!-- Room Filter Chips (Toàn nhà, Về phòng chính,...) -->
+                            <div class="flex gap-1 overflow-x-hidden pb-1 shrink-0">
+                                <div class="px-2 py-0.5 rounded-full bg-[#0284C7] border border-[#38BDF8] text-[9px] font-bold text-white shrink-0">
+                                    TOÀN NHÀ
+                                </div>
+                                <div class="px-2 py-0.5 rounded-full bg-[#059669] border border-[#10B981] text-[9px] font-bold text-white shrink-0">
+                                    🏠 VỀ TỶ
+                                </div>
+                                <div class="px-2 py-0.5 rounded-full bg-[#1E293B] text-[9px] text-slate-400 shrink-0">
+                                    Phòng khách
+                                </div>
+                            </div>
+
+                            <!-- Device Grid (2 Cột x 2 Hàng các nút điều khiển thực tế) -->
+                            <div class="grid grid-cols-2 gap-1.5 my-auto">
+                                
+                                <!-- Card 1: Máy lạnh phòng ngủ tỷ -->
+                                <div class="bg-[#0F172A] border border-[#0284C7] rounded-lg p-1.5 flex flex-col justify-between h-[80px]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs">❄️</span>
+                                        <span class="text-[8px] px-1 rounded bg-[#0284C7] text-white font-bold">25.0°C</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-white truncate">Máy Lạnh Tỷ</div>
+                                        <div class="text-[8px] text-[#38BDF8]">Đang bật • Mát</div>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Đèn trần -->
+                                <div class="bg-[#0F172A] border border-[#F59E0B] rounded-lg p-1.5 flex flex-col justify-between h-[80px]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs">💡</span>
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-white truncate">Đèn Trần</div>
+                                        <div class="text-[8px] text-emerald-400">Đang bật</div>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Đèn ngủ -->
+                                <div class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-1.5 flex flex-col justify-between h-[80px]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs">🌙</span>
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-white truncate">Đèn Ngủ</div>
+                                        <div class="text-[8px] text-slate-500">Đang tắt</div>
+                                    </div>
+                                </div>
+
+                                <!-- Card 4: Quạt phòng -->
+                                <div class="bg-[#0F172A] border border-[#1E293B] rounded-lg p-1.5 flex flex-col justify-between h-[80px]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs">💨</span>
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-white truncate">Quạt Trần</div>
+                                        <div class="text-[8px] text-slate-500">Đang tắt</div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Nút tắt tất cả toàn nhà ở dưới cùng tab -->
+                            <div class="mt-1 py-1 px-2 rounded-lg bg-[#7F1D1D]/40 border border-[#EF4444]/60 text-center text-[9px] font-bold text-[#FCA5A5] shrink-0">
+                                🛑 TẮT HẾT TOÀN NHÀ
+                            </div>
+
+                        </div>
+
+                        <!-- 3. TabView Bottom Bar (Cao 36px, 4 Tab đáy chuẩn hiện tại) -->
+                        <div class="h-[36px] w-full bg-[#0F172A] border-t border-[#1E293B] grid grid-cols-4 items-center shrink-0 text-center">
+                            <div class="text-[9px] font-bold text-[#38BDF8] border-b-2 border-[#38BDF8] py-1">
+                                <div>📱</div>
+                                <div>Thiết Bị</div>
+                            </div>
+                            <div class="text-[9px] text-[#94A3B8] py-1">
+                                <div>🤖</div>
+                                <div>Nala AI</div>
+                            </div>
+                            <div class="text-[9px] text-[#94A3B8] py-1">
+                                <div>🎙️</div>
+                                <div>Đàm Thoại</div>
+                            </div>
+                            <div class="text-[9px] text-[#94A3B8] py-1">
+                                <div>⚙️</div>
+                                <div>Cài Đặt</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ======================================================== -->
+                    <!-- LAYER 2: SCREENSAVER WATCHFACE STANDBY OVERLAY (MỚI) -->
+                    <!-- LỚP PHỦ ĐỘC LẬP: CHỈ XUẤT HIỆN KHI TIMEOUT, ẨN KHI CHẠM -->
+                    <!-- ======================================================== -->
+                    <div id="screensaverOverlay" class="absolute inset-0 bg-[#05070D] p-3 flex flex-col justify-between z-20 transition-all duration-300">
+                        
+                        <!-- Top Mini Status -->
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <div class="flex items-center gap-1 text-emerald-400 font-medium">
+                                <span>📶</span> WiFi
+                            </div>
+                            <div class="text-slate-300 font-semibold truncate max-w-[130px]">
+                                📍 Phòng ngủ tỷ
+                            </div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                        </div>
+
+                        <!-- Center: BIG STANDBY CLOCK (TỐI ƯU CHO 240x320) -->
+                        <div class="flex flex-col items-center justify-center my-auto">
+                            
+                            <!-- Digital Time Hours & Minutes -->
+                            <div class="flex items-baseline font-clock font-extrabold tracking-tight">
+                                <span id="stbHours" class="text-5xl text-white font-mono-num drop-shadow-[0_2px_12px_rgba(255,255,255,0.2)]">00</span>
+                                <span class="text-4xl text-cyan-400 mx-0.5 pulse-sec font-mono-num">:</span>
+                                <span id="stbMinutes" class="text-5xl bg-clip-text text-transparent bg-gradient-to-br from-cyan-300 to-blue-500 font-mono-num drop-shadow-[0_2px_12px_rgba(56,189,248,0.3)]">00</span>
+                            </div>
+
+                            <!-- Seconds -->
+                            <div class="text-xs font-mono font-bold text-slate-400 mt-0.5 flex items-center gap-1">
+                                <span id="stbSeconds" class="text-cyan-400 font-mono-num">00</span>
+                                <span class="text-[10px] text-slate-500 uppercase">GIÂY</span>
+                            </div>
+
+                            <!-- Vietnamese Date -->
+                            <div class="mt-2 text-center">
+                                <div id="stbDayOfWeek" class="text-xs font-bold text-cyan-300 uppercase tracking-wide">Thứ Bảy</div>
+                                <div id="stbDateVi" class="text-[11px] text-slate-300 font-medium mt-0.5">07/11/2026</div>
+                            </div>
+
+                            <!-- Decorative divider -->
+                            <div class="w-16 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent my-2"></div>
+
+                            <!-- Room Climate Badge -->
+                            <div class="px-2.5 py-1 rounded-full bg-slate-900/90 border border-cyan-500/30 flex items-center gap-1.5 text-[10px]">
+                                <span>❄️</span>
+                                <span class="text-slate-300">Máy lạnh:</span>
+                                <span class="font-bold text-cyan-300">25.0°C</span>
+                            </div>
+
+                        </div>
+
+                        <!-- Bottom Touch to Wake Prompt -->
+                        <div class="text-center pb-1">
+                            <div class="text-[9px] text-slate-500 flex items-center justify-center gap-1">
+                                <span>👆</span> <em>Chạm để mở bảng điều khiển</em>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Bottom Hardware Chin -->
+                <div class="text-center pt-3 text-[10px] tracking-widest text-slate-600 font-semibold uppercase">
+                    NALA PANEL • ES3C28P 2.8"
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Safety Guarantee & Technical Blueprint (6 Cols) -->
+        <div class="lg:col-span-6 flex flex-col gap-6">
+
+            <!-- Card 1: Safety Guarantee (Bảo toàn 100% bố cục cũ) -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-emerald-400 text-lg">🛡️</span>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide">
+                        Cam Kết Kỹ Thuật: Bảo Toàn 100% Giao Diện Gốc
+                    </h3>
+                </div>
+
+                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                    Để tuyệt đối không gây lỗi hay lệch bố cục hiện tại, màn hình chờ được thiết kế dưới dạng <strong>Lớp phủ độc lập (Transparent Overlay Object)</strong>.
+                </p>
+
+                <div class="space-y-2.5 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-start gap-2.5">
+                        <span class="text-cyan-400 font-bold text-sm">1.</span>
+                        <div>
+                            <strong class="text-white">Không đụng vào code cũ:</strong>
+                            <p class="text-slate-400 text-[11px] mt-0.5">Giữ nguyên 100% hàm <code>build_tab_devices()</code>, <code>build_tab_ai()</code>, <code>build_tab_intercom()</code>, <code>build_tab_settings()</code> và thanh Header 38px.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-start gap-2.5">
+                        <span class="text-cyan-400 font-bold text-sm">2.</span>
+                        <div>
+                            <strong class="text-white">Chỉ thêm 1 Object duy nhất (`modal_screensaver`):</strong>
+                            <p class="text-slate-400 text-[11px] mt-0.5">Kích thước 240×320, khi bình thường luôn mang cờ <code>LV_OBJ_FLAG_HIDDEN</code> (ẩn hoàn toàn, không tốn tài nguyên render CPU/RAM).</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-start gap-2.5">
+                        <span class="text-cyan-400 font-bold text-sm">3.</span>
+                        <div>
+                            <strong class="text-white">Chạm là thức dậy tức thì:</strong>
+                            <p class="text-slate-400 text-[11px] mt-0.5">Sự kiện chạm chỉ đơn giản là gán lại cờ <code>LV_OBJ_FLAG_HIDDEN</code>, trả lại màn hình làm việc đúng tab đang mở với độ trễ 0ms.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Card 2: Interactive Test Controls -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-4">
+                    <span class="text-cyan-400">⚡</span> Thử Nghiệm Tương Tác
+                </h3>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button onclick="forceScreensaver()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+                        <span>🌙</span> Xem Màn Hình Chờ
+                    </button>
+                    <button onclick="forceWakeup()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+                        <span>📱</span> Xem Dashboard Gốc
+                    </button>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
+                    <span>Độ sáng màn hình chờ:</span>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="rngDim" min="15" max="100" value="40" oninput="changeDimming(this.value)" class="w-24 accent-cyan-500">
+                        <span id="lblDimVal" class="font-mono text-cyan-400 text-[11px]">40%</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- TECHNICAL CODE SNIPPET MODAL -->
+    <div id="techModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-white">Mã Nguồn Bổ Sung Màn Hình Chờ (ESP32Time + LVGL 8)</h2>
+                    <p class="text-xs text-slate-400">Thêm vào cuối `ui_lvgl_dashboard.h` mà không làm thay đổi các hàm cũ</p>
+                </div>
+                <button onclick="toggleTechModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-300 font-mono">
+                <pre class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-cyan-300 overflow-x-auto"><code>// 1. Khai báo thêm trong uiDashboard:
+lv_obj_t* modal_screensaver = nullptr;
+lv_obj_t* lbl_stb_time = nullptr;
+lv_obj_t* lbl_stb_date = nullptr;
+lv_obj_t* lbl_stb_clim = nullptr;
+
+// 2. Hàm khởi tạo lớp phủ màn hình chờ (gọi 1 lần trong init):
+void build_screensaver(lv_obj_t* scr) {
+    modal_screensaver = lv_obj_create(scr);
+    lv_obj_set_size(modal_screensaver, 240, 320);
+    lv_obj_set_pos(modal_screensaver, 0, 0);
+    lv_obj_set_style_bg_color(modal_screensaver, lv_color_hex(0x05070D), 0);
+    lv_obj_set_style_border_width(modal_screensaver, 0, 0);
+    lv_obj_set_style_pad_all(modal_screensaver, 4, 0);
+    
+    // Đặt cờ ẩn mặc định để không che màn hình gốc:
+    lv_obj_add_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+
+    // Chạm vào là ẩn ngay màn hình chờ:
+    lv_obj_add_event_cb(modal_screensaver, [](lv_event_t* e) {
+        auto* ui = (UiLvglDashboard*)lv_event_get_user_data(e);
+        ui->hide_screensaver();
+    }, LV_EVENT_CLICKED, this);
+
+    // Label giờ số to 32px
+    lbl_stb_time = lv_label_create(modal_screensaver);
+    lv_obj_set_style_text_color(lbl_stb_time, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(lbl_stb_time, LV_ALIGN_CENTER, 0, -25);
+
+    // Label thứ ngày tháng
+    lbl_stb_date = lv_label_create(modal_screensaver);
+    lv_obj_set_style_text_color(lbl_stb_date, lv_color_hex(0x38BDF8), 0);
+    lv_obj_align(lbl_stb_date, LV_ALIGN_CENTER, 0, 15);
+}
+
+// 3. Hai hàm bật/tắt an toàn:
+void show_screensaver() {
+    if (modal_screensaver) {
+        lv_obj_clear_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(modal_screensaver);
+    }
+}
+
+void hide_screensaver() {
+    if (modal_screensaver) {
+        lv_obj_add_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+    }
+}</code></pre>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
+                <button onclick="toggleTechModal()" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs">Đóng</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Interactive Script -->
+    <script>
+        let isScreensaver = true;
+        let timeoutSeconds = 30;
+        let countdownLeft = 30;
+        let timerInterval = null;
+        let dimPercent = 40;
+
+        const dayNames = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById('stbHours').textContent = h;
+            document.getElementById('stbMinutes').textContent = m;
+            document.getElementById('stbSeconds').textContent = s;
+
+            const dayVi = dayNames[now.getDay()];
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()}`;
+            document.getElementById('stbDayOfWeek').textContent = dayVi;
+            document.getElementById('stbDateVi').textContent = dateStr;
+        }
+
+        function simulateScreenTouch() {
+            if (isScreensaver) {
+                forceWakeup();
+            } else {
+                forceScreensaver();
+            }
+        }
+
+        function forceWakeup() {
+            isScreensaver = false;
+            countdownLeft = timeoutSeconds;
+            updateCountdownUI();
+
+            const overlay = document.getElementById('screensaverOverlay');
+            const badge = document.getElementById('screenStateBadge');
+            const led = document.getElementById('hardwareLed');
+            const screen = document.getElementById('realLcdDisplay');
+
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+
+            screen.style.filter = 'brightness(100%)';
+            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            badge.textContent = '⚡ DASHBOARD GỐC (ĐANG HOẠT ĐỘNG)';
+            led.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] transition-all duration-300';
+        }
+
+        function forceScreensaver() {
+            isScreensaver = true;
+            updateCountdownUI();
+
+            const overlay = document.getElementById('screensaverOverlay');
+            const badge = document.getElementById('screenStateBadge');
+            const led = document.getElementById('hardwareLed');
+            const screen = document.getElementById('realLcdDisplay');
+
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+
+            screen.style.filter = `brightness(${dimPercent}%)`;
+            badge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            badge.textContent = '🌙 MÀN HÌNH CHỜ (STANDBY)';
+            led.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#38bdf8] transition-all duration-300';
+        }
+
+        function updateCountdownUI() {
+            const badge = document.getElementById('timerCountdown');
+            if (badge) {
+                badge.textContent = isScreensaver ? 'Đang Chờ' : `${countdownLeft}s`;
+            }
+        }
+
+        function changeDimming(val) {
+            dimPercent = parseInt(val);
+            document.getElementById('lblDimVal').textContent = `${dimPercent}%`;
+            if (isScreensaver) {
+                document.getElementById('realLcdDisplay').style.filter = `brightness(${dimPercent}%)`;
+            }
+        }
+
+        function toggleTechModal() {
+            const m = document.getElementById('techModal');
+            m.classList.toggle('hidden');
+        }
+
+        // Timer interval
+        setInterval(() => {
+            if (!isScreensaver) {
+                countdownLeft--;
+                updateCountdownUI();
+                if (countdownLeft <= 0) {
+                    forceScreensaver();
+                }
+            }
+        }, 1000);
+
+        updateClock();
+        setInterval(updateClock, 1000);
+        forceScreensaver();
+    </script>
+</body>
+</html>
