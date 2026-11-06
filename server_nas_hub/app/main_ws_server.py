@@ -99,6 +99,8 @@ def get_buttons_with_state(dev: dict, include_all_house_active: bool = False) ->
         eid = b.get("entity_id", "")
         if eid:
             local_eids.add(eid)
+            if len(room_buttons) >= 6:
+                continue
             raw_s = ha_bridge.states.get(eid, {})
             cur_state = raw_s.get("state", "off")
             b_copy["state"] = cur_state
@@ -153,6 +155,8 @@ def get_buttons_with_state(dev: dict, include_all_house_active: bool = False) ->
             short_d = shorten_device(device_name)
             display_label = f"{short_r}: {short_d}"
 
+            if len(room_buttons) >= 6:
+                continue
             raw_s = ha_bridge.states.get(eid, {})
             buttons_with_state.append({
                 "id": f"ha_{eid.replace('.', '_')}",
@@ -278,6 +282,8 @@ def get_all_rooms_summary(local_room: str = "") -> list:
             dname = dname.replace("Máy lạnh", "M.Lạnh").replace("máy lạnh", "M.Lạnh")
             dname = dname.replace("Đèn trần", "Đèn").replace("đèn trần", "Đèn")
             dname = dname.replace("Công tắc", "CT").replace("công tắc", "CT")
+            if len(room_buttons) >= 6:
+                continue
             raw_s = ha_bridge.states.get(eid, {})
             raw_attrs = raw_s.get("attributes", {})
             slim_attrs = {}
@@ -332,7 +338,7 @@ def get_all_rooms_summary(local_room: str = "") -> list:
         return (is_local, has_active, -r["active_devices_count"], r["room_name"])
 
     rooms.sort(key=room_sort_key)
-    return rooms[:12]
+    return rooms[:8]
 
 # All-House Master Configuration File
 ALL_HOUSE_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "all_house_config.json")
@@ -564,9 +570,7 @@ async def on_ha_state_change(entity_id: str, new_state: str, raw_obj: dict):
                             "state": new_state,
                             "is_on": is_on,
                             "attributes": attrs,
-                            "house_status": house_status,
-                            "all_rooms": get_all_rooms_summary(local_room=dev.get("room_name", "")),
-                            "buttons": get_buttons_with_state(dev, include_all_house_active=False)
+                            "house_status": house_status
                         }
                     }
                     await ws.send_json(panel_msg)
