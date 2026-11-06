@@ -1,7 +1,10 @@
 """
 NALA SMART HOME - ADVANCED AI AGENT ROUTER
-Multi-provider support: Google Gemini, DeepSeek, OpenRouter (9 Router), Custom OpenAI.
-Includes dynamic Home Assistant function calling & tool execution.
+Implements official specs:
+- Google Gemini: Native Generative Language API (generateContent) with x-goog-api-key & Function Declarations
+- DeepSeek: Official OpenAI-compatible Chat Completions API (api.deepseek.com)
+- OpenRouter (9 Router): Official OpenRouter API (openrouter.ai/api/v1)
+Includes Home Assistant Tool Calling & Room-Context Awareness.
 """
 
 import os
@@ -31,6 +34,14 @@ def mask_key(k: Optional[str]) -> str:
         return "****"
     return f"{k[:4]}...{k[-4:]}"
 
+def normalize_gemini_model(model: Optional[str]) -> str:
+    m = (model or "").strip()
+    if not m or m in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
+        return "gemini-2.5-flash"
+    if m.startswith("models/"):
+        return m.replace("models/", "")
+    return m
+
 class AIAgentRouter:
     def __init__(self, gemini_api_key: str, deepseek_api_key: str, ha_bridge, data_dir: Optional[str] = None):
         self.ha_bridge = ha_bridge
@@ -55,12 +66,12 @@ class AIAgentRouter:
             "gemini": {
                 "api_key": default_gemini or os.getenv("GEMINI_API_KEY", ""),
                 "model": "gemini-2.5-flash",
-                "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+                "base_url": "https://generativelanguage.googleapis.com/v1beta"
             },
             "deepseek": {
                 "api_key": default_deepseek or os.getenv("DEEPSEEK_API_KEY", ""),
                 "model": "deepseek-chat",
-                "base_url": "https://api.deepseek.com/v1"
+                "base_url": "https://api.deepseek.com"
             },
             "openrouter": {
                 "api_key": os.getenv("OPENROUTER_API_KEY", ""),
@@ -80,7 +91,6 @@ class AIAgentRouter:
             try:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     saved = json.load(f)
-                    # Merge deep
                     for k, v in saved.items():
                         if isinstance(v, dict) and k in default_cfg and isinstance(default_cfg[k], dict):
                             default_cfg[k].update(v)
@@ -90,6 +100,8 @@ class AIAgentRouter:
             except Exception as e:
                 logger.error("Failed to read %s: %s", self.config_file, e)
 
+        # Normalize any saved gemini model
+        default_cfg["gemini"]["model"] = normalize_gemini_model(default_cfg["gemini"].get("model"))
         return default_cfg
 
     def get_safe_config(self) -> Dict[str, Any]:
@@ -101,14 +113,14 @@ class AIAgentRouter:
             "gemini": {
                 "api_key_masked": mask_key(self.config["gemini"].get("api_key")),
                 "has_key": bool(self.config["gemini"].get("api_key")),
-                "model": self.config["gemini"].get("model", "gemini-2.5-flash"),
-                "base_url": self.config["gemini"].get("base_url", "https://generativelanguage.googleapis.com/v1beta/openai")
+                "model": normalize_gemini_model(self.config["gemini"].get("model")),
+                "base_url": self.config["gemini"].get("base_url", "https://generativelanguage.googleapis.com/v1beta")
             },
             "deepseek": {
                 "api_key_masked": mask_key(self.config["deepseek"].get("api_key")),
                 "has_key": bool(self.config["deepseek"].get("api_key")),
                 "model": self.config["deepseek"].get("model", "deepseek-chat"),
-                "base_url": self.config["deepseek"].get("base_url", "https://api.deepseek.com/v1")
+                "base_url": self.config["deepseek"].get("base_url", "https://api.deepseek.com")
             },
             "openrouter": {
                 "api_key_masked": mask_key(self.config["openrouter"].get("api_key")),
@@ -142,12 +154,15 @@ class AIAgentRouter:
                         self.config[prov] = {}
 
                     if "model" in p_data and p_data["model"]:
-                        self.config[prov]["model"] = p_data["model"].strip()
+                        mod_val = p_data["model"].strip()
+                        if prov == "gemini":
+                            mod_val = normalize_gemini_model(mod_val)
+                        self.config[prov]["model"] = mod_val
+
                     if "base_url" in p_data and p_data["base_url"]:
                         self.config[prov]["base_url"] = p_data["base_url"].strip()
 
                     new_key = p_data.get("api_key", "").strip()
-                    # Nếu có key mới và không phải dạng masked "..."
                     if new_key and "..." not in new_key and "****" not in new_key:
                         self.config[prov]["api_key"] = new_key
 
@@ -160,8 +175,8 @@ class AIAgentRouter:
             logger.error("Failed to save AI config: %s", e)
             return False
 
-    def _get_ha_tools_schema(self) -> List[Dict[str, Any]]:
-        """Khai báo function calling tools theo chuẩn OpenAI cho các AI models."""
+    def _get_ha_tools_schema_openai(self) -> List[Dict[str, Any]]:
+        """Khai báo function calling tools theo chuẩn OpenAI (cho DeepSeek, OpenRouter)."""
         return [
             {
                 "type": "function",
@@ -225,6 +240,62 @@ class AIAgentRouter:
             }
         ]
 
+    def _get_ha_tools_schema_gemini(self) -> List[Dict[str, Any]]:
+        """Khai báo function declarations theo chuẩn Google Gemini REST."""
+        return [
+            {
+                "name": "control_home_device",
+                "description": "Bật, tắt thiết bị hoặc điều chỉnh nhiệt độ máy lạnh trong nhà.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "entity_id": {
+                            "type": "STRING",
+                            "description": "ID thiết bị trong Home Assistant (ví dụ: light.den_phong_khach)."
+                        },
+                        "action": {
+                            "type": "STRING",
+                            "enum": ["turn_on", "turn_off", "toggle", "set_temperature"],
+                            "description": "Hành động điều khiển thiết bị."
+                        },
+                        "temperature": {
+                            "type": "NUMBER",
+                            "description": "Nhiệt độ cài đặt nếu là máy lạnh."
+                        }
+                    },
+                    "required": ["entity_id", "action"]
+                }
+            },
+            {
+                "name": "master_turn_off_all",
+                "description": "Tắt toàn bộ thiết bị đang bật trong nhà khi đi vắng hoặc đi ngủ.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "confirm": {
+                            "type": "BOOLEAN",
+                            "description": "Xác nhận tắt hết"
+                        }
+                    },
+                    "required": ["confirm"]
+                }
+            },
+            {
+                "name": "activate_scene",
+                "description": "Kích hoạt kịch bản ngữ cảnh trong nhà.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "scene_id": {
+                            "type": "STRING",
+                            "description": "ID ngữ cảnh (scene.tiep_khach, scene.di_ngu...)"
+                        }
+                    },
+                    "required": ["scene_id"]
+                }
+            }
+        ]
+
     def _build_device_context(self) -> str:
         """Tóm tắt danh sách thiết bị có trong Home Assistant để đưa vào context của AI."""
         if not self.ha_bridge:
@@ -244,7 +315,6 @@ class AIAgentRouter:
                 state = e.get("state", "off")
                 lines.append(f"- {name} ({eid}) | Phòng: {area} | Trạng thái: {state}")
 
-        # Giới hạn tối đa 50 thiết bị để không làm tràn context
         return "\n".join(lines[:50])
 
     async def execute_tool(self, name: str, args: Dict[str, Any]) -> str:
@@ -287,62 +357,116 @@ class AIAgentRouter:
         return "Không nhận diện được công cụ phù hợp."
 
     async def test_connection(self, provider: str, api_key: Optional[str] = None, model: Optional[str] = None, base_url: Optional[str] = None) -> Dict[str, Any]:
-        """Test latency và kết nối đến AI provider được chỉ định."""
+        """Test latency và kết nối đến AI provider theo chuẩn chính thức của từng hãng."""
         t0 = time.time()
         prov_cfg = self.config.get(provider, {})
         key = api_key or prov_cfg.get("api_key", "")
         mod = model or prov_cfg.get("model", "")
         url = base_url or prov_cfg.get("base_url", "")
-        if provider == "gemini" and mod in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
-            mod = "gemini-2.5-flash" 
 
         if not key:
             return {"status": "error", "message": f"Chưa có API Key cho {provider}"}
 
-        headers = {
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json"
-        }
-        if provider == "openrouter":
-            headers["HTTP-Referer"] = "https://nalasmarthome.local"
-            headers["X-Title"] = "NALA Smart Home Hub"
-
-        endpoint = f"{url.rstrip('/')}/chat/completions"
-        payload = {
-            "model": mod,
-            "messages": [
-                {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
-            ],
-            "max_tokens": 10
-        }
-
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
-                res = await client.post(endpoint, headers=headers, json=payload)
-                elapsed = int((time.time() - t0) * 1000)
-                if res.status_code == 200:
-                    data = res.json()
-                    reply = data["choices"][0]["message"]["content"].strip()
-                    return {
-                        "status": "success",
-                        "latency_ms": elapsed,
-                        "reply": reply,
-                        "model": mod,
-                        "provider": provider
+                # 1. GOOGLE GEMINI NATIVE REST API (Official Google AI Studio)
+                if provider == "gemini":
+                    norm_mod = normalize_gemini_model(mod)
+                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
+                    headers = {
+                        "x-goog-api-key": key,
+                        "Content-Type": "application/json"
                     }
+                    payload = {
+                        "contents": [
+                            {"parts": [{"text": "Trả lời 'OK' nếu bạn nhận được tin này."}]}
+                        ],
+                        "generationConfig": {"maxOutputTokens": 10, "temperature": 0.2}
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
+                # 2. DEEPSEEK OFFICIAL API (api.deepseek.com/chat/completions)
+                elif provider == "deepseek":
+                    norm_mod = mod or "deepseek-chat"
+                    endpoint = "https://api.deepseek.com/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "model": norm_mod,
+                        "messages": [
+                            {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
+                        ],
+                        "max_tokens": 10,
+                        "temperature": 0.2
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["choices"][0]["message"]["content"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
+                # 3. OPENROUTER (9 Router) API (openrouter.ai/api/v1/chat/completions)
+                elif provider == "openrouter":
+                    norm_mod = mod or "google/gemini-2.0-flash-exp:free"
+                    endpoint = "https://openrouter.ai/api/v1/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://nalasmarthome.local",
+                        "X-Title": "NALA Smart Home Hub"
+                    }
+                    payload = {
+                        "model": norm_mod,
+                        "messages": [
+                            {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
+                        ],
+                        "max_tokens": 10
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["choices"][0]["message"]["content"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
+                # 4. CUSTOM OPENAI-COMPATIBLE
                 else:
-                    return {
-                        "status": "error",
-                        "http_code": res.status_code,
-                        "message": res.text[:200],
-                        "latency_ms": elapsed
+                    endpoint = f"{url.rstrip('/')}/chat/completions"
+                    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+                    payload = {
+                        "model": mod,
+                        "messages": [{"role": "user", "content": "Trả lời 'OK'"}],
+                        "max_tokens": 10
                     }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["choices"][0]["message"]["content"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": mod, "provider": provider}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
         except Exception as e:
             elapsed = int((time.time() - t0) * 1000)
             return {"status": "error", "message": str(e), "latency_ms": elapsed}
 
     async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> str:
-        """Xử lý giọng nói người dùng, kết hợp Rule-based cực nhanh và Multi-AI Tool Calling."""
+        """Xử lý giọng nói người dùng, kết hợp Fast-Rule và Multi-AI Function Calling."""
         if not user_text:
             return "Tôi không nghe thấy gì cả."
 
@@ -357,7 +481,6 @@ class AIAgentRouter:
         # 2. Xác định AI Provider
         prov = model_preference or self.config.get("active_provider", "gemini")
         if prov not in self.config or not self.config[prov].get("api_key"):
-            # Fallback sang provider nào đang có key
             for alt in ["gemini", "deepseek", "openrouter", "custom"]:
                 if self.config.get(alt, {}).get("api_key"):
                     prov = alt
@@ -367,72 +490,131 @@ class AIAgentRouter:
         api_key = prov_cfg.get("api_key", "")
         model = prov_cfg.get("model", "")
         base_url = prov_cfg.get("base_url", "")
-        if prov == "gemini" and model in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
-            model = "gemini-2.5-flash" 
 
         if not api_key:
             return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI."
 
-        # Chuẩn bị system prompt với ngữ cảnh thiết bị thực tế
         device_ctx = self._build_device_context()
-        system_instruction = SYSTEM_PROMPT_TEMPLATE.format(device_context=device_ctx, current_room=context_room or "Không xác định")
-        tools = self._get_ha_tools_schema()
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        if prov == "openrouter":
-            headers["HTTP-Referer"] = "https://nalasmarthome.local"
-            headers["X-Title"] = "NALA Smart Home Hub"
-
-        endpoint = f"{base_url.rstrip('/')}/chat/completions"
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": user_text}
-            ],
-            "tools": tools,
-            "tool_choice": "auto",
-            "max_tokens": 150,
-            "temperature": 0.4
-        }
+        system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
+            device_context=device_ctx,
+            current_room=context_room or "Không xác định"
+        )
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.post(endpoint, headers=headers, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    msg = data["choices"][0]["message"]
+                # -------------------------------------------------------------
+                # GOOGLE GEMINI NATIVE REST (generateContent)
+                # -------------------------------------------------------------
+                if prov == "gemini":
+                    norm_mod = normalize_gemini_model(model)
+                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
+                    headers = {
+                        "x-goog-api-key": api_key,
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "system_instruction": {
+                            "parts": [{"text": system_instruction}]
+                        },
+                        "contents": [
+                            {"role": "user", "parts": [{"text": user_text}]}
+                        ],
+                        "tools": [
+                            {"function_declarations": self._get_ha_tools_schema_gemini()}
+                        ],
+                        "generationConfig": {
+                            "temperature": 0.4,
+                            "maxOutputTokens": 150
+                        }
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidate = data.get("candidates", [{}])[0]
+                        parts = candidate.get("content", {}).get("parts", [])
 
-                    # Kiểm tra xem Model có gọi Tool không
-                    tool_calls = msg.get("tool_calls", [])
-                    if tool_calls:
+                        # Kiểm tra function call
                         confirmations = []
-                        for tc in tool_calls:
-                            func = tc.get("function", {})
-                            fn_name = func.get("name", "")
-                            raw_args = func.get("arguments", "{}")
-                            try:
-                                args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
-                            except Exception:
-                                args = {}
-                            res_msg = await self.execute_tool(fn_name, args)
-                            confirmations.append(res_msg)
+                        text_replies = []
+                        for part in parts:
+                            if "functionCall" in part:
+                                fn = part["functionCall"]
+                                fn_name = fn.get("name", "")
+                                fn_args = fn.get("args", {})
+                                res_msg = await self.execute_tool(fn_name, fn_args)
+                                confirmations.append(res_msg)
+                            elif "text" in part:
+                                text_replies.append(part["text"].strip())
 
-                        # Trả về câu xác nhận hành động
                         if confirmations:
                             return " ".join(confirmations)
-                        return "Đã thực hiện yêu cầu cho bạn."
+                        if text_replies:
+                            return " ".join(text_replies)
+                    else:
+                        logger.error("Gemini API error %d: %s", res.status_code, res.text)
+                        return f"Xin lỗi, Gemini báo lỗi ({res.status_code})."
 
-                    # Không gọi tool -> trả lời tự nhiên
-                    content = msg.get("content", "").strip()
-                    if content:
-                        return content
+                # -------------------------------------------------------------
+                # DEEPSEEK & OPENROUTER (OpenAI Chat Completions Format)
+                # -------------------------------------------------------------
                 else:
-                    logger.error("AI Provider %s error %d: %s", prov, res.status_code, res.text)
-                    return f"Xin lỗi, {prov} báo lỗi ({res.status_code})."
+                    if prov == "deepseek":
+                        endpoint = "https://api.deepseek.com/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                        use_model = model or "deepseek-chat"
+                    elif prov == "openrouter":
+                        endpoint = "https://openrouter.ai/api/v1/chat/completions"
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://nalasmarthome.local",
+                            "X-Title": "NALA Smart Home Hub"
+                        }
+                        use_model = model or "google/gemini-2.0-flash-exp:free"
+                    else:
+                        endpoint = f"{base_url.rstrip('/')}/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                        use_model = model
+
+                    payload = {
+                        "model": use_model,
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_text}
+                        ],
+                        "tools": self._get_ha_tools_schema_openai(),
+                        "tool_choice": "auto",
+                        "max_tokens": 150,
+                        "temperature": 0.4
+                    }
+
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        msg = data["choices"][0]["message"]
+                        tool_calls = msg.get("tool_calls", [])
+                        if tool_calls:
+                            confirmations = []
+                            for tc in tool_calls:
+                                func = tc.get("function", {})
+                                fn_name = func.get("name", "")
+                                raw_args = func.get("arguments", "{}")
+                                try:
+                                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                                except Exception:
+                                    args = {}
+                                res_msg = await self.execute_tool(fn_name, args)
+                                confirmations.append(res_msg)
+                            if confirmations:
+                                return " ".join(confirmations)
+                            return "Đã thực hiện yêu cầu cho bạn."
+
+                        content = msg.get("content", "").strip()
+                        if content:
+                            return content
+                    else:
+                        logger.error("AI Provider %s error %d: %s", prov, res.status_code, res.text)
+                        return f"Xin lỗi, {prov} báo lỗi ({res.status_code})."
 
         except Exception as e:
             logger.error("Error communicating with AI Provider %s: %s", prov, e)
