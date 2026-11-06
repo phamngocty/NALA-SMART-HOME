@@ -179,6 +179,16 @@ private:
     lv_obj_t* lbl_incoming_caller;
     lv_obj_t* lbl_incoming_status;
 
+    // Screensaver Standby Modal (Smart Clock Watchface)
+    lv_obj_t* modal_screensaver;
+    lv_obj_t* lbl_stb_time;
+    lv_obj_t* lbl_stb_sec;
+    lv_obj_t* lbl_stb_date;
+    lv_obj_t* lbl_stb_room;
+    lv_obj_t* lbl_stb_clim;
+    lv_obj_t* lbl_stb_hint;
+    bool screensaver_active;
+
     // Climate Dialog Modal (Tessera Glass)
     lv_obj_t* dialog_climate;
     lv_obj_t* lbl_clim_title;
@@ -236,6 +246,9 @@ public:
           lbl_diag_result(nullptr), lbl_net_info(nullptr),
           modal_incoming_call(nullptr), lbl_incoming_title(nullptr),
           lbl_incoming_caller(nullptr), lbl_incoming_status(nullptr),
+          modal_screensaver(nullptr), lbl_stb_time(nullptr), lbl_stb_sec(nullptr),
+          lbl_stb_date(nullptr), lbl_stb_room(nullptr), lbl_stb_clim(nullptr),
+          lbl_stb_hint(nullptr), screensaver_active(false),
           dialog_climate(nullptr), lbl_clim_title(nullptr), btn_clim_close(nullptr),
           lbl_clim_temp(nullptr), lbl_clim_status(nullptr),
           btn_clim_minus(nullptr), btn_clim_plus(nullptr),
@@ -363,6 +376,7 @@ public:
 
         build_incoming_call_modal(scr);
         build_climate_dialog(scr);
+        build_screensaver(scr);
     }
 
     void set_ws_connected(bool connected) {
@@ -943,6 +957,90 @@ public:
         }
     }
 
+    void build_screensaver(lv_obj_t* parent) {
+        modal_screensaver = lv_obj_create(parent);
+        lv_obj_set_size(modal_screensaver, 240, 320);
+        lv_obj_set_pos(modal_screensaver, 0, 0);
+        lv_obj_set_style_bg_color(modal_screensaver, lv_color_hex(0x05070D), 0); // Apple Deep Dark Standby
+        lv_obj_set_style_border_width(modal_screensaver, 0, 0);
+        lv_obj_set_style_radius(modal_screensaver, 0, 0);
+        lv_obj_set_style_pad_all(modal_screensaver, 4, 0);
+        lv_obj_clear_flag(modal_screensaver, LV_OBJ_FLAG_SCROLLABLE);
+
+        // Mặc định ẩn hoàn toàn khi khởi động (Bảo toàn 100% bố cục gốc)
+        lv_obj_add_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+
+        // Bắt sự kiện chạm để mở lại Dashboard
+        lv_obj_add_event_cb(modal_screensaver, event_handler_trampoline, LV_EVENT_CLICKED, this);
+
+        // Top: Tên phòng hiện tại
+        lbl_stb_room = lv_label_create(modal_screensaver);
+        lv_label_set_text_fmt(lbl_stb_room, "📍 %s", home_room_name);
+        lv_obj_set_style_text_color(lbl_stb_room, lv_color_hex(0x94A3B8), 0);
+        lv_obj_set_style_text_font(lbl_stb_room, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_room, LV_ALIGN_TOP_MID, 0, 16);
+
+        // Center: Giờ số to (Font Montserrat 32px)
+        lbl_stb_time = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_time, "00:00");
+        lv_obj_set_style_text_color(lbl_stb_time, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_text_font(lbl_stb_time, &lv_font_montserrat_32, 0);
+        lv_obj_align(lbl_stb_time, LV_ALIGN_CENTER, 0, -32);
+
+        // Giây
+        lbl_stb_sec = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_sec, ":00");
+        lv_obj_set_style_text_color(lbl_stb_sec, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_text_font(lbl_stb_sec, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_sec, LV_ALIGN_CENTER, 0, -4);
+
+        // Thứ, Ngày Tháng Năm Tiếng Việt
+        lbl_stb_date = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_date, "Chờ đồng bộ giờ...");
+        lv_obj_set_style_text_color(lbl_stb_date, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_text_font(lbl_stb_date, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_date, LV_ALIGN_CENTER, 0, 24);
+
+        // Nhiệt độ phòng / Trạng thái
+        lbl_stb_clim = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_clim, "❄️ Nala Smart Home");
+        lv_obj_set_style_text_color(lbl_stb_clim, lv_color_hex(0x10B981), 0);
+        lv_obj_set_style_text_font(lbl_stb_clim, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_clim, LV_ALIGN_CENTER, 0, 56);
+
+        // Gợi ý chạm
+        lbl_stb_hint = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_hint, "Chạm màn hình để mở");
+        lv_obj_set_style_text_color(lbl_stb_hint, lv_color_hex(0x475569), 0);
+        lv_obj_set_style_text_font(lbl_stb_hint, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_hint, LV_ALIGN_BOTTOM_MID, 0, -15);
+    }
+
+    void show_screensaver() {
+        if (!modal_screensaver) return;
+        screensaver_active = true;
+        lv_obj_clear_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(modal_screensaver);
+    }
+
+    void hide_screensaver() {
+        if (!modal_screensaver) return;
+        screensaver_active = false;
+        lv_obj_add_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    bool is_screensaver_active() const {
+        return screensaver_active;
+    }
+
+    void update_standby_clock(const char* time_str, const char* sec_str, const char* date_str, const char* clim_str = nullptr) {
+        if (!modal_screensaver || !screensaver_active) return;
+        if (lbl_stb_time && time_str) lv_label_set_text(lbl_stb_time, time_str);
+        if (lbl_stb_sec && sec_str) lv_label_set_text(lbl_stb_sec, sec_str);
+        if (lbl_stb_date && date_str) lv_label_set_text(lbl_stb_date, date_str);
+        if (lbl_stb_clim && clim_str) lv_label_set_text(lbl_stb_clim, clim_str);
+    }
+
     void sync_settings(uint8_t vol, uint8_t bright, bool ring, uint8_t mic_gain) {
         if (slider_vol) {
             lv_slider_set_value(slider_vol, vol, LV_ANIM_OFF);
@@ -992,6 +1090,10 @@ private:
 
         if (code == LV_EVENT_CLICKED) {
             Serial.printf("[UI-EVENT] CLICKED target=%p\n", target);
+            if (target == modal_screensaver) {
+                hide_screensaver();
+                return;
+            }
         } else if (code == LV_EVENT_VALUE_CHANGED) {
             Serial.printf("[UI-EVENT] VALUE_CHANGED target=%p\n", target);
         }

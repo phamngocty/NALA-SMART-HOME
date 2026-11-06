@@ -104,6 +104,8 @@ SemaphoreHandle_t i2c_mutex = NULL;
 
 #include "ota_manager.h"
 #include "esp_ota_ops.h"
+#include <ESP32Time.h>
+ESP32Time rtc(7 * 3600); // Múi giờ Việt Nam GMT+7 (offset 25200s)
 volatile bool is_ota_running = false;
 #define CURRENT_FIRMWARE_VERSION "v3.3.1"
 
@@ -881,6 +883,15 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(1000)) == pdTRUE);
     }
 
+    // Đồng bộ thời gian thực từ NAS Hub
+    if (doc.containsKey("epoch") || doc.containsKey("timestamp")) {
+        unsigned long ep = doc["epoch"] | doc["timestamp"] | 0;
+        if (ep > 100000000) {
+            rtc.setTime(ep);
+            Serial.printf("[RTC] Dong bo gio tu NAS Hub thanh cong: %s\n", rtc.getTime("%H:%M:%S").c_str());
+        }
+    }
+
     Serial.printf("[WS-TEXT] Handling type: %s, FreeHeap: %lu\n", type.c_str(), (unsigned long)ESP.getFreeHeap());
     if (type == "wake_chime") {
         Serial.println("[AI] Nhan lenh phat am thanh thuc tinh Ding!");
@@ -1223,6 +1234,30 @@ void Task_LVGL_UI(void *p) {
             if (lvgl_mutex != NULL && xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 uiDashboard.check_flush_climate_setpoint();
                 uiDashboard.tick_countdown(millis());
+
+                // Màn hình chờ Standby: Tự động vào sau 30 giây không thao tác
+                uint32_t inactive_ms = lv_disp_get_inactive_time(NULL);
+                if (!uiDashboard.is_screensaver_active() && inactive_ms >= 30000) {
+                    uiDashboard.show_screensaver();
+                } else if (uiDashboard.is_screensaver_active() && inactive_ms < 500) {
+                    uiDashboard.hide_screensaver();
+                }
+
+                // Cập nhật đồng hồ mỗi giây khi màn hình chờ đang hiển thị
+                static unsigned long last_stb_sec = 0;
+                if (millis() - last_stb_sec >= 1000) {
+                    last_stb_sec = millis();
+                    if (uiDashboard.is_screensaver_active()) {
+                        String time_str = rtc.getTime("%H:%M");
+                        String sec_str = rtc.getTime(":%S");
+                        int wday = rtc.getDayofWeek();
+                        const char* wday_names[7] = {"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
+                        const char* wday_name = (wday >= 0 && wday < 7) ? wday_names[wday] : "Hôm nay";
+                        String date_str = String(wday_name) + ", " + rtc.getTime("%d/%m/%Y");
+                        uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), date_str.c_str());
+                    }
+                }
+
                 lv_timer_handler();
                 xSemaphoreGive(lvgl_mutex);
             }
