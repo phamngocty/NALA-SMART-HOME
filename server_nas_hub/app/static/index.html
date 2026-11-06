@@ -1648,6 +1648,125 @@
     </div>
 
         <!-- ======================================================================= -->
+    <!-- BẢNG ĐIỀU KHIỂN MÁY LẠNH / ĐIỀU HÒA MIDEA (CLIMATE CONTROL MODAL)       -->
+    <!-- ======================================================================= -->
+    <div class="modal-overlay" id="climateModal" onclick="if(event.target===this) closeClimateModal()" style="display: none; align-items: center; justify-content: center; z-index: 10002;">
+        <div class="modal-box" style="background: #111827; border: 1px solid #374151; border-radius: 24px; width: 95%; max-width: 440px; box-shadow: 0 25px 60px rgba(0,0,0,0.85); overflow: hidden; color: #f9fafb; font-family: 'Inter', sans-serif;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 10px 20px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <button type="button" onclick="closeClimateModal()" style="background: rgba(255,255,255,0.08); border: none; width: 38px; height: 38px; border-radius: 50%; color: #f3f4f6; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                        ✕
+                    </button>
+                    <div>
+                        <div id="climateModalRoom" style="font-size: 13px; color: #9ca3af; font-weight: 500;">Phòng ngủ tỷ</div>
+                        <div id="climateModalTitle" style="font-size: 18px; font-weight: 700; color: #f9fafb; line-height: 1.2;">Máy lạnh phòng ngủ tỷ</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" id="climatePowerBtn" onclick="toggleClimatePower()" title="Bật / Tắt nguồn" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                        ⏻
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current Temp -->
+            <div style="text-align: center; margin-top: 6px; margin-bottom: 4px;">
+                <div style="font-size: 13px; color: #9ca3af; font-weight: 500;">Nhiệt độ hiện tại</div>
+                <div id="climateCurrentTemp" style="font-size: 22px; font-weight: 700; color: #f9fafb; margin-top: 2px;">26,1 °C</div>
+            </div>
+
+            <!-- Circular Arc Thermostat Dial -->
+            <div style="position: relative; width: 280px; height: 260px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <svg id="climateSvgDial" width="280" height="260" viewBox="0 0 280 260" style="position: absolute; top: 0; left: 0;">
+                    <defs>
+                        <linearGradient id="climateCoolGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#1d4ed8" />
+                            <stop offset="100%" stop-color="#38bdf8" />
+                        </linearGradient>
+                        <linearGradient id="climateHeatGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#b45309" />
+                            <stop offset="100%" stop-color="#f59e0b" />
+                        </linearGradient>
+                    </defs>
+                    <!-- Background Track: from 135 deg to 405 deg -->
+                    <path id="climateArcBg" d="M 72.82 197.18 A 95 95 0 1 1 207.18 197.18" fill="none" stroke="#27272a" stroke-width="18" stroke-linecap="round" />
+                    <!-- Active Track -->
+                    <path id="climateArcActive" d="M 72.82 197.18 A 95 95 0 0 1 140 35" fill="none" stroke="url(#climateCoolGrad)" stroke-width="18" stroke-linecap="round" />
+                    <!-- Knob -->
+                    <circle id="climateKnob" cx="140" cy="35" r="11" fill="#ffffff" filter="drop-shadow(0 0 8px rgba(56, 189, 248, 0.9))" />
+                </svg>
+
+                <!-- Center Content inside Dial -->
+                <div style="position: relative; z-index: 2; text-align: center; margin-top: -12px;">
+                    <div id="climateCenterMode" style="font-size: 15px; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Mát</div>
+                    <div id="climateTargetTemp" style="font-size: 46px; font-weight: 800; color: #ffffff; letter-spacing: -1px; line-height: 1;">
+                        26<span style="font-size: 32px; font-weight: 600;">,0</span> <span style="font-size: 22px; font-weight: 600; color: #94a3b8;">°C</span>
+                    </div>
+
+                    <!-- Minus & Plus Buttons -->
+                    <div style="display: flex; gap: 20px; justify-content: center; margin-top: 14px;">
+                        <button type="button" onclick="adjustClimateTemp(-0.5)" style="background: #1f2937; border: 1px solid #374151; color: #f9fafb; width: 44px; height: 44px; border-radius: 50%; font-size: 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.1s, background 0.15s;" onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'">
+                            −
+                        </button>
+                        <button type="button" onclick="adjustClimateTemp(0.5)" style="background: #1f2937; border: 1px solid #374151; color: #f9fafb; width: 44px; height: 44px; border-radius: 50%; font-size: 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.1s, background 0.15s;" onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'">
+                            +
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 Control Cards Grid (2x2) -->
+            <div style="padding: 12px 20px 24px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <!-- Card 1: Chế độ -->
+                <div onclick="openClimateSubmenu('mode')" style="background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.15s;" onmouseover="this.style.background='#263345'" onmouseout="this.style.background='#1f2937'">
+                    <div style="font-size: 22px;" id="climateModeIcon">❄️</div>
+                    <div>
+                        <div style="font-size: 11px; color: #9ca3af; font-weight: 600;">Chế độ</div>
+                        <div id="climateCardModeVal" style="font-size: 14px; font-weight: 700; color: #f9fafb; margin-top: 1px;">Mát</div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Cài sẵn -->
+                <div onclick="openClimateSubmenu('preset')" style="background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.15s;" onmouseover="this.style.background='#263345'" onmouseout="this.style.background='#1f2937'">
+                    <div style="font-size: 22px;">🔘</div>
+                    <div>
+                        <div style="font-size: 11px; color: #9ca3af; font-weight: 600;">Cài sẵn</div>
+                        <div id="climateCardPresetVal" style="font-size: 14px; font-weight: 700; color: #f9fafb; margin-top: 1px;">Không có</div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Chế độ quạt -->
+                <div onclick="openClimateSubmenu('fan')" style="background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.15s;" onmouseover="this.style.background='#263345'" onmouseout="this.style.background='#1f2937'">
+                    <div style="font-size: 22px;">🌀</div>
+                    <div>
+                        <div style="font-size: 11px; color: #9ca3af; font-weight: 600;">Chế độ quạt</div>
+                        <div id="climateCardFanVal" style="font-size: 14px; font-weight: 700; color: #f9fafb; margin-top: 1px;">Tự động</div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Chế độ xoay -->
+                <div onclick="openClimateSubmenu('swing')" style="background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.15s;" onmouseover="this.style.background='#263345'" onmouseout="this.style.background='#1f2937'">
+                    <div style="font-size: 22px;">↕️</div>
+                    <div>
+                        <div style="font-size: 11px; color: #9ca3af; font-weight: 600;">Chế độ xoay</div>
+                        <div id="climateCardSwingVal" style="font-size: 14px; font-weight: 700; color: #f9fafb; margin-top: 1px;">Dọc</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submenu Selector Sheet -->
+            <div id="climateSubmenuSheet" style="display: none; background: #0f172a; border-top: 1px solid #374151; padding: 16px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span id="climateSubmenuTitle" style="font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;"></span>
+                    <button type="button" onclick="closeClimateSubmenu()" style="background: transparent; border: none; color: #94a3b8; font-size: 13px; cursor: pointer;">✕ Đóng</button>
+                </div>
+                <div id="climateSubmenuOptions" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+        <!-- ======================================================================= -->
     <!-- MODAL CẤU HÌNH NÚT TOÀN NHÀ & TẮT HẾT (ALL-HOUSE MASTER CONFIG MODAL)     -->
     <!-- ======================================================================= -->
     <!-- ======================================================================= -->
@@ -2759,6 +2878,9 @@
                 if (eid) {
                     entityStates[eid] = state;
                     updateEntityButtons(eid, state);
+                    if (typeof isClimateModalOpen !== 'undefined' && isClimateModalOpen && currentClimateId === eid) {
+                        updateClimateModalLive(payload);
+                    }
                 }
                 if (payload.house_status) {
                     updateAllHouseStrip(payload.house_status);
@@ -3733,6 +3855,10 @@
         }
 
         async function toggleEntity(entityId) {
+            if (entityId && entityId.startsWith('climate.')) {
+                openClimateModal(entityId);
+                return;
+            }
             const cur = entityStates[entityId] || 'off';
             const next = cur === 'on' ? 'off' : 'on';
             entityStates[entityId] = next;
@@ -4522,6 +4648,376 @@
         });
     </script>
 <script>
+// =============================================================================
+// BẢNG ĐIỀU KHIỂN MÁY LẠNH MIDEA / HOME ASSISTANT CLIMATE CONTROLLER
+// =============================================================================
+let isClimateModalOpen = false;
+let currentClimateId = null;
+let currentClimateEntity = null;
+let currentClimateTargetTemp = 26.0;
+let climateTempDebounceTimer = null;
+
+const CLIMATE_MODE_MAP = {
+    'off': { label: 'Tắt', icon: '⭕', color: '#94a3b8' },
+    'cool': { label: 'Mát', icon: '❄️', color: '#38bdf8' },
+    'auto': { label: 'Tự động', icon: '⚡', color: '#34d399' },
+    'dry': { label: 'Làm khô', icon: '💧', color: '#60a5fa' },
+    'fan_only': { label: 'Quạt gió', icon: '🌀', color: '#a78bfa' },
+    'heat': { label: 'Sưởi', icon: '🔥', color: '#f59e0b' }
+};
+
+const CLIMATE_FAN_MAP = {
+    'auto': 'Tự động',
+    'silent': 'Im lặng',
+    'low': 'Thấp',
+    'medium': 'Trung bình',
+    'high': 'Cao',
+    'full': 'Tối đa'
+};
+
+const CLIMATE_SWING_MAP = {
+    'off': 'Tắt',
+    'vertical': 'Dọc',
+    'horizontal': 'Ngang',
+    'both': 'Cả hai'
+};
+
+const CLIMATE_PRESET_MAP = {
+    'none': 'Không có',
+    'comfort': 'Thoải mái',
+    'boost': 'Mạnh mẽ',
+    'sleep': 'Ngủ',
+    'eco': 'Tiết kiệm'
+};
+
+async function openClimateModal(entityId) {
+    currentClimateId = entityId;
+    const modal = document.getElementById('climateModal');
+    if (!modal) return;
+
+    let ent = (currentEntities || []).find(e => e.entity_id === entityId);
+    if (!ent) {
+        try {
+            const res = await fetch('/api/ha/entities');
+            if (res.ok) {
+                currentEntities = await res.json();
+                ent = currentEntities.find(e => e.entity_id === entityId);
+            }
+        } catch (e) {}
+    }
+
+    currentClimateEntity = ent || {
+        entity_id: entityId,
+        state: entityStates[entityId] || 'off',
+        attributes: {}
+    };
+
+    isClimateModalOpen = true;
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+
+    renderClimateModalUI();
+}
+
+function closeClimateModal() {
+    const modal = document.getElementById('climateModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+    closeClimateSubmenu();
+    isClimateModalOpen = false;
+}
+
+function updateClimateModalLive(payload) {
+    if (!currentClimateEntity) return;
+    if (payload.state) currentClimateEntity.state = payload.state;
+    if (payload.attributes) {
+        currentClimateEntity.attributes = Object.assign({}, currentClimateEntity.attributes, payload.attributes);
+    }
+    renderClimateModalUI();
+}
+
+function renderClimateModalUI() {
+    if (!currentClimateEntity) return;
+    const attrs = currentClimateEntity.attributes || {};
+    const state = currentClimateEntity.state || 'off';
+    const friendlyName = attrs.friendly_name || 'Máy Lạnh';
+
+    let roomName = 'Phòng ngủ';
+    const foundDev = (currentDevices || []).find(d => {
+        const btns = d.button_mappings || [];
+        return btns.some(b => b.entity_id === currentClimateId);
+    });
+    if (foundDev && foundDev.room_name) {
+        roomName = foundDev.room_name;
+    } else if (friendlyName.includes('phòng')) {
+        const idx = friendlyName.toLowerCase().indexOf('phòng');
+        roomName = friendlyName.substring(idx);
+    }
+
+    document.getElementById('climateModalRoom').textContent = roomName;
+    document.getElementById('climateModalTitle').textContent = friendlyName;
+
+    const curTemp = (attrs.current_temperature !== undefined && attrs.current_temperature !== null)
+        ? attrs.current_temperature
+        : attrs.indoor_temperature;
+    const curTempStr = (curTemp !== undefined && curTemp !== null)
+        ? `${curTemp.toFixed(1).replace('.', ',')} °C`
+        : '-- °C';
+    document.getElementById('climateCurrentTemp').textContent = curTempStr;
+
+    let targetTemp = attrs.temperature !== undefined ? attrs.temperature : (attrs.target_temperature || 26.0);
+    currentClimateTargetTemp = targetTemp;
+
+    const pwrBtn = document.getElementById('climatePowerBtn');
+    const isOff = state === 'off';
+    if (pwrBtn) {
+        if (isOff) {
+            pwrBtn.style.background = 'rgba(255,255,255,0.08)';
+            pwrBtn.style.borderColor = '#4b5563';
+            pwrBtn.style.color = '#9ca3af';
+        } else {
+            pwrBtn.style.background = 'rgba(56, 189, 248, 0.2)';
+            pwrBtn.style.borderColor = '#38bdf8';
+            pwrBtn.style.color = '#38bdf8';
+        }
+    }
+
+    const modeInfo = CLIMATE_MODE_MAP[state] || { label: state, icon: '❄️', color: '#38bdf8' };
+    document.getElementById('climateModeIcon').textContent = modeInfo.icon;
+    document.getElementById('climateCardModeVal').textContent = modeInfo.label;
+    document.getElementById('climateCardModeVal').style.color = modeInfo.color;
+
+    const preset = attrs.preset_mode || 'none';
+    document.getElementById('climateCardPresetVal').textContent = CLIMATE_PRESET_MAP[preset] || preset;
+
+    const fan = attrs.fan_mode || 'auto';
+    document.getElementById('climateCardFanVal').textContent = CLIMATE_FAN_MAP[fan] || fan;
+
+    const swing = attrs.swing_mode || 'vertical';
+    document.getElementById('climateCardSwingVal').textContent = CLIMATE_SWING_MAP[swing] || swing;
+
+    const minTemp = attrs.min_temp || 16.0;
+    const maxTemp = attrs.max_temp || 30.0;
+    renderClimateDial(targetTemp, minTemp, maxTemp, state);
+}
+
+function renderClimateDial(targetTemp, minTemp, maxTemp, state) {
+    const isOff = state === 'off';
+    const centerModeEl = document.getElementById('climateCenterMode');
+    const targetTempEl = document.getElementById('climateTargetTemp');
+    const arcActiveEl = document.getElementById('climateArcActive');
+    const knobEl = document.getElementById('climateKnob');
+
+    const modeInfo = CLIMATE_MODE_MAP[state] || { label: state, icon: '❄️', color: '#38bdf8' };
+    centerModeEl.textContent = isOff ? 'Tắt' : modeInfo.label;
+    centerModeEl.style.color = isOff ? '#64748b' : modeInfo.color;
+
+    if (isOff) {
+        targetTempEl.innerHTML = `<span style="font-size: 34px; color: #64748b; font-weight: 700;">ĐÃ TẮT</span>`;
+        arcActiveEl.setAttribute('d', '');
+        knobEl.style.display = 'none';
+        return;
+    }
+
+    knobEl.style.display = 'block';
+    const tFixed = Number(targetTemp).toFixed(1);
+    const parts = tFixed.split('.');
+    targetTempEl.innerHTML = `${parts[0]}<span style="font-size: 30px; font-weight: 600;">,${parts[1] || '0'}</span> <span style="font-size: 20px; font-weight: 600; color: #94a3b8;">°C</span>`;
+
+    const cx = 140, cy = 130, r = 95;
+    const f = Math.max(0, Math.min(1, (targetTemp - minTemp) / (maxTemp - minTemp)));
+    const angle = 135 + (f * 270);
+    const rad = (angle * Math.PI) / 180;
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
+
+    const startRad = (135 * Math.PI) / 180;
+    const startX = cx + r * Math.cos(startRad);
+    const startY = cy + r * Math.sin(startRad);
+
+    const largeArc = (f * 270 > 180) ? 1 : 0;
+    arcActiveEl.setAttribute('d', `M ${startX.toFixed(2)} ${startY.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x.toFixed(2)} ${y.toFixed(2)}`);
+
+    knobEl.setAttribute('cx', x.toFixed(2));
+    knobEl.setAttribute('cy', y.toFixed(2));
+}
+
+function adjustClimateTemp(delta) {
+    if (!currentClimateEntity) return;
+    const attrs = currentClimateEntity.attributes || {};
+    const minTemp = attrs.min_temp || 16.0;
+    const maxTemp = attrs.max_temp || 30.0;
+    const state = currentClimateEntity.state || 'off';
+
+    if (state === 'off') {
+        currentClimateEntity.state = 'cool';
+    }
+
+    currentClimateTargetTemp = Math.max(minTemp, Math.min(maxTemp, currentClimateTargetTemp + delta));
+    if (!currentClimateEntity.attributes) currentClimateEntity.attributes = {};
+    currentClimateEntity.attributes.temperature = currentClimateTargetTemp;
+
+    renderClimateDial(currentClimateTargetTemp, minTemp, maxTemp, currentClimateEntity.state);
+
+    clearTimeout(climateTempDebounceTimer);
+    climateTempDebounceTimer = setTimeout(async () => {
+        try {
+            await fetch('/api/ha/call_service', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    domain: 'climate',
+                    service: 'set_temperature',
+                    entity_id: currentClimateId,
+                    service_data: { temperature: currentClimateTargetTemp }
+                })
+            });
+        } catch (e) {
+            console.error("Call climate set_temperature error:", e);
+        }
+    }, 350);
+}
+
+async function toggleClimatePower() {
+    if (!currentClimateEntity) return;
+    const isOff = (currentClimateEntity.state || 'off') === 'off';
+    const targetMode = isOff ? 'cool' : 'off';
+    currentClimateEntity.state = targetMode;
+    renderClimateModalUI();
+
+    try {
+        await fetch('/api/ha/call_service', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                domain: 'climate',
+                service: 'set_hvac_mode',
+                entity_id: currentClimateId,
+                service_data: { hvac_mode: targetMode }
+            })
+        });
+    } catch (e) {
+        console.error("Toggle power error:", e);
+    }
+}
+
+function openClimateSubmenu(type) {
+    const sheet = document.getElementById('climateSubmenuSheet');
+    const title = document.getElementById('climateSubmenuTitle');
+    const container = document.getElementById('climateSubmenuOptions');
+    if (!sheet || !container || !currentClimateEntity) return;
+
+    const attrs = currentClimateEntity.attributes || {};
+    const state = currentClimateEntity.state || 'off';
+    container.innerHTML = '';
+
+    if (type === 'mode') {
+        title.textContent = 'CHỌN CHẾ ĐỘ HOẠT ĐỘNG (HVAC MODE)';
+        const modes = attrs.hvac_modes || ['cool', 'auto', 'dry', 'fan_only', 'heat', 'off'];
+        modes.forEach(m => {
+            const info = CLIMATE_MODE_MAP[m] || { label: m, icon: '⚙️' };
+            const active = state === m;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = `background: ${active ? '#2563eb' : '#1e293b'}; border: 1px solid ${active ? '#60a5fa' : '#334155'}; color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;`;
+            btn.innerHTML = `<span>${info.icon}</span> <span>${info.label}</span>`;
+            btn.onclick = () => selectClimateOption('mode', m);
+            container.appendChild(btn);
+        });
+    } else if (type === 'preset') {
+        title.textContent = 'CHỌN CHẾ ĐỘ CÀI SẴN (PRESET MODE)';
+        const presets = attrs.preset_modes || ['none', 'comfort', 'boost', 'sleep', 'eco'];
+        const curP = attrs.preset_mode || 'none';
+        presets.forEach(p => {
+            const active = curP === p;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = `background: ${active ? '#2563eb' : '#1e293b'}; border: 1px solid ${active ? '#60a5fa' : '#334155'}; color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;`;
+            btn.textContent = CLIMATE_PRESET_MAP[p] || p;
+            btn.onclick = () => selectClimateOption('preset', p);
+            container.appendChild(btn);
+        });
+    } else if (type === 'fan') {
+        title.textContent = 'CHỌN TỐC ĐỘ QUẠT GIÓ (FAN SPEED)';
+        const fans = attrs.fan_modes || ['auto', 'silent', 'low', 'medium', 'high', 'full'];
+        const curF = attrs.fan_mode || 'auto';
+        fans.forEach(f => {
+            const active = curF === f;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = `background: ${active ? '#2563eb' : '#1e293b'}; border: 1px solid ${active ? '#60a5fa' : '#334155'}; color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;`;
+            btn.textContent = CLIMATE_FAN_MAP[f] || f;
+            btn.onclick = () => selectClimateOption('fan', f);
+            container.appendChild(btn);
+        });
+    } else if (type === 'swing') {
+        title.textContent = 'CHỌN CHẾ ĐỘ XOAY CÁNH GIÓ (SWING MODE)';
+        const swings = attrs.swing_modes || ['vertical', 'horizontal', 'both', 'off'];
+        const curS = attrs.swing_mode || 'vertical';
+        swings.forEach(s => {
+            const active = curS === s;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = `background: ${active ? '#2563eb' : '#1e293b'}; border: 1px solid ${active ? '#60a5fa' : '#334155'}; color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;`;
+            btn.textContent = CLIMATE_SWING_MAP[s] || s;
+            btn.onclick = () => selectClimateOption('swing', s);
+            container.appendChild(btn);
+        });
+    }
+
+    sheet.style.display = 'block';
+}
+
+function closeClimateSubmenu() {
+    const sheet = document.getElementById('climateSubmenuSheet');
+    if (sheet) sheet.style.display = 'none';
+}
+
+async function selectClimateOption(type, value) {
+    closeClimateSubmenu();
+    if (!currentClimateEntity) return;
+    if (!currentClimateEntity.attributes) currentClimateEntity.attributes = {};
+
+    let service = '';
+    let serviceData = {};
+
+    if (type === 'mode') {
+        service = 'set_hvac_mode';
+        serviceData = { hvac_mode: value };
+        currentClimateEntity.state = value;
+    } else if (type === 'preset') {
+        service = 'set_preset_mode';
+        serviceData = { preset_mode: value };
+        currentClimateEntity.attributes.preset_mode = value;
+    } else if (type === 'fan') {
+        service = 'set_fan_mode';
+        serviceData = { fan_mode: value };
+        currentClimateEntity.attributes.fan_mode = value;
+    } else if (type === 'swing') {
+        service = 'set_swing_mode';
+        serviceData = { swing_mode: value };
+        currentClimateEntity.attributes.swing_mode = value;
+    }
+
+    renderClimateModalUI();
+
+    try {
+        await fetch('/api/ha/call_service', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                domain: 'climate',
+                service: service,
+                entity_id: currentClimateId,
+                service_data: serviceData
+            })
+        });
+    } catch (e) {
+        console.error("Call climate option error:", e);
+    }
+}
 // -----------------------------------------------------------------------------
 // AI AGENT ROUTER & PIPELINE WEB CONTROLS
 // -----------------------------------------------------------------------------
