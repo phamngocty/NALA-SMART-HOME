@@ -19,8 +19,33 @@
 
 #define MAX_DASHBOARD_BUTTONS 16
 #define MAX_ROOM_CHIPS 6
+#define MAX_REMOTE_ROOMS 10
+#define MAX_REMOTE_ROOM_BUTTONS 8
 
 typedef void (*UIActionCallback_t)(const char* target, const char* action, int value);
+
+struct SyncedRoomButton_t {
+    String id;
+    String name;
+    String entity_id;
+    String icon = "light";
+    bool is_on = false;
+    float temperature = 26.0f;
+    float current_temperature = 28.0f;
+    String hvac_mode = "off";
+    String fan_mode = "auto";
+    bool swing_on = false;
+};
+
+struct SyncedRoom_t {
+    String room_id;
+    String room_name;
+    String floor;
+    uint8_t active_count = 0;
+    uint8_t total_count = 0;
+    uint8_t buttons_count = 0;
+    SyncedRoomButton_t buttons[MAX_REMOTE_ROOM_BUTTONS];
+};
 
 struct UIButtonSlot {
     lv_obj_t* btn_obj = nullptr;
@@ -74,6 +99,37 @@ private:
 
     // 2-Column Scrollable Grid
     lv_obj_t* cont_devices_scroll;
+
+    // Smart Floor & Room Tree Hub State
+    String home_room_name;
+    String viewing_room_name;
+    bool is_viewing_remote_room;
+    bool is_house_tree_visible;
+    uint8_t room_view_timeout_sec;
+    uint32_t last_remote_touch_ms;
+
+    // Local buttons backup
+    UIButtonSlot local_buttons_backup[MAX_DASHBOARD_BUTTONS];
+    uint8_t local_buttons_count;
+
+    // Synced room tree
+    SyncedRoom_t synced_rooms[MAX_REMOTE_ROOMS];
+    uint8_t synced_rooms_count;
+
+    // UI elements for Smart Floor Hub
+    lv_obj_t* btn_home_return;
+    lv_obj_t* lbl_home_return;
+    lv_obj_t* cont_house_tree;
+    lv_obj_t* room_card_btns[MAX_REMOTE_ROOMS];
+    lv_obj_t* lbl_room_card_names[MAX_REMOTE_ROOMS];
+    lv_obj_t* lbl_room_card_subs[MAX_REMOTE_ROOMS];
+    lv_obj_t* badge_room_cards[MAX_REMOTE_ROOMS];
+    lv_obj_t* lbl_room_card_badges[MAX_REMOTE_ROOMS];
+
+    // Cached House Alert Status
+    char cached_house_summary[64];
+    uint32_t cached_house_alert_color;
+    bool cached_has_active_devices;
 
     // Tab 1 Elements: Nala AI
     lv_obj_t* lbl_ai_state;
@@ -166,6 +222,13 @@ public:
           active_room_chips_count(0), current_room_filter("ALL"),
           strip_house_alert(nullptr), lbl_house_alert(nullptr), btn_master_off(nullptr), lbl_master_off(nullptr),
           cont_devices_scroll(nullptr),
+          home_room_name("Thiết Bị"), viewing_room_name("Thiết Bị"),
+          is_viewing_remote_room(false), is_house_tree_visible(false),
+          room_view_timeout_sec(15), last_remote_touch_ms(0),
+          local_buttons_count(0), synced_rooms_count(0),
+          btn_home_return(nullptr), lbl_home_return(nullptr),
+          cont_house_tree(nullptr),
+          cached_house_alert_color(0x10B981), cached_has_active_devices(false),
           lbl_ai_state(nullptr), ai_pulse_circle(nullptr), ta_ai_response(nullptr), btn_ai_ptt(nullptr), lbl_ai_ptt_text(nullptr),
           active_intercom_targets_count(0),
           btn_broadcast(nullptr), btn_intercom_ptt(nullptr), lbl_intercom_ptt(nullptr),
@@ -191,6 +254,14 @@ public:
         for (int m = 0; m < 4; m++) {
             btn_clim_modes[m] = nullptr;
             lbl_clim_modes[m] = nullptr;
+        }
+        strncpy(cached_house_summary, "Tất cả thiết bị tắt", sizeof(cached_house_summary));
+        for (int i = 0; i < MAX_REMOTE_ROOMS; i++) {
+            room_card_btns[i] = nullptr;
+            lbl_room_card_names[i] = nullptr;
+            lbl_room_card_subs[i] = nullptr;
+            badge_room_cards[i] = nullptr;
+            lbl_room_card_badges[i] = nullptr;
         }
         for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
             chip_rooms[i] = nullptr;
@@ -230,6 +301,11 @@ public:
     void init(const char* room_name, const char* ip_str, const char* pair_code, 
               uint8_t init_vol, uint8_t init_bright, bool init_ring_on_call = true, uint8_t init_mic_gain = 5) {
         ring_on_call_enabled = init_ring_on_call;
+        home_room_name = (room_name && strlen(room_name) > 0) ? String(room_name) : String("Thiết Bị");
+        viewing_room_name = home_room_name;
+        is_viewing_remote_room = false;
+        is_house_tree_visible = false;
+        last_remote_touch_ms = 0;
         lv_obj_t* scr = lv_scr_act();
         lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_bg_color(scr, lv_color_hex(0x080C14), 0); // Apple Deep Dark
@@ -320,97 +396,421 @@ public:
         }
     }
 
-    void sync_buttons(const JsonArrayConst& btn_array) {
-        uint8_t count = btn_array.size();
+    void backup_local_buttons() {
+        local_buttons_count = active_buttons_count;
+        for (uint8_t i = 0; i < active_buttons_count; i++) {
+            local_buttons_backup[i].id = buttons[i].id;
+            local_buttons_backup[i].name = buttons[i].name;
+            local_buttons_backup[i].entity_id = buttons[i].entity_id;
+            local_buttons_backup[i].icon = buttons[i].icon;
+            local_buttons_backup[i].room = buttons[i].room;
+            local_buttons_backup[i].is_on = buttons[i].is_on;
+            local_buttons_backup[i].temperature = buttons[i].temperature;
+            local_buttons_backup[i].current_temperature = buttons[i].current_temperature;
+            local_buttons_backup[i].hvac_mode = buttons[i].hvac_mode;
+            local_buttons_backup[i].fan_mode = buttons[i].fan_mode;
+            local_buttons_backup[i].swing_on = buttons[i].swing_on;
+        }
+    }
+
+    void restore_local_buttons() {
+        active_buttons_count = local_buttons_count;
+        for (uint8_t i = 0; i < local_buttons_count; i++) {
+            buttons[i].id = local_buttons_backup[i].id;
+            buttons[i].name = local_buttons_backup[i].name;
+            buttons[i].entity_id = local_buttons_backup[i].entity_id;
+            buttons[i].icon = local_buttons_backup[i].icon;
+            buttons[i].room = local_buttons_backup[i].room;
+            buttons[i].is_on = local_buttons_backup[i].is_on;
+            buttons[i].temperature = local_buttons_backup[i].temperature;
+            buttons[i].current_temperature = local_buttons_backup[i].current_temperature;
+            buttons[i].hvac_mode = local_buttons_backup[i].hvac_mode;
+            buttons[i].fan_mode = local_buttons_backup[i].fan_mode;
+            buttons[i].swing_on = local_buttons_backup[i].swing_on;
+        }
+
+        for (int i = 0; i < MAX_DASHBOARD_BUTTONS; i++) {
+            if (!buttons[i].btn_obj) continue;
+            if (i < local_buttons_count) {
+                lv_obj_clear_flag(buttons[i].btn_obj, LV_OBJ_FLAG_HIDDEN);
+                update_button_ui(i);
+            } else {
+                lv_obj_add_flag(buttons[i].btn_obj, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+
+    void load_remote_buttons(const SyncedRoom_t& sr) {
+        uint8_t count = sr.buttons_count;
         if (count > MAX_DASHBOARD_BUTTONS) count = MAX_DASHBOARD_BUTTONS;
         active_buttons_count = count;
 
         for (uint8_t i = 0; i < count; i++) {
-            buttons[i].id = btn_array[i]["id"] | String("btn_" + String(i + 1));
-            buttons[i].name = btn_array[i]["name"] | String("Nút " + String(i + 1));
-            buttons[i].entity_id = btn_array[i]["entity_id"] | "";
-            buttons[i].icon = btn_array[i]["icon"] | "light";
-            buttons[i].room = btn_array[i]["room"] | "";
+            buttons[i].id = sr.buttons[i].id;
+            buttons[i].name = sr.buttons[i].name;
+            buttons[i].entity_id = sr.buttons[i].entity_id;
+            buttons[i].icon = sr.buttons[i].icon;
+            buttons[i].room = sr.room_name;
+            buttons[i].is_on = sr.buttons[i].is_on;
+            buttons[i].temperature = sr.buttons[i].temperature;
+            buttons[i].current_temperature = sr.buttons[i].current_temperature;
+            buttons[i].hvac_mode = sr.buttons[i].hvac_mode;
+            buttons[i].fan_mode = sr.buttons[i].fan_mode;
+            buttons[i].swing_on = sr.buttons[i].swing_on;
+        }
+
+        for (int i = 0; i < MAX_DASHBOARD_BUTTONS; i++) {
+            if (!buttons[i].btn_obj) continue;
+            if (i < count) {
+                lv_obj_clear_flag(buttons[i].btn_obj, LV_OBJ_FLAG_HIDDEN);
+                update_button_ui(i);
+            } else {
+                lv_obj_add_flag(buttons[i].btn_obj, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+
+    void refresh_house_alert_status() {
+        if (!lbl_house_alert) return;
+        lv_label_set_text(lbl_house_alert, cached_house_summary);
+        lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(cached_house_alert_color), 0);
+        if (btn_master_off) {
+            if (cached_has_active_devices) lv_obj_clear_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    void sync_buttons(const JsonArrayConst& btn_array) {
+        uint8_t count = btn_array.size();
+        if (count > MAX_DASHBOARD_BUTTONS) count = MAX_DASHBOARD_BUTTONS;
+
+        local_buttons_count = count;
+        for (uint8_t i = 0; i < count; i++) {
+            local_buttons_backup[i].id = btn_array[i]["id"] | String("btn_" + String(i + 1));
+            local_buttons_backup[i].name = btn_array[i]["name"] | String("Nút " + String(i + 1));
+            local_buttons_backup[i].entity_id = btn_array[i]["entity_id"] | "";
+            local_buttons_backup[i].icon = btn_array[i]["icon"] | "light";
+            local_buttons_backup[i].room = btn_array[i]["room"] | "";
 
             bool is_on = btn_array[i]["is_on"] | false;
             if (!is_on && btn_array[i].containsKey("state")) {
                 String st = btn_array[i]["state"] | "off";
                 is_on = (st == "on" || (st != "off" && st != "unavailable" && st != "unknown" && st.length() > 0));
             }
-            buttons[i].is_on = is_on;
+            local_buttons_backup[i].is_on = is_on;
 
             if (btn_array[i].containsKey("attributes")) {
                 JsonObjectConst attrs = btn_array[i]["attributes"];
                 if (attrs.containsKey("temperature")) {
-                    buttons[i].temperature = attrs["temperature"] | 26.0f;
+                    local_buttons_backup[i].temperature = attrs["temperature"] | 26.0f;
                 }
                 if (attrs.containsKey("current_temperature")) {
-                    buttons[i].current_temperature = attrs["current_temperature"] | 28.0f;
+                    local_buttons_backup[i].current_temperature = attrs["current_temperature"] | 28.0f;
                 }
                 if (attrs.containsKey("hvac_mode")) {
-                    buttons[i].hvac_mode = attrs["hvac_mode"] | "off";
+                    local_buttons_backup[i].hvac_mode = attrs["hvac_mode"] | "off";
                 }
                 if (attrs.containsKey("fan_mode")) {
-                    buttons[i].fan_mode = attrs["fan_mode"] | "auto";
+                    local_buttons_backup[i].fan_mode = attrs["fan_mode"] | "auto";
                 }
                 if (attrs.containsKey("swing_mode")) {
                     String sm = attrs["swing_mode"] | "";
-                    buttons[i].swing_on = (sm != "off" && sm.length() > 0);
+                    local_buttons_backup[i].swing_on = (sm != "off" && sm.length() > 0);
                 }
             }
             if (btn_array[i].containsKey("state")) {
                 String st = btn_array[i]["state"] | "off";
-                buttons[i].hvac_mode = st;
+                local_buttons_backup[i].hvac_mode = st;
             }
         }
 
-        filter_devices_by_room(current_room_filter);
+        if (!is_viewing_remote_room) {
+            restore_local_buttons();
+        }
     }
 
     void sync_house_status(const JsonObjectConst& house_st) {
-        if (!lbl_house_alert) return;
         int on_lights = house_st["total_on_lights"] | 0;
         int on_fans = house_st["total_on_fans"] | 0;
         const char* summary = house_st["summary_text"] | "";
         if (summary && strlen(summary) > 0) {
-            lv_label_set_text(lbl_house_alert, summary);
+            strncpy(cached_house_summary, summary, sizeof(cached_house_summary) - 1);
+            cached_house_summary[sizeof(cached_house_summary) - 1] = '\0';
         } else if (on_lights > 0 || on_fans > 0) {
-            char buf[64];
-            snprintf(buf, sizeof(buf), "%d ĐÈN & %d QUẠT BẬT", on_lights, on_fans);
-            lv_label_set_text(lbl_house_alert, buf);
+            snprintf(cached_house_summary, sizeof(cached_house_summary), "%d ĐÈN & %d QUẠT BẬT", on_lights, on_fans);
         } else {
-            lv_label_set_text(lbl_house_alert, "ĐÃ TẮT HẾT CÁC PHÒNG");
+            strncpy(cached_house_summary, "ĐÃ TẮT HẾT CÁC PHÒNG", sizeof(cached_house_summary));
         }
 
-        if (on_lights > 0 || on_fans > 0) {
-            lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0xF59E0B), 0);
-            if (btn_master_off) lv_obj_clear_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0x10B981), 0);
-            if (btn_master_off) lv_obj_add_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
+        cached_has_active_devices = (on_lights > 0 || on_fans > 0);
+        cached_house_alert_color = cached_has_active_devices ? 0xF59E0B : 0x10B981;
+
+        if (!is_viewing_remote_room && !is_house_tree_visible) {
+            refresh_house_alert_status();
+        }
+    }
+
+    void render_house_tree_ui() {
+        for (int i = 0; i < MAX_REMOTE_ROOMS; i++) {
+            if (!room_card_btns[i]) continue;
+            if (i < synced_rooms_count) {
+                lv_obj_clear_flag(room_card_btns[i], LV_OBJ_FLAG_HIDDEN);
+                lv_label_set_text(lbl_room_card_names[i], synced_rooms[i].room_name.c_str());
+
+                String sub = synced_rooms[i].floor;
+                if (sub.length() > 0) sub += " • ";
+                sub += String(synced_rooms[i].total_count) + " thiết bị";
+                lv_label_set_text(lbl_room_card_subs[i], sub.c_str());
+
+                if (synced_rooms[i].active_count > 0) {
+                    lv_obj_set_style_bg_color(room_card_btns[i], lv_color_hex(0x1C1917), 0);
+                    lv_obj_set_style_border_color(room_card_btns[i], lv_color_hex(0xF59E0B), 0);
+                    lv_obj_set_style_bg_color(badge_room_cards[i], lv_color_hex(0xB45309), 0);
+                    lv_obj_set_style_border_color(badge_room_cards[i], lv_color_hex(0xF59E0B), 0);
+
+                    char btxt[16];
+                    snprintf(btxt, sizeof(btxt), "⚡ %d BẬT", synced_rooms[i].active_count);
+                    lv_label_set_text(lbl_room_card_badges[i], btxt);
+                    lv_obj_set_style_text_color(lbl_room_card_badges[i], lv_color_hex(0xFEF08A), 0);
+                } else {
+                    lv_obj_set_style_bg_color(room_card_btns[i], lv_color_hex(0x0F172A), 0);
+                    lv_obj_set_style_border_color(room_card_btns[i], lv_color_hex(0x1E293B), 0);
+                    lv_obj_set_style_bg_color(badge_room_cards[i], lv_color_hex(0x1E293B), 0);
+                    lv_obj_set_style_border_color(badge_room_cards[i], lv_color_hex(0x334155), 0);
+
+                    lv_label_set_text(lbl_room_card_badges[i], "Tắt hết");
+                    lv_obj_set_style_text_color(lbl_room_card_badges[i], lv_color_hex(0x64748B), 0);
+                }
+            } else {
+                lv_obj_add_flag(room_card_btns[i], LV_OBJ_FLAG_HIDDEN);
+            }
         }
     }
 
     void sync_all_rooms(const JsonArrayConst& rooms_array) {
-        active_room_chips_count = 0;
+        uint8_t count = 0;
         for (JsonObjectConst r : rooms_array) {
-            if (active_room_chips_count >= MAX_ROOM_CHIPS) break;
-            const char* rname = r["room_name"] | "";
-            if (rname && strlen(rname) > 0) {
-                strncpy(chip_room_names[active_room_chips_count], rname, sizeof(chip_room_names[0]) - 1);
-                chip_room_names[active_room_chips_count][sizeof(chip_room_names[0]) - 1] = '\0';
-                active_room_chips_count++;
+            if (count >= MAX_REMOTE_ROOMS) break;
+            synced_rooms[count].room_id = r["room_id"] | "";
+            synced_rooms[count].room_name = r["room_name"] | "";
+            synced_rooms[count].floor = r["floor"] | "";
+            synced_rooms[count].active_count = r["active_devices_count"] | 0;
+            synced_rooms[count].total_count = r["total_devices_count"] | 0;
+
+            JsonArrayConst btns = r["buttons"];
+            uint8_t bc = 0;
+            for (JsonObjectConst b : btns) {
+                if (bc >= MAX_REMOTE_ROOM_BUTTONS) break;
+                synced_rooms[count].buttons[bc].id = b["id"] | "";
+                synced_rooms[count].buttons[bc].name = b["name"] | "";
+                synced_rooms[count].buttons[bc].entity_id = b["entity_id"] | "";
+                synced_rooms[count].buttons[bc].icon = b["icon"] | "light";
+
+                bool is_on = b["is_on"] | false;
+                if (!is_on && b.containsKey("state")) {
+                    String st = b["state"] | "off";
+                    is_on = (st == "on" || (st != "off" && st != "unavailable" && st != "unknown" && st.length() > 0));
+                }
+                synced_rooms[count].buttons[bc].is_on = is_on;
+
+                if (b.containsKey("attributes")) {
+                    JsonObjectConst attrs = b["attributes"];
+                    if (attrs.containsKey("temperature")) {
+                        synced_rooms[count].buttons[bc].temperature = attrs["temperature"] | 26.0f;
+                    }
+                    if (attrs.containsKey("current_temperature")) {
+                        synced_rooms[count].buttons[bc].current_temperature = attrs["current_temperature"] | 28.0f;
+                    }
+                    if (attrs.containsKey("hvac_mode")) {
+                        synced_rooms[count].buttons[bc].hvac_mode = attrs["hvac_mode"] | "off";
+                    }
+                    if (attrs.containsKey("fan_mode")) {
+                        synced_rooms[count].buttons[bc].fan_mode = attrs["fan_mode"] | "auto";
+                    }
+                    if (attrs.containsKey("swing_mode")) {
+                        String sm = attrs["swing_mode"] | "";
+                        synced_rooms[count].buttons[bc].swing_on = (sm != "off" && sm.length() > 0);
+                    }
+                }
+                if (b.containsKey("state")) {
+                    String st = b["state"] | "off";
+                    synced_rooms[count].buttons[bc].hvac_mode = st;
+                }
+                bc++;
+            }
+            synced_rooms[count].buttons_count = bc;
+            count++;
+        }
+        synced_rooms_count = count;
+
+        render_house_tree_ui();
+
+        if (is_viewing_remote_room) {
+            for (uint8_t i = 0; i < synced_rooms_count; i++) {
+                if (synced_rooms[i].room_name.equalsIgnoreCase(viewing_room_name)) {
+                    load_remote_buttons(synced_rooms[i]);
+                    break;
+                }
             }
         }
-        for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
-            if (!chip_rooms[i]) continue;
-            if (i < active_room_chips_count) {
-                lv_obj_clear_flag(chip_rooms[i], LV_OBJ_FLAG_HIDDEN);
-                if (lbl_chip_rooms[i]) {
-                    lv_label_set_text(lbl_chip_rooms[i], chip_room_names[i]);
+    }
+
+    void toggle_house_tree_view() {
+        is_house_tree_visible = !is_house_tree_visible;
+        if (is_house_tree_visible) {
+            lv_obj_add_flag(cont_devices_scroll, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(cont_house_tree, LV_OBJ_FLAG_HIDDEN);
+
+            if (chip_all) {
+                lv_obj_set_style_bg_color(chip_all, lv_color_hex(0xF59E0B), 0);
+                lv_obj_set_style_border_color(chip_all, lv_color_hex(0xFCD34D), 0);
+            }
+            if (lbl_house_alert) {
+                lv_label_set_text(lbl_house_alert, "CHỌN PHÒNG ĐIỀU KHIỂN");
+                lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0x38BDF8), 0);
+            }
+            if (btn_master_off) lv_obj_add_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(cont_house_tree, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(cont_devices_scroll, LV_OBJ_FLAG_HIDDEN);
+
+            if (chip_all) {
+                if (!is_viewing_remote_room) {
+                    lv_obj_set_style_bg_color(chip_all, lv_color_hex(0x0284C7), 0);
+                    lv_obj_set_style_border_color(chip_all, lv_color_hex(0x38BDF8), 0);
+                } else {
+                    lv_obj_set_style_bg_color(chip_all, lv_color_hex(0x111927), 0);
+                    lv_obj_set_style_border_color(chip_all, lv_color_hex(0x27354A), 0);
                 }
+            }
+            if (is_viewing_remote_room) {
+                if (room_view_timeout_sec > 0) {
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "⏳ Tự về sau %us", (unsigned int)room_view_timeout_sec);
+                    lv_label_set_text(lbl_house_alert, buf);
+                } else {
+                    lv_label_set_text(lbl_house_alert, "Đang xem từ xa");
+                }
+                lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0xF59E0B), 0);
             } else {
-                lv_obj_add_flag(chip_rooms[i], LV_OBJ_FLAG_HIDDEN);
+                refresh_house_alert_status();
+            }
+        }
+    }
+
+    void view_remote_room(int idx) {
+        if (idx < 0 || idx >= synced_rooms_count) return;
+
+        if (synced_rooms[idx].room_name.equalsIgnoreCase(home_room_name)) {
+            return_to_home_room();
+            return;
+        }
+
+        if (!is_viewing_remote_room) {
+            backup_local_buttons();
+        }
+
+        is_viewing_remote_room = true;
+        is_house_tree_visible = false;
+        viewing_room_name = synced_rooms[idx].room_name;
+        last_remote_touch_ms = millis();
+
+        load_remote_buttons(synced_rooms[idx]);
+
+        lv_obj_add_flag(cont_house_tree, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(cont_devices_scroll, LV_OBJ_FLAG_HIDDEN);
+
+        if (chip_all) {
+            lv_obj_set_style_bg_color(chip_all, lv_color_hex(0x111927), 0);
+            lv_obj_set_style_border_color(chip_all, lv_color_hex(0x27354A), 0);
+        }
+
+        if (btn_home_return) {
+            String btn_txt = "🏠 VỀ ";
+            int last_space = home_room_name.lastIndexOf(' ');
+            if (last_space >= 0 && last_space < (int)home_room_name.length() - 1) {
+                btn_txt += home_room_name.substring(last_space + 1);
+            } else if (home_room_name.length() > 0) {
+                btn_txt += home_room_name;
+            } else {
+                btn_txt += "PHÒNG";
+            }
+            btn_txt.toUpperCase();
+            lv_label_set_text(lbl_home_return, btn_txt.c_str());
+            lv_obj_clear_flag(btn_home_return, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
+            if (chip_rooms[i]) lv_obj_add_flag(chip_rooms[i], LV_OBJ_FLAG_HIDDEN);
+        }
+
+        String title = "NALA: " + viewing_room_name + " (Từ xa)";
+        if (lbl_header_title) lv_label_set_text(lbl_header_title, title.c_str());
+
+        if (lbl_house_alert) {
+            if (room_view_timeout_sec > 0) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "⏳ Tự về sau %us", (unsigned int)room_view_timeout_sec);
+                lv_label_set_text(lbl_house_alert, buf);
+            } else {
+                lv_label_set_text(lbl_house_alert, "Đang xem từ xa");
+            }
+            lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0xF59E0B), 0);
+        }
+        if (btn_master_off) lv_obj_add_flag(btn_master_off, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    void return_to_home_room() {
+        if (!is_viewing_remote_room && !is_house_tree_visible) return;
+
+        if (is_viewing_remote_room) {
+            restore_local_buttons();
+            is_viewing_remote_room = false;
+            viewing_room_name = home_room_name;
+        }
+
+        is_house_tree_visible = false;
+        if (cont_house_tree) lv_obj_add_flag(cont_house_tree, LV_OBJ_FLAG_HIDDEN);
+        if (cont_devices_scroll) lv_obj_clear_flag(cont_devices_scroll, LV_OBJ_FLAG_HIDDEN);
+        if (btn_home_return) lv_obj_add_flag(btn_home_return, LV_OBJ_FLAG_HIDDEN);
+
+        if (chip_all) {
+            lv_obj_set_style_bg_color(chip_all, lv_color_hex(0x0284C7), 0);
+            lv_obj_set_style_border_color(chip_all, lv_color_hex(0x38BDF8), 0);
+        }
+
+        for (int i = 0; i < active_room_chips_count && i < MAX_ROOM_CHIPS; i++) {
+            if (chip_rooms[i]) lv_obj_clear_flag(chip_rooms[i], LV_OBJ_FLAG_HIDDEN);
+        }
+
+        String title = "NALA: " + home_room_name;
+        if (lbl_header_title) lv_label_set_text(lbl_header_title, title.c_str());
+
+        refresh_house_alert_status();
+    }
+
+    void tick_countdown(uint32_t now_ms) {
+        if (!is_viewing_remote_room) return;
+        if (room_view_timeout_sec == 0) return;
+
+        uint32_t elapsed_ms = now_ms - last_remote_touch_ms;
+        uint32_t total_ms = (uint32_t)room_view_timeout_sec * 1000;
+
+        if (elapsed_ms >= total_ms) {
+            Serial.printf("[HUB-TREE] Het %ds timeout! Tu dong quay ve phong: %s\n", 
+                          room_view_timeout_sec, home_room_name.c_str());
+            return_to_home_room();
+        } else {
+            uint32_t remain_sec = (total_ms - elapsed_ms + 999) / 1000;
+            static uint32_t last_disp_remain = 0xFFFFFFFF;
+            if (remain_sec != last_disp_remain) {
+                last_disp_remain = remain_sec;
+                if (lbl_house_alert && !is_house_tree_visible) {
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "⏳ Tự về sau %us", (unsigned int)remain_sec);
+                    lv_label_set_text(lbl_house_alert, buf);
+                    lv_obj_set_style_text_color(lbl_house_alert, lv_color_hex(0xF59E0B), 0);
+                }
             }
         }
     }
@@ -497,9 +897,20 @@ public:
     }
 
     void set_room_title(const char* room_name) {
-        if (lbl_header_title && room_name) {
-            lv_label_set_text_fmt(lbl_header_title, "NALA: %s", room_name);
+        if (room_name && strlen(room_name) > 0) {
+            home_room_name = String(room_name);
+            if (!is_viewing_remote_room) {
+                viewing_room_name = home_room_name;
+                if (lbl_header_title) {
+                    lv_label_set_text_fmt(lbl_header_title, "NALA: %s", home_room_name.c_str());
+                }
+            }
         }
+    }
+
+    void set_room_view_timeout(uint8_t sec) {
+        room_view_timeout_sec = sec;
+        Serial.printf("[UI-CONFIG] Room view timeout: %u sec\n", (unsigned int)sec);
     }
 
     void set_ai_state(const char* state_str, const char* text = nullptr) {
@@ -672,12 +1083,27 @@ private:
             return;
         }
 
-        // Room filter chips
+        // Smart Floor & Room Hub Events
         if (target == chip_all && code == LV_EVENT_CLICKED) {
-            Serial.println("[UI-ACTION] Clicked TOÀN NHÀ chip!");
-            filter_devices_by_room("ALL");
+            Serial.println("[UI-ACTION] Clicked TOÀN NHÀ button!");
+            toggle_house_tree_view();
             return;
         }
+
+        if (target == btn_home_return && code == LV_EVENT_CLICKED) {
+            Serial.println("[UI-ACTION] Clicked Return to Home Room button!");
+            return_to_home_room();
+            return;
+        }
+
+        for (int i = 0; i < MAX_REMOTE_ROOMS; i++) {
+            if (target == room_card_btns[i] && code == LV_EVENT_CLICKED) {
+                Serial.printf("[UI-ACTION] Clicked Room Card %d: %s\n", i, synced_rooms[i].room_name.c_str());
+                view_remote_room(i);
+                return;
+            }
+        }
+
         for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
             if (target == chip_rooms[i] && code == LV_EVENT_CLICKED) {
                 filter_devices_by_room(chip_room_names[i]);
@@ -694,6 +1120,9 @@ private:
         // Device buttons
         for (int i = 0; i < MAX_DASHBOARD_BUTTONS; i++) {
             if (target == buttons[i].btn_obj && code == LV_EVENT_CLICKED) {
+                if (is_viewing_remote_room) {
+                    last_remote_touch_ms = millis(); // Reset 15s timer when interacting with remote room
+                }
                 Serial.printf("[UI-ACTION] Clicked Button %d (%s) entity=%s is_on=%d\n", 
                               i, buttons[i].name.c_str(), buttons[i].entity_id.c_str(), (int)buttons[i].is_on);
                 bool is_climate = (buttons[i].icon == "climate" || buttons[i].entity_id.startsWith("climate"));
@@ -991,6 +1420,24 @@ private:
         lv_obj_set_style_text_font(lbl_chip_all, &font_vietnamese_14, 0);
         lv_obj_center(lbl_chip_all);
 
+        // Nút VỀ PHÒNG CHÍNH - nằm cạnh nút TOÀN NHÀ
+        btn_home_return = lv_btn_create(cont_room_chips);
+        lv_obj_set_size(btn_home_return, 88, 24);
+        lv_obj_set_pos(btn_home_return, 78, 2);
+        lv_obj_set_style_radius(btn_home_return, 12, 0);
+        lv_obj_set_style_bg_color(btn_home_return, lv_color_hex(0x059669), 0);
+        lv_obj_set_style_border_color(btn_home_return, lv_color_hex(0x34D399), 0);
+        lv_obj_set_style_border_width(btn_home_return, 1, 0);
+        lv_obj_set_style_pad_all(btn_home_return, 1, 0);
+        lv_obj_add_event_cb(btn_home_return, event_handler_trampoline, LV_EVENT_CLICKED, this);
+
+        lbl_home_return = lv_label_create(btn_home_return);
+        lv_obj_clear_flag(lbl_home_return, LV_OBJ_FLAG_CLICKABLE);
+        lv_label_set_text(lbl_home_return, "🏠 VỀ PHÒNG");
+        lv_obj_set_style_text_font(lbl_home_return, &font_vietnamese_14, 0);
+        lv_obj_center(lbl_home_return);
+        lv_obj_add_flag(btn_home_return, LV_OBJ_FLAG_HIDDEN);
+
         int chip_x = 78;
         for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
             chip_rooms[i] = lv_btn_create(cont_room_chips);
@@ -1074,6 +1521,53 @@ private:
             } else {
                 update_button_ui(i);
             }
+        }
+
+        // 4. Scrollable Smart Floor & Room Tree Grid - Y: 60, H: 178
+        cont_house_tree = lv_obj_create(tab_devices);
+        lv_obj_set_size(cont_house_tree, 236, 178);
+        lv_obj_set_pos(cont_house_tree, 2, 60);
+        lv_obj_set_style_bg_opa(cont_house_tree, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(cont_house_tree, 0, 0);
+        lv_obj_set_style_pad_all(cont_house_tree, 0, 0);
+        lv_obj_set_scroll_dir(cont_house_tree, LV_DIR_VER);
+        lv_obj_set_scrollbar_mode(cont_house_tree, LV_SCROLLBAR_MODE_AUTO);
+        lv_obj_add_flag(cont_house_tree, LV_OBJ_FLAG_HIDDEN);
+
+        for (int i = 0; i < MAX_REMOTE_ROOMS; i++) {
+            room_card_btns[i] = lv_btn_create(cont_house_tree);
+            lv_obj_set_size(room_card_btns[i], 230, 42);
+            lv_obj_set_pos(room_card_btns[i], 2, i * 46);
+            lv_obj_set_style_radius(room_card_btns[i], 8, 0);
+            lv_obj_set_style_border_width(room_card_btns[i], 1, 0);
+            lv_obj_set_style_pad_all(room_card_btns[i], 2, 0);
+            lv_obj_add_event_cb(room_card_btns[i], event_handler_trampoline, LV_EVENT_CLICKED, this);
+
+            lbl_room_card_names[i] = lv_label_create(room_card_btns[i]);
+            lv_obj_clear_flag(lbl_room_card_names[i], LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_style_text_font(lbl_room_card_names[i], &font_vietnamese_14, 0);
+            lv_obj_align(lbl_room_card_names[i], LV_ALIGN_TOP_LEFT, 6, 2);
+
+            lbl_room_card_subs[i] = lv_label_create(room_card_btns[i]);
+            lv_obj_clear_flag(lbl_room_card_subs[i], LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_style_text_font(lbl_room_card_subs[i], &font_vietnamese_14, 0);
+            lv_obj_set_style_text_color(lbl_room_card_subs[i], lv_color_hex(0x94A3B8), 0);
+            lv_obj_align(lbl_room_card_subs[i], LV_ALIGN_BOTTOM_LEFT, 6, -2);
+
+            badge_room_cards[i] = lv_obj_create(room_card_btns[i]);
+            lv_obj_set_size(badge_room_cards[i], 62, 22);
+            lv_obj_align(badge_room_cards[i], LV_ALIGN_RIGHT_MID, -4, 0);
+            lv_obj_set_style_radius(badge_room_cards[i], 10, 0);
+            lv_obj_set_style_border_width(badge_room_cards[i], 1, 0);
+            lv_obj_set_style_pad_all(badge_room_cards[i], 0, 0);
+            lv_obj_clear_flag(badge_room_cards[i], LV_OBJ_FLAG_CLICKABLE);
+
+            lbl_room_card_badges[i] = lv_label_create(badge_room_cards[i]);
+            lv_obj_clear_flag(lbl_room_card_badges[i], LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_style_text_font(lbl_room_card_badges[i], &font_vietnamese_14, 0);
+            lv_obj_center(lbl_room_card_badges[i]);
+
+            lv_obj_add_flag(room_card_btns[i], LV_OBJ_FLAG_HIDDEN);
         }
     }
 
