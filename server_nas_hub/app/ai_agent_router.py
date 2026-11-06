@@ -40,8 +40,8 @@ def mask_key(k: Optional[str]) -> str:
 
 def normalize_gemini_model(model: Optional[str]) -> str:
     m = (model or "").strip()
-    if not m or m in ["gemini-2.0-flash", "models/gemini-2.0-flash", "gemini-2.5-flash", "models/gemini-2.5-flash"]:
-        return "gemini-3.8-flash"
+    if not m or m in ["gemini-2.0-flash", "models/gemini-2.0-flash", "gemini-2.5-flash", "models/gemini-2.5-flash", "gemini-3.8-flash", "models/gemini-3.8-flash", "gemini-flash-latest", "models/gemini-flash-latest"]:
+        return "gemini-flash-lite-latest"
     if m.startswith("models/"):
         return m.replace("models/", "")
     return m
@@ -69,13 +69,18 @@ class AIAgentRouter:
             "active_provider": "gemini",
             "gemini": {
                 "api_key": default_gemini or os.getenv("GEMINI_API_KEY", ""),
-                "model": "gemini-3.8-flash",
+                "model": "gemini-flash-lite-latest",
                 "base_url": "https://generativelanguage.googleapis.com/v1beta"
             },
             "deepseek": {
                 "api_key": default_deepseek or os.getenv("DEEPSEEK_API_KEY", ""),
                 "model": "deepseek-flash",
                 "base_url": "https://api.deepseek.com"
+            },
+            "groq": {
+                "api_key": os.getenv("GROQ_API_KEY", ""),
+                "model": "llama-3.3-70b-versatile",
+                "base_url": "https://api.groq.com/openai/v1"
             },
             "openrouter": {
                 "api_key": os.getenv("OPENROUTER_API_KEY", ""),
@@ -88,7 +93,10 @@ class AIAgentRouter:
                 "base_url": "http://localhost:11434/v1"
             },
             "tts_voice": "vi-VN-HoaiMyNeural",
-            "stt_service_url": os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions")
+            "stt_service_url": os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions"),
+            "stt_provider": "auto",
+            "stt_groq_model": "whisper-large-v3-turbo",
+            "auto_fallback": True
         }
 
         if os.path.exists(self.config_file):
@@ -114,6 +122,9 @@ class AIAgentRouter:
             "active_provider": self.config.get("active_provider", "gemini"),
             "tts_voice": self.config.get("tts_voice", "vi-VN-HoaiMyNeural"),
             "stt_service_url": self.config.get("stt_service_url", "http://127.0.0.1:8095/v1/audio/transcriptions"),
+            "stt_provider": self.config.get("stt_provider", "auto"),
+            "stt_groq_model": self.config.get("stt_groq_model", "whisper-large-v3-turbo"),
+            "auto_fallback": self.config.get("auto_fallback", True),
             "gemini": {
                 "api_key_masked": mask_key(self.config["gemini"].get("api_key")),
                 "has_key": bool(self.config["gemini"].get("api_key")),
@@ -125,6 +136,12 @@ class AIAgentRouter:
                 "has_key": bool(self.config["deepseek"].get("api_key")),
                 "model": self.config["deepseek"].get("model", "deepseek-flash"),
                 "base_url": self.config["deepseek"].get("base_url", "https://api.deepseek.com")
+            },
+            "groq": {
+                "api_key_masked": mask_key(self.config.get("groq", {}).get("api_key")),
+                "has_key": bool(self.config.get("groq", {}).get("api_key")),
+                "model": self.config.get("groq", {}).get("model", "llama-3.3-70b-versatile"),
+                "base_url": self.config.get("groq", {}).get("base_url", "https://api.groq.com/openai/v1")
             },
             "openrouter": {
                 "api_key_masked": mask_key(self.config["openrouter"].get("api_key")),
@@ -150,8 +167,14 @@ class AIAgentRouter:
                 self.config["tts_voice"] = new_data["tts_voice"]
             if "stt_service_url" in new_data:
                 self.config["stt_service_url"] = new_data["stt_service_url"]
+            if "stt_provider" in new_data:
+                self.config["stt_provider"] = new_data["stt_provider"]
+            if "stt_groq_model" in new_data:
+                self.config["stt_groq_model"] = new_data["stt_groq_model"]
+            if "auto_fallback" in new_data:
+                self.config["auto_fallback"] = bool(new_data["auto_fallback"])
 
-            for prov in ["gemini", "deepseek", "openrouter", "custom"]:
+            for prov in ["gemini", "deepseek", "groq", "openrouter", "custom"]:
                 if prov in new_data and isinstance(new_data[prov], dict):
                     p_data = new_data[prov]
                     if prov not in self.config:
@@ -472,7 +495,15 @@ class AIAgentRouter:
                             return {"status": "success", "latency_ms": int((time.time() - t0) * 1000), "reply": reply, "model": norm_mod, "provider": provider}
                         elif res_fb.status_code == 503:
                             return {"status": "warning", "http_code": 503, "message": f"Máy chủ Google báo model {norm_mod} đang chịu tải cao (High Demand). API key đã xác thực thành công!", "latency_ms": int((time.time() - t0) * 1000)}
-                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+                        err_msg = res_fb.text if res_fb.text else res.text
+                        if "Rate limit exceeded" in err_msg or "too_many_requests" in err_msg or res_fb.status_code == 429:
+                            return {
+                                "status": "error",
+                                "http_code": 429,
+                                "message": f"Google Free Tier giới hạn model {norm_mod} (Google tự động trỏ '{norm_mod}' vào model bị giới hạn 20 req/ngày). Vui lòng chọn 'gemini-flash-lite-latest' hoặc 'gemini-3.5-flash' để dùng miễn phí không lo giới hạn!",
+                                "latency_ms": int((time.time() - t0) * 1000)
+                            }
+                        return {"status": "error", "http_code": res_fb.status_code or res.status_code, "message": err_msg[:250], "latency_ms": elapsed}
 
                 # 2. DEEPSEEK OFFICIAL API (api.deepseek.com/chat/completions)
                 elif provider == "deepseek":
@@ -502,7 +533,34 @@ class AIAgentRouter:
                     else:
                         return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
 
-                # 3. OPENROUTER (9 Router) API (openrouter.ai/api/v1/chat/completions)
+                # 3. GROQ CLOUD OFFICIAL API (api.groq.com/openai/v1/chat/completions)
+                elif provider == "groq":
+                    norm_mod = mod or "llama-3.3-70b-versatile"
+                    endpoint = "https://api.groq.com/openai/v1/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "model": norm_mod,
+                        "messages": [
+                            {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
+                        ],
+                        "max_tokens": 10,
+                        "temperature": 0.2
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["choices"][0]["message"]["content"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    elif res.status_code == 401:
+                        return {"status": "error", "http_code": 401, "message": "API Key Groq không hợp lệ (gsk_...). Vui lòng kiểm tra lại trên console.groq.com/keys", "latency_ms": elapsed}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
+                # 4. OPENROUTER (9 Router) API (openrouter.ai/api/v1/chat/completions)
                 elif provider == "openrouter":
                     norm_mod = mod or "google/gemini-2.0-flash-exp:free"
                     endpoint = "https://openrouter.ai/api/v1/chat/completions"
@@ -553,8 +611,227 @@ class AIAgentRouter:
                 err_msg = f"Hết thời gian chờ phản hồi từ {provider} ({elapsed}ms). Máy chủ có thể đang chịu tải cao hoặc đường truyền chậm."
             return {"status": "error", "message": err_msg, "latency_ms": elapsed}
 
+    async def list_available_models(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None) -> List[Dict[str, str]]:
+        """Lấy danh sách các model khả dụng từ API chính thức của từng provider."""
+        prov_cfg = self.config.get(provider, {})
+        raw_key = (api_key or "").strip()
+        if not raw_key or "..." in raw_key or "****" in raw_key:
+            key = prov_cfg.get("api_key", "")
+        else:
+            key = raw_key
+
+        url = base_url or prov_cfg.get("base_url", "")
+        models: List[Dict[str, str]] = []
+
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                # 1. GOOGLE GEMINI
+                if provider == "gemini":
+                    if key:
+                        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
+                        res = await client.get(endpoint)
+                        if res.status_code == 200:
+                            data = res.json()
+                            for m in data.get("models", []):
+                                methods = m.get("supportedGenerationMethods", [])
+                                if "generateContent" in methods:
+                                    m_id = m.get("name", "").replace("models/", "")
+                                    disp = m.get("displayName") or m_id
+                                    models.append({"id": m_id, "name": f"{m_id} ({disp})"})
+
+                    top_gemini = [
+                        {"id": "gemini-flash-lite-latest", "name": "gemini-flash-lite-latest (Khuyên dùng - Miễn phí tốc độ cao)"},
+                        {"id": "gemini-3.5-flash", "name": "gemini-3.5-flash (Bản 3.5 Flash ổn định)"},
+                        {"id": "gemini-3.5-flash-lite", "name": "gemini-3.5-flash-lite (Bản 3.5 Lite nhẹ)"},
+                        {"id": "gemini-flash-latest", "name": "gemini-flash-latest (Google trỏ 3.8 - Giới hạn 20 req/ngày)"},
+                        {"id": "gemini-3.8-flash", "name": "gemini-3.8-flash (Bản 3.8 - Giới hạn 20 req/ngày)"},
+                        {"id": "gemini-pro-latest", "name": "gemini-pro-latest (Bản Pro mới nhất)"}
+                    ]
+                    if not models:
+                        return top_gemini
+                    existing_ids = {m["id"] for m in models}
+                    ordered = [m for m in top_gemini if m["id"] in existing_ids or not models]
+                    for m in models:
+                        if m["id"] not in {x["id"] for x in ordered}:
+                            ordered.append(m)
+                    return ordered
+
+                # 2. GROQ CLOUD
+                elif provider == "groq":
+                    if key:
+                        endpoint = "https://api.groq.com/openai/v1/models"
+                        headers = {"Authorization": f"Bearer {key}"}
+                        res = await client.get(endpoint, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                            for m in data.get("data", []):
+                                m_id = m.get("id", "")
+                                if "whisper" in m_id.lower() or "guard" in m_id.lower():
+                                    continue
+                                desc = ""
+                                if "llama-3.3-70b" in m_id:
+                                    desc = " (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"
+                                elif "llama-3.1-8b" in m_id:
+                                    desc = " (8B Siêu nhẹ ~800 tokens/s)"
+                                elif "mixtral" in m_id:
+                                    desc = " (MoE 32k Context)"
+                                elif "deepseek" in m_id:
+                                    desc = " (DeepSeek R1 Distill)"
+                                elif "qwen" in m_id:
+                                    desc = " (Qwen 2.5)"
+                                models.append({"id": m_id, "name": f"{m_id}{desc}"})
+
+                    default_groq = [
+                        {"id": "llama-3.3-70b-versatile", "name": "llama-3.3-70b-versatile (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"},
+                        {"id": "llama-3.1-8b-instant", "name": "llama-3.1-8b-instant (8B Siêu nhẹ ~800 tokens/s)"},
+                        {"id": "llama-3.2-3b-preview", "name": "llama-3.2-3b-preview (3B Nhẹ gọn)"},
+                        {"id": "llama-3.2-11b-vision-preview", "name": "llama-3.2-11b-vision-preview (11B Đa phương tiện)"},
+                        {"id": "deepseek-r1-distill-llama-70b", "name": "deepseek-r1-distill-llama-70b (Suy luận R1)"},
+                        {"id": "qwen-2.5-32b", "name": "qwen-2.5-32b (Qwen 32B Cân bằng)"},
+                        {"id": "mixtral-8x7b-32768", "name": "mixtral-8x7b-32768 (MoE 32k Context)"},
+                        {"id": "gemma2-9b-it", "name": "gemma2-9b-it (Google Gemma 2)"}
+                    ]
+                    if not models:
+                        return default_groq
+                    existing = {m["id"] for m in models}
+                    ordered = [m for m in default_groq if m["id"] in existing]
+                    for m in models:
+                        if m["id"] not in {x["id"] for x in ordered}:
+                            ordered.append(m)
+                    return ordered
+
+                # 3. DEEPSEEK
+                elif provider == "deepseek":
+                    if key:
+                        endpoint = "https://api.deepseek.com/models"
+                        headers = {"Authorization": f"Bearer {key}"}
+                        res = await client.get(endpoint, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                            for m in data.get("data", []):
+                                m_id = m.get("id", "")
+                                models.append({"id": m_id, "name": m_id})
+                    if not models:
+                        return [
+                            {"id": "deepseek-flash", "name": "deepseek-flash (Khuyên dùng - V4 Flash)"},
+                            {"id": "deepseek-chat", "name": "deepseek-chat (V3 Cân bằng)"},
+                            {"id": "deepseek-reasoner", "name": "deepseek-reasoner (R1 Suy luận sâu)"}
+                        ]
+                    return models
+
+                # 4. OPENROUTER
+                elif provider == "openrouter":
+                    endpoint = "https://openrouter.ai/api/v1/models"
+                    headers = {"Authorization": f"Bearer {key}"} if key else {}
+                    res = await client.get(endpoint, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        raw_list = data.get("data", [])
+                        free_models = []
+                        top_models = []
+                        for m in raw_list:
+                            m_id = m.get("id", "")
+                            m_name = m.get("name", m_id)
+                            if ":free" in m_id:
+                                free_models.append({"id": m_id, "name": f"{m_id} [Miễn phí]"})
+                            elif any(k in m_id for k in ["gemini-2.0-flash", "llama-3.3-70b", "deepseek/deepseek-chat", "claude-3.5-haiku"]):
+                                top_models.append({"id": m_id, "name": f"{m_id} ({m_name})"})
+                        return free_models + top_models
+                    return [
+                        {"id": "google/gemini-2.0-flash-exp:free", "name": "google/gemini-2.0-flash-exp:free [Miễn phí]"},
+                        {"id": "deepseek/deepseek-chat", "name": "deepseek/deepseek-chat (DeepSeek V3)"},
+                        {"id": "meta-llama/llama-3.3-70b-instruct", "name": "meta-llama/llama-3.3-70b-instruct"}
+                    ]
+
+                # 5. CUSTOM / OLLAMA / LOCAL
+                else:
+                    if url:
+                        base = url.rstrip('/')
+                        if not base.endswith('/v1'):
+                            base += '/v1'
+                        endpoint = f"{base}/models"
+                        headers = {"Authorization": f"Bearer {key}"} if key else {}
+                        res = await client.get(endpoint, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                            for m in data.get("data", []):
+                                m_id = m.get("id", "")
+                                models.append({"id": m_id, "name": m_id})
+                    return models or [{"id": "qwen2.5:3b", "name": "qwen2.5:3b (Ollama Default)"}]
+
+        except Exception as e:
+            logger.error("Error fetching models for %s: %s", provider, e)
+            return []
+
+
+
+    async def _try_local_rule_fallback(self, user_text: str, context_room: str = "") -> Optional[str]:
+        """Dự phòng offline nội bộ qua Home Assistant khi toàn bộ Cloud AI bị đứt mạng hoặc quá tải."""
+        if not user_text or not self.ha_bridge:
+            return None
+        t = user_text.lower().strip()
+
+        is_turn_on = any(w in t for w in ["bật", "mở", "khởi động", "set", "chỉnh"])
+        is_turn_off = any(w in t for w in ["tắt", "đóng", "ngắt", "dừng"])
+        if not is_turn_on and not is_turn_off:
+            return None
+
+        action = "turn_on" if is_turn_on else "turn_off"
+        action_name = "bật" if is_turn_on else "tắt"
+
+        target_domain = ""
+        if any(w in t for w in ["máy lạnh", "điều hòa", "ac"]):
+            target_domain = "climate"
+        elif any(w in t for w in ["đèn", "ánh sáng", "led"]):
+            target_domain = "light"
+        elif any(w in t for w in ["quạt", "fan"]):
+            target_domain = "fan"
+        elif any(w in t for w in ["công tắc", "ổ cắm"]):
+            target_domain = "switch"
+
+        matched_eid = None
+        matched_name = None
+        room_lower = (context_room or "").lower()
+
+        for eid, state_obj in self.ha_bridge.states.items():
+            domain = eid.split(".")[0]
+            if target_domain and domain != target_domain:
+                continue
+            attrs = state_obj.get("attributes", {})
+            friendly_name = attrs.get("friendly_name", "").lower()
+
+            if room_lower and room_lower in t:
+                if room_lower in friendly_name or room_lower in eid.lower():
+                    matched_eid = eid
+                    matched_name = attrs.get("friendly_name", eid)
+                    break
+            elif target_domain:
+                if room_lower and (room_lower in friendly_name or room_lower in eid.lower()):
+                    matched_eid = eid
+                    matched_name = attrs.get("friendly_name", eid)
+                    break
+                elif not matched_eid:
+                    matched_eid = eid
+                    matched_name = attrs.get("friendly_name", eid)
+
+        if matched_eid:
+            domain = matched_eid.split(".")[0]
+            try:
+                if domain == "climate":
+                    if is_turn_off:
+                        await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "off"})
+                    else:
+                        await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "cool"})
+                else:
+                    await self.ha_bridge.call_service(domain, action, entity_id=matched_eid)
+                return f"Đã {action_name} {matched_name or matched_eid} theo lệnh dự phòng nội bộ."
+            except Exception as ex:
+                logger.error("Local rule execution error for %s: %s", matched_eid, ex)
+
+        return None
+
     async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> str:
-        """Xử lý giọng nói người dùng, kết hợp Fast-Rule và Multi-AI Function Calling."""
+        """Xử lý giọng nói người dùng, kết hợp Fast-Rule, Multi-AI Function Calling và Cơ chế Tự Động Dự Phòng (Failover/Fallback)."""
         if not user_text:
             return "Tôi không nghe thấy gì cả."
 
@@ -566,21 +843,24 @@ class AIAgentRouter:
             cnt = res.get("turned_off_count", 0)
             return f"Đã tắt {cnt} thiết bị trong nhà cho bạn."
 
-        # 2. Xác định AI Provider
-        prov = model_preference or self.config.get("active_provider", "gemini")
-        if prov not in self.config or not self.config[prov].get("api_key"):
-            for alt in ["gemini", "deepseek", "openrouter", "custom"]:
-                if self.config.get(alt, {}).get("api_key"):
-                    prov = alt
-                    break
+        # 2. Xây dựng danh sách ứng viên Provider theo thứ tự ưu tiên (Primary -> Fallbacks)
+        preferred = model_preference or self.config.get("active_provider", "gemini")
+        auto_fallback = self.config.get("auto_fallback", True)
 
-        prov_cfg = self.config.get(prov, {})
-        api_key = prov_cfg.get("api_key", "")
-        model = prov_cfg.get("model", "")
-        base_url = prov_cfg.get("base_url", "")
+        candidates = []
+        if self.config.get(preferred, {}).get("api_key"):
+            candidates.append(preferred)
 
-        if not api_key:
-            return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI."
+        if auto_fallback:
+            for alt in ["groq", "deepseek", "gemini", "openrouter", "custom"]:
+                if alt != preferred and self.config.get(alt, {}).get("api_key"):
+                    candidates.append(alt)
+
+        if not candidates:
+            local_res = await self._try_local_rule_fallback(user_text, context_room)
+            if local_res:
+                return local_res
+            return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI khả dụng."
 
         device_ctx = self._build_device_context()
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
@@ -588,131 +868,139 @@ class AIAgentRouter:
             current_room=context_room or "Không xác định"
         )
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                # -------------------------------------------------------------
-                # GOOGLE GEMINI NATIVE REST (generateContent)
-                # -------------------------------------------------------------
-                if prov == "gemini":
-                    norm_mod = normalize_gemini_model(model)
-                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
-                    headers = {
-                        "x-goog-api-key": api_key,
-                        "Content-Type": "application/json"
-                    }
-                    payload = {
-                        "system_instruction": {
-                            "parts": [{"text": system_instruction}]
-                        },
-                        "contents": [
-                            {"role": "user", "parts": [{"text": user_text}]}
-                        ],
-                        "tools": [
-                            {"function_declarations": self._get_ha_tools_schema_gemini()}
-                        ],
-                        "generationConfig": {
-                            "temperature": 0.4,
-                            "maxOutputTokens": 150
-                        }
-                    }
-                    res = await client.post(endpoint, headers=headers, json=payload)
-                    if res.status_code == 200:
-                        data = res.json()
-                        candidate = data.get("candidates", [{}])[0]
-                        parts = candidate.get("content", {}).get("parts", [])
+        last_error_desc = ""
 
-                        # Kiểm tra function call
-                        confirmations = []
-                        text_replies = []
-                        for part in parts:
-                            if "functionCall" in part:
-                                fn = part["functionCall"]
-                                fn_name = fn.get("name", "")
-                                fn_args = fn.get("args", {})
-                                res_msg = await self.execute_tool(fn_name, fn_args)
-                                confirmations.append(res_msg)
-                            elif "text" in part:
-                                text_replies.append(part["text"].strip())
+        for prov_idx, prov in enumerate(candidates):
+            prov_cfg = self.config.get(prov, {})
+            api_key = prov_cfg.get("api_key", "")
+            model = prov_cfg.get("model", "")
+            base_url = prov_cfg.get("base_url", "")
 
-                        if confirmations:
-                            return " ".join(confirmations)
-                        if text_replies:
-                            return " ".join(text_replies)
-                    else:
-                        logger.error("Gemini API error %d: %s", res.status_code, res.text)
-                        return f"Xin lỗi, Gemini báo lỗi ({res.status_code})."
+            logger.info("Processing intent with [%s] (Candidate %d/%d, model: %s)...",
+                        prov, prov_idx + 1, len(candidates), model)
 
-                # -------------------------------------------------------------
-                # DEEPSEEK & OPENROUTER (OpenAI Chat Completions Format)
-                # -------------------------------------------------------------
-                else:
-                    if prov == "deepseek":
-                        endpoint = "https://api.deepseek.com/chat/completions"
-                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                        use_model = model or "deepseek-flash"
-                    elif prov == "openrouter":
-                        endpoint = "https://openrouter.ai/api/v1/chat/completions"
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    if prov == "gemini":
+                        norm_mod = normalize_gemini_model(model)
+                        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
                         headers = {
-                            "Authorization": f"Bearer {api_key}",
-                            "Content-Type": "application/json",
-                            "HTTP-Referer": "https://nalasmarthome.local",
-                            "X-Title": "NALA Smart Home Hub"
+                            "x-goog-api-key": api_key,
+                            "Content-Type": "application/json"
                         }
-                        use_model = model or "google/gemini-2.0-flash-exp:free"
-                    else:
-                        endpoint = f"{base_url.rstrip('/')}/chat/completions"
-                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                        use_model = model
+                        payload = {
+                            "system_instruction": {"parts": [{"text": system_instruction}]},
+                            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                            "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
+                            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 150}
+                        }
+                        res = await client.post(endpoint, headers=headers, json=payload)
+                        if res.status_code == 200:
+                            data = res.json()
+                            candidate = data.get("candidates", [{}])[0]
+                            parts = candidate.get("content", {}).get("parts", [])
 
-                    payload = {
-                        "model": use_model,
-                        "messages": [
-                            {"role": "system", "content": system_instruction},
-                            {"role": "user", "content": user_text}
-                        ],
-                        "tools": self._get_ha_tools_schema_openai(),
-                        "tool_choice": "auto",
-                        "max_tokens": 150,
-                        "temperature": 0.4
-                    }
-                    if prov == "deepseek":
-                        payload["thinking"] = {"type": "disabled"}
-
-                    res = await client.post(endpoint, headers=headers, json=payload)
-                    if res.status_code == 200:
-                        data = res.json()
-                        msg = data["choices"][0]["message"]
-                        tool_calls = msg.get("tool_calls", [])
-                        if tool_calls:
                             confirmations = []
-                            for tc in tool_calls:
-                                func = tc.get("function", {})
-                                fn_name = func.get("name", "")
-                                raw_args = func.get("arguments", "{}")
-                                try:
-                                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
-                                except Exception:
-                                    args = {}
-                                res_msg = await self.execute_tool(fn_name, args)
-                                confirmations.append(res_msg)
+                            text_replies = []
+                            for part in parts:
+                                if "functionCall" in part:
+                                    fn = part["functionCall"]
+                                    res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
+                                    confirmations.append(res_msg)
+                                elif "text" in part:
+                                    text_replies.append(part["text"].strip())
+
                             if confirmations:
                                 return " ".join(confirmations)
-                            return "Đã thực hiện yêu cầu cho bạn."
+                            if text_replies:
+                                return " ".join(text_replies)
+                        else:
+                            last_error_desc = f"Gemini HTTP {res.status_code}"
+                            logger.warning("Gemini API error %d: %s. Auto-falling back to next provider...",
+                                           res.status_code, res.text[:120])
+                            continue
 
-                        content = msg.get("content", "").strip()
-                        if content:
-                            return content
                     else:
-                        logger.error("AI Provider %s error %d: %s", prov, res.status_code, res.text)
-                        return f"Xin lỗi, {prov} báo lỗi ({res.status_code})."
+                        if prov == "groq":
+                            endpoint = "https://api.groq.com/openai/v1/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model or "llama-3.3-70b-versatile"
+                        elif prov == "deepseek":
+                            endpoint = "https://api.deepseek.com/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model or "deepseek-flash"
+                        elif prov == "openrouter":
+                            endpoint = "https://openrouter.ai/api/v1/chat/completions"
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json",
+                                "HTTP-Referer": "https://nalasmarthome.local",
+                                "X-Title": "NALA Smart Home Hub"
+                            }
+                            use_model = model or "google/gemini-2.0-flash-exp:free"
+                        else:
+                            endpoint = f"{base_url.rstrip('/')}/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model
 
-        except Exception as e:
-            logger.error("Error communicating with AI Provider %s: %s", prov, e)
+                        payload = {
+                            "model": use_model,
+                            "messages": [
+                                {"role": "system", "content": system_instruction},
+                                {"role": "user", "content": user_text}
+                            ],
+                            "tools": self._get_ha_tools_schema_openai(),
+                            "tool_choice": "auto",
+                            "max_tokens": 150,
+                            "temperature": 0.4
+                        }
+                        if prov == "deepseek":
+                            payload["thinking"] = {"type": "disabled"}
 
-        return "Xin lỗi, hiện tại tôi gặp sự cố khi kết nối tới trợ lý AI."
+                        res = await client.post(endpoint, headers=headers, json=payload)
+                        if res.status_code == 200:
+                            data = res.json()
+                            msg = data["choices"][0]["message"]
+                            tool_calls = msg.get("tool_calls", [])
+                            if tool_calls:
+                                confirmations = []
+                                for tc in tool_calls:
+                                    func = tc.get("function", {})
+                                    fn_name = func.get("name", "")
+                                    raw_args = func.get("arguments", "{}")
+                                    try:
+                                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                                    except Exception:
+                                        args = {}
+                                    res_msg = await self.execute_tool(fn_name, args)
+                                    confirmations.append(res_msg)
+                                if confirmations:
+                                    return " ".join(confirmations)
+                                return "Đã thực hiện yêu cầu cho bạn."
+
+                            content = msg.get("content", "").strip()
+                            if content:
+                                return content
+                        else:
+                            last_error_desc = f"{prov} HTTP {res.status_code}"
+                            logger.warning("Provider '%s' error %d: %s. Auto-falling back...",
+                                           prov, res.status_code, res.text[:120])
+                            continue
+
+            except Exception as e:
+                last_error_desc = str(e)
+                logger.warning("Exception communicating with AI Provider '%s': %s. Auto-falling back...", prov, e)
+                continue
+
+        logger.error("All AI providers failed (%s). Triggering offline local rule fallback...", last_error_desc)
+        local_res = await self._try_local_rule_fallback(user_text, context_room)
+        if local_res:
+            return local_res
+
+        return f"Xin lỗi, các máy chủ AI đều đang bận ({last_error_desc}). Vui lòng thử lại sau ít giây."
 
     async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> AsyncGenerator[str, None]:
-        """Stream kết quả đối thoại thời gian thực từng token (SSE/WebSocket chunk) phong cách Xiaozhi / Gemini Live."""
+        """Stream kết quả đối thoại thời gian thực từng token với cơ chế Tự Động Dự Phòng (Failover / Fallback)."""
         if not user_text or not user_text.strip():
             yield "Tôi không nghe thấy gì cả."
             return
@@ -729,21 +1017,27 @@ class AIAgentRouter:
                 await asyncio.sleep(0.03)
             return
 
-        # 2. Xác định AI Provider
-        prov = model_preference or self.config.get("active_provider", "deepseek")
-        if prov not in self.config or not self.config[prov].get("api_key"):
-            for alt in ["deepseek", "gemini", "openrouter", "custom"]:
-                if self.config.get(alt, {}).get("api_key"):
-                    prov = alt
-                    break
+        # 2. Xây dựng danh sách ứng viên Provider theo thứ tự ưu tiên (Primary -> Fallbacks)
+        preferred = model_preference or self.config.get("active_provider", "gemini")
+        auto_fallback = self.config.get("auto_fallback", True)
 
-        prov_cfg = self.config.get(prov, {})
-        api_key = prov_cfg.get("api_key", "")
-        model = prov_cfg.get("model", "")
-        base_url = prov_cfg.get("base_url", "")
+        candidates = []
+        if self.config.get(preferred, {}).get("api_key"):
+            candidates.append(preferred)
 
-        if not api_key:
-            msg = f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa có API Key."
+        if auto_fallback:
+            for alt in ["groq", "deepseek", "gemini", "openrouter", "custom"]:
+                if alt != preferred and self.config.get(alt, {}).get("api_key"):
+                    candidates.append(alt)
+
+        if not candidates:
+            local_res = await self._try_local_rule_fallback(user_text, context_room)
+            if local_res:
+                for word in local_res.split(" "):
+                    yield word + " "
+                    await asyncio.sleep(0.03)
+                return
+            msg = f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa có API Key AI khả dụng."
             for word in msg.split(" "):
                 yield word + " "
                 await asyncio.sleep(0.03)
@@ -755,164 +1049,187 @@ class AIAgentRouter:
             current_room=context_room or "Không xác định"
         )
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # -------------------------------------------------------------
-                # 1. DEEPSEEK & OPENROUTER & CUSTOM (OpenAI SSE Streaming)
-                # -------------------------------------------------------------
-                if prov != "gemini":
-                    if prov == "deepseek":
-                        endpoint = "https://api.deepseek.com/chat/completions"
-                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                        use_model = model or "deepseek-flash"
-                    elif prov == "openrouter":
-                        endpoint = "https://openrouter.ai/api/v1/chat/completions"
-                        headers = {
-                            "Authorization": f"Bearer {api_key}",
-                            "Content-Type": "application/json",
-                            "HTTP-Referer": "https://nalasmarthome.local",
-                            "X-Title": "NALA Smart Home Hub"
-                        }
-                        use_model = model or "google/gemini-2.0-flash-exp:free"
-                    else:
-                        endpoint = f"{base_url.rstrip('/')}/chat/completions"
-                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                        use_model = model
+        completed_successfully = False
+        last_error_msg = ""
 
-                    payload = {
-                        "model": use_model,
-                        "messages": [
-                            {"role": "system", "content": system_instruction},
-                            {"role": "user", "content": user_text}
-                        ],
-                        "tools": self._get_ha_tools_schema_openai(),
-                        "tool_choice": "auto",
-                        "stream": True,
-                        "max_tokens": 200,
-                        "temperature": 0.3
-                    }
-                    if prov == "deepseek":
-                        payload["thinking"] = {"type": "disabled"}
+        for prov_idx, prov in enumerate(candidates):
+            prov_cfg = self.config.get(prov, {})
+            api_key = prov_cfg.get("api_key", "")
+            model = prov_cfg.get("model", "")
+            base_url = prov_cfg.get("base_url", "")
 
-                    accumulated_tool_calls: Dict[int, Dict[str, Any]] = {}
-                    has_text = False
+            logger.info("Attempting AI stream with [%s] (Candidate %d/%d, model: %s)...",
+                        prov, prov_idx + 1, len(candidates), model)
 
-                    async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
-                        if response.status_code != 200:
-                            err_body = await response.aread()
-                            logger.error("AI Stream %s error %d: %s", prov, response.status_code, err_body.decode('utf-8', errors='replace'))
-                            yield f"Lỗi từ {prov} ({response.status_code})."
-                            return
-
-                        async for line in response.aiter_lines():
-                            line = line.strip()
-                            if not line or not line.startswith("data: "):
-                                continue
-                            data_str = line[6:]
-                            if data_str == "[DONE]":
-                                break
-
-                            try:
-                                chunk_json = json.loads(data_str)
-                                choices = chunk_json.get("choices", [])
-                                if not choices:
-                                    continue
-                                delta = choices[0].get("delta", {})
-
-                                # Kiểm tra tool call stream
-                                if "tool_calls" in delta and delta["tool_calls"]:
-                                    for tc in delta["tool_calls"]:
-                                        idx = tc.get("index", 0)
-                                        if idx not in accumulated_tool_calls:
-                                            accumulated_tool_calls[idx] = {
-                                                "name": tc.get("function", {}).get("name", ""),
-                                                "args": ""
-                                            }
-                                        fn_data = tc.get("function", {})
-                                        if "name" in fn_data and fn_data["name"]:
-                                            accumulated_tool_calls[idx]["name"] = fn_data["name"]
-                                        if "arguments" in fn_data and fn_data["arguments"]:
-                                            accumulated_tool_calls[idx]["args"] += fn_data["arguments"]
-
-                                # Stream content text
-                                content_piece = delta.get("content", "")
-                                if content_piece:
-                                    has_text = True
-                                    yield content_piece
-
-                            except Exception:
-                                continue
-
-                    # Nếu có tool call được gọi
-                    if accumulated_tool_calls:
-                        confirmations = []
-                        for idx, call in accumulated_tool_calls.items():
-                            fn_name = call.get("name", "")
-                            raw_args = call.get("args", "{}")
-                            try:
-                                args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
-                            except Exception:
-                                args = {}
-                            res_msg = await self.execute_tool(fn_name, args)
-                            confirmations.append(res_msg)
-
-                        final_msg = " ".join(confirmations) if confirmations else "Đã thực hiện xong cho bạn."
-                        if has_text:
-                            yield " " + final_msg
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    if prov != "gemini":
+                        if prov == "groq":
+                            endpoint = "https://api.groq.com/openai/v1/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model or "llama-3.3-70b-versatile"
+                        elif prov == "deepseek":
+                            endpoint = "https://api.deepseek.com/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model or "deepseek-flash"
+                        elif prov == "openrouter":
+                            endpoint = "https://openrouter.ai/api/v1/chat/completions"
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json",
+                                "HTTP-Referer": "https://nalasmarthome.local",
+                                "X-Title": "NALA Smart Home Hub"
+                            }
+                            use_model = model or "google/gemini-2.0-flash-exp:free"
                         else:
-                            for word in final_msg.split(" "):
-                                yield word + " "
-                                await asyncio.sleep(0.03)
+                            endpoint = f"{base_url.rstrip('/')}/chat/completions"
+                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                            use_model = model
 
-                # -------------------------------------------------------------
-                # 2. GOOGLE GEMINI SSE STREAMING (streamGenerateContent)
-                # -------------------------------------------------------------
-                else:
-                    norm_mod = normalize_gemini_model(model)
-                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:streamGenerateContent?alt=sse"
-                    headers = {
-                        "x-goog-api-key": api_key,
-                        "Content-Type": "application/json"
-                    }
-                    payload = {
-                        "system_instruction": {"parts": [{"text": system_instruction}]},
-                        "contents": [{"role": "user", "parts": [{"text": user_text}]}],
-                        "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
-                        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 200}
-                    }
+                        payload = {
+                            "model": use_model,
+                            "messages": [
+                                {"role": "system", "content": system_instruction},
+                                {"role": "user", "content": user_text}
+                            ],
+                            "tools": self._get_ha_tools_schema_openai(),
+                            "tool_choice": "auto",
+                            "stream": True,
+                            "max_tokens": 200,
+                            "temperature": 0.3
+                        }
+                        if prov == "deepseek":
+                            payload["thinking"] = {"type": "disabled"}
 
-                    async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
-                        if response.status_code != 200:
-                            err_body = await response.aread()
-                            logger.error("Gemini Stream error %d: %s", response.status_code, err_body.decode('utf-8', errors='replace'))
-                            if response.status_code == 503:
-                                yield "Gemini đang chịu tải cao tạm thời. Vui lòng thử lại sau ít giây."
-                            else:
-                                yield f"Lỗi Gemini ({response.status_code})."
-                            return
+                        accumulated_tool_calls: Dict[int, Dict[str, Any]] = {}
+                        has_text = False
 
-                        async for line in response.aiter_lines():
-                            line = line.strip()
-                            if not line or not line.startswith("data: "):
+                        async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
+                            if response.status_code != 200:
+                                err_body = await response.aread()
+                                last_error_msg = f"{prov} HTTP {response.status_code}"
+                                logger.warning("Provider '%s' returned HTTP %d: %s. Auto-falling back...",
+                                               prov, response.status_code, err_body[:100].decode('utf-8', errors='replace'))
                                 continue
-                            try:
-                                chunk_json = json.loads(line[6:])
-                                candidates = chunk_json.get("candidates", [])
-                                if not candidates:
+
+                            async for line in response.aiter_lines():
+                                line = line.strip()
+                                if not line or not line.startswith("data: "):
                                     continue
-                                parts = candidates[0].get("content", {}).get("parts", [])
-                                for p in parts:
-                                    if "text" in p and p["text"]:
-                                        yield p["text"]
-                                    elif "functionCall" in p:
-                                        fn = p["functionCall"]
-                                        res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
-                                        for word in res_msg.split(" "):
-                                            yield word + " "
-                                            await asyncio.sleep(0.03)
-                            except Exception:
+                                data_str = line[6:]
+                                if data_str == "[DONE]":
+                                    break
+
+                                try:
+                                    chunk_json = json.loads(data_str)
+                                    choices = chunk_json.get("choices", [])
+                                    if not choices:
+                                        continue
+                                    delta = choices[0].get("delta", {})
+
+                                    if "tool_calls" in delta and delta["tool_calls"]:
+                                        for tc in delta["tool_calls"]:
+                                            idx = tc.get("index", 0)
+                                            if idx not in accumulated_tool_calls:
+                                                accumulated_tool_calls[idx] = {
+                                                    "name": tc.get("function", {}).get("name", ""),
+                                                    "args": ""
+                                                }
+                                            fn_data = tc.get("function", {})
+                                            if "name" in fn_data and fn_data["name"]:
+                                                accumulated_tool_calls[idx]["name"] = fn_data["name"]
+                                            if "arguments" in fn_data and fn_data["arguments"]:
+                                                accumulated_tool_calls[idx]["args"] += fn_data["arguments"]
+
+                                    content_piece = delta.get("content", "")
+                                    if content_piece:
+                                        has_text = True
+                                        yield content_piece
+
+                                except Exception:
+                                    continue
+
+                        if accumulated_tool_calls:
+                            confirmations = []
+                            for idx, call in accumulated_tool_calls.items():
+                                fn_name = call.get("name", "")
+                                raw_args = call.get("args", "{}")
+                                try:
+                                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                                except Exception:
+                                    args = {}
+                                res_msg = await self.execute_tool(fn_name, args)
+                                confirmations.append(res_msg)
+
+                            final_msg = " ".join(confirmations) if confirmations else "Đã thực hiện xong cho bạn."
+                            if has_text:
+                                yield " " + final_msg
+                            else:
+                                for word in final_msg.split(" "):
+                                    yield word + " "
+                                    await asyncio.sleep(0.03)
+
+                        completed_successfully = True
+                        break
+
+                    else:
+                        norm_mod = normalize_gemini_model(model)
+                        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:streamGenerateContent?alt=sse"
+                        headers = {
+                            "x-goog-api-key": api_key,
+                            "Content-Type": "application/json"
+                        }
+                        payload = {
+                            "system_instruction": {"parts": [{"text": system_instruction}]},
+                            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                            "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
+                            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 200}
+                        }
+
+                        async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
+                            if response.status_code != 200:
+                                err_body = await response.aread()
+                                last_error_msg = f"Gemini HTTP {response.status_code}"
+                                logger.warning("Gemini returned HTTP %d: %s. Auto-falling back to next provider...",
+                                               response.status_code, err_body[:100].decode('utf-8', errors='replace'))
                                 continue
 
-        except Exception as e:
-            logger.error("Error in stream_intent: %s", e)
-            yield f"Đã xảy ra lỗi kết nối: {str(e)}"
+                            async for line in response.aiter_lines():
+                                line = line.strip()
+                                if not line or not line.startswith("data: "):
+                                    continue
+                                try:
+                                    chunk_json = json.loads(line[6:])
+                                    candidates_chunk = chunk_json.get("candidates", [])
+                                    if not candidates_chunk:
+                                        continue
+                                    parts = candidates_chunk[0].get("content", {}).get("parts", [])
+                                    for p in parts:
+                                        if "text" in p and p["text"]:
+                                            yield p["text"]
+                                        elif "functionCall" in p:
+                                            fn = p["functionCall"]
+                                            res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
+                                            for word in res_msg.split(" "):
+                                                yield word + " "
+                                                await asyncio.sleep(0.03)
+                                except Exception:
+                                    continue
+
+                        completed_successfully = True
+                        break
+
+            except Exception as e:
+                last_error_msg = str(e)
+                logger.warning("Exception with provider '%s': %s. Auto-falling back...", prov, e)
+                continue
+
+        if not completed_successfully:
+            logger.error("All AI providers failed (%s). Triggering offline local rule fallback...", last_error_msg)
+            local_res = await self._try_local_rule_fallback(user_text, context_room)
+            if local_res:
+                for word in local_res.split(" "):
+                    yield word + " "
+                    await asyncio.sleep(0.03)
+                return
+            yield f"Các máy chủ AI đều đang bận ({last_error_msg}). Vui lòng thử lại sau ít giây."

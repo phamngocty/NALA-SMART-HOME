@@ -183,6 +183,7 @@ private:
     lv_obj_t* modal_screensaver;
     lv_obj_t* lbl_stb_time;
     lv_obj_t* lbl_stb_sec;
+    lv_obj_t* lbl_stb_wday;
     lv_obj_t* lbl_stb_date;
     lv_obj_t* lbl_stb_room;
     lv_obj_t* lbl_stb_clim;
@@ -246,7 +247,7 @@ public:
           lbl_diag_result(nullptr), lbl_net_info(nullptr),
           modal_incoming_call(nullptr), lbl_incoming_title(nullptr),
           lbl_incoming_caller(nullptr), lbl_incoming_status(nullptr),
-          modal_screensaver(nullptr), lbl_stb_time(nullptr), lbl_stb_sec(nullptr),
+          modal_screensaver(nullptr), lbl_stb_time(nullptr), lbl_stb_sec(nullptr), lbl_stb_wday(nullptr),
           lbl_stb_date(nullptr), lbl_stb_room(nullptr), lbl_stb_clim(nullptr),
           lbl_stb_hint(nullptr), screensaver_active(false),
           dialog_climate(nullptr), lbl_clim_title(nullptr), btn_clim_close(nullptr),
@@ -961,10 +962,10 @@ public:
         modal_screensaver = lv_obj_create(parent);
         lv_obj_set_size(modal_screensaver, 240, 320);
         lv_obj_set_pos(modal_screensaver, 0, 0);
-        lv_obj_set_style_bg_color(modal_screensaver, lv_color_hex(0x05070D), 0); // Apple Deep Dark Standby
+        lv_obj_set_style_bg_color(modal_screensaver, lv_color_hex(0x030712), 0); // Obsidian OLED Deep Black
         lv_obj_set_style_border_width(modal_screensaver, 0, 0);
         lv_obj_set_style_radius(modal_screensaver, 0, 0);
-        lv_obj_set_style_pad_all(modal_screensaver, 4, 0);
+        lv_obj_set_style_pad_all(modal_screensaver, 0, 0);
         lv_obj_clear_flag(modal_screensaver, LV_OBJ_FLAG_SCROLLABLE);
 
         // Mặc định ẩn hoàn toàn khi khởi động (Bảo toàn 100% bố cục gốc)
@@ -973,47 +974,100 @@ public:
         // Bắt sự kiện chạm để mở lại Dashboard
         lv_obj_add_event_cb(modal_screensaver, event_handler_trampoline, LV_EVENT_CLICKED, this);
 
-        // Top: Tên phòng hiện tại
-        lbl_stb_room = lv_label_create(modal_screensaver);
-        lv_label_set_text_fmt(lbl_stb_room, "📍 %s", home_room_name);
-        lv_obj_set_style_text_color(lbl_stb_room, lv_color_hex(0x94A3B8), 0);
-        lv_obj_set_style_text_font(lbl_stb_room, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_stb_room, LV_ALIGN_TOP_MID, 0, 16);
+        // 1. Top Glass Pill Badge: Tên phòng hiện tại + Chấm xanh Online
+        lv_obj_t* badge_room = lv_obj_create(modal_screensaver);
+        lv_obj_set_size(badge_room, LV_SIZE_CONTENT, 28);
+        lv_obj_set_style_bg_color(badge_room, lv_color_hex(0x0F172A), 0);
+        lv_obj_set_style_border_color(badge_room, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(badge_room, 1, 0);
+        lv_obj_set_style_radius(badge_room, 14, 0); // Pill shape
+        lv_obj_set_style_pad_ver(badge_room, 2, 0);
+        lv_obj_set_style_pad_hor(badge_room, 12, 0);
+        lv_obj_clear_flag(badge_room, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_align(badge_room, LV_ALIGN_TOP_MID, 0, 16);
 
-        // Center: Giờ số to (Font Montserrat 32px)
+        // Chấm LED xanh trạng thái (Hardware Graphic, không dùng emoji tránh lỗi font ô vuông)
+        lv_obj_t* dot_online = lv_obj_create(badge_room);
+        lv_obj_set_size(dot_online, 7, 7);
+        lv_obj_set_style_bg_color(dot_online, lv_color_hex(0x10B981), 0);
+        lv_obj_set_style_radius(dot_online, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_border_width(dot_online, 0, 0);
+        lv_obj_align(dot_online, LV_ALIGN_LEFT_MID, 0, 0);
+
+        lbl_stb_room = lv_label_create(badge_room);
+        lv_label_set_text(lbl_stb_room, home_room_name && strlen(home_room_name) > 0 ? home_room_name : "Nala Panel");
+        lv_obj_set_style_text_color(lbl_stb_room, lv_color_hex(0xE2E8F0), 0);
+        lv_obj_set_style_text_font(lbl_stb_room, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_room, LV_ALIGN_LEFT_MID, 12, 0);
+
+        // 2. Giờ số to (Font Montserrat 40px - Chuẩn Smart Watch Standby)
         lbl_stb_time = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_time, "00:00");
         lv_obj_set_style_text_color(lbl_stb_time, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_set_style_text_font(lbl_stb_time, &lv_font_montserrat_32, 0);
-        lv_obj_align(lbl_stb_time, LV_ALIGN_CENTER, 0, -32);
+        lv_obj_set_style_text_font(lbl_stb_time, &lv_font_montserrat_40, 0);
+        lv_obj_align(lbl_stb_time, LV_ALIGN_CENTER, -12, -38);
 
-        // Giây
+        // Giây (Font Montserrat 16px đặt gọn bên phải của phút)
         lbl_stb_sec = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_sec, ":00");
         lv_obj_set_style_text_color(lbl_stb_sec, lv_color_hex(0x38BDF8), 0);
-        lv_obj_set_style_text_font(lbl_stb_sec, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_stb_sec, LV_ALIGN_CENTER, 0, -4);
+        lv_obj_set_style_text_font(lbl_stb_sec, &lv_font_montserrat_16, 0);
+        lv_obj_align(lbl_stb_sec, LV_ALIGN_CENTER, 70, -28);
 
-        // Thứ, Ngày Tháng Năm Tiếng Việt
+        // 3. Thứ Tiếng Việt (Chữ hoa Cyan Nổi bật)
+        lbl_stb_wday = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_wday, "HÔM NAY");
+        lv_obj_set_style_text_color(lbl_stb_wday, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_text_font(lbl_stb_wday, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_wday, LV_ALIGN_CENTER, 0, 10);
+
+        // Ngày Tháng Năm
         lbl_stb_date = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_date, "Chờ đồng bộ giờ...");
-        lv_obj_set_style_text_color(lbl_stb_date, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_text_color(lbl_stb_date, lv_color_hex(0x94A3B8), 0);
         lv_obj_set_style_text_font(lbl_stb_date, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_stb_date, LV_ALIGN_CENTER, 0, 24);
+        lv_obj_align(lbl_stb_date, LV_ALIGN_CENTER, 0, 32);
 
-        // Nhiệt độ phòng / Trạng thái
-        lbl_stb_clim = lv_label_create(modal_screensaver);
-        lv_label_set_text(lbl_stb_clim, "❄️ Nala Smart Home");
-        lv_obj_set_style_text_color(lbl_stb_clim, lv_color_hex(0x10B981), 0);
+        // Đường chỉ trang trí tinh tế (Divider)
+        lv_obj_t* div_line = lv_obj_create(modal_screensaver);
+        lv_obj_set_size(div_line, 80, 2);
+        lv_obj_set_style_bg_color(div_line, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(div_line, 0, 0);
+        lv_obj_set_style_radius(div_line, 1, 0);
+        lv_obj_align(div_line, LV_ALIGN_CENTER, 0, 52);
+
+        // 4. Khung trạng thái Thiết Bị / Máy Lạnh (Card Bo Góc Sang Trọng)
+        lv_obj_t* card_clim = lv_obj_create(modal_screensaver);
+        lv_obj_set_size(card_clim, 210, 36);
+        lv_obj_set_style_bg_color(card_clim, lv_color_hex(0x0B1324), 0);
+        lv_obj_set_style_border_color(card_clim, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(card_clim, 1, 0);
+        lv_obj_set_style_radius(card_clim, 10, 0);
+        lv_obj_set_style_pad_ver(card_clim, 4, 0);
+        lv_obj_set_style_pad_hor(card_clim, 8, 0);
+        lv_obj_clear_flag(card_clim, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_align(card_clim, LV_ALIGN_CENTER, 0, 80);
+
+        // Chấm màu xanh ngọc trạng thái
+        lv_obj_t* dot_clim = lv_obj_create(card_clim);
+        lv_obj_set_size(dot_clim, 6, 6);
+        lv_obj_set_style_bg_color(dot_clim, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_radius(dot_clim, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_border_width(dot_clim, 0, 0);
+        lv_obj_align(dot_clim, LV_ALIGN_LEFT_MID, 2, 0);
+
+        lbl_stb_clim = lv_label_create(card_clim);
+        lv_label_set_text(lbl_stb_clim, "Nala Smart Home: Sẵn sàng");
+        lv_obj_set_style_text_color(lbl_stb_clim, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_text_font(lbl_stb_clim, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_stb_clim, LV_ALIGN_CENTER, 0, 56);
+        lv_obj_align(lbl_stb_clim, LV_ALIGN_LEFT_MID, 14, 0);
 
-        // Gợi ý chạm
+        // 5. Gợi ý chạm mở bảng điều khiển
         lbl_stb_hint = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_hint, "Chạm màn hình để mở");
         lv_obj_set_style_text_color(lbl_stb_hint, lv_color_hex(0x475569), 0);
         lv_obj_set_style_text_font(lbl_stb_hint, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_stb_hint, LV_ALIGN_BOTTOM_MID, 0, -15);
+        lv_obj_align(lbl_stb_hint, LV_ALIGN_BOTTOM_MID, 0, -14);
     }
 
     void show_screensaver() {
@@ -1033,12 +1087,34 @@ public:
         return screensaver_active;
     }
 
-    void update_standby_clock(const char* time_str, const char* sec_str, const char* date_str, const char* clim_str = nullptr) {
+    void update_standby_clock(const char* time_str, const char* sec_str, const char* wday_str, const char* date_str) {
         if (!modal_screensaver || !screensaver_active) return;
         if (lbl_stb_time && time_str) lv_label_set_text(lbl_stb_time, time_str);
         if (lbl_stb_sec && sec_str) lv_label_set_text(lbl_stb_sec, sec_str);
+        if (lbl_stb_wday && wday_str) lv_label_set_text(lbl_stb_wday, wday_str);
         if (lbl_stb_date && date_str) lv_label_set_text(lbl_stb_date, date_str);
-        if (lbl_stb_clim && clim_str) lv_label_set_text(lbl_stb_clim, clim_str);
+
+        // Tự động quét thông tin máy lạnh nếu có trong các nút thiết bị
+        if (lbl_stb_clim) {
+            bool found_clim = false;
+            for (int i = 0; i < MAX_DASHBOARD_BUTTONS; i++) {
+                if (buttons[i].icon == "climate" || buttons[i].entity_id.startsWith("climate")) {
+                    char cbuf[64];
+                    float set_t = buttons[i].temperature > 10.0f ? buttons[i].temperature : 26.0f;
+                    if (buttons[i].is_on && buttons[i].hvac_mode != "off") {
+                        snprintf(cbuf, sizeof(cbuf), "Máy Lạnh: %.1f°C • Mát", set_t);
+                    } else {
+                        snprintf(cbuf, sizeof(cbuf), "Máy Lạnh: Tắt (Cài: %.1f°C)", set_t);
+                    }
+                    lv_label_set_text(lbl_stb_clim, cbuf);
+                    found_clim = true;
+                    break;
+                }
+            }
+            if (!found_clim) {
+                lv_label_set_text(lbl_stb_clim, "Nala Smart Home: Sẵn sàng");
+            }
+        }
     }
 
     void sync_settings(uint8_t vol, uint8_t bright, bool ring, uint8_t mic_gain) {

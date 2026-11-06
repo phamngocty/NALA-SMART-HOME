@@ -37,6 +37,15 @@
             --text-muted: #9ca3af;
         }
 
+        @keyframes sttPulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.8); opacity: 0; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .stt-option-card:hover {
+            transform: translateY(-2px);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: var(--bg-color);
@@ -1783,21 +1792,91 @@
         </div>
 
         <div class="modal-body" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 18px;">
-            <!-- Pipeline Hardware Status -->
-            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 14px; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 12px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 20px;">⚡</span>
-                    <div>
-                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">STT Nhận Diện Giọng Nói</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #10b981;">Faster-Whisper GPU (GTX 1660 Ti :8095)</div>
+            <!-- STT Mode Selection Card (Speech to Text) -->
+            <div id="sttCardContainer" style="background: #182234; border: 2px solid #38bdf8; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: border-color 0.3s ease;">
+                <!-- Header with Dynamic Glowing LED Lamp -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <!-- Glowing LED Indicator -->
+                        <div style="position: relative; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <div id="sttLedHalo" style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #38bdf8; opacity: 0.4; animation: sttPulse 2s infinite;"></div>
+                            <div id="sttLedDot" style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8; transition: all 0.3s ease;"></div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 14px; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                <span>🎙️ Chế Độ Nhận Dạng Giọng Nói (STT - Speech to Text)</span>
+                            </div>
+                            <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-top: 2px; transition: color 0.3s ease;" id="sttStatusBadge">
+                                ĐANG BẬT: 🔄 Tự động (Ưu tiên Groq Whisper Turbo ~0.15s ➔ Fallback GPU NAS)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STT Select Dropdown as Quick Selector -->
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 12px; color: #94a3b8; font-weight: 600;">Chế độ STT:</label>
+                        <select id="cfgSTTProvider" style="background: #0f172a; border: 1px solid #3b82f6; color: white; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onchange="updateSTTModeFromSelect()">
+                            <option value="auto" selected>🔄 Tự động (Ưu tiên Groq Whisper Turbo 0.15s -&gt; GPU NAS)</option>
+                            <option value="groq">⚡ Groq Cloud Whisper Turbo (~0.15s, 0% GPU NAS)</option>
+                            <option value="local">🖥️ Faster-Whisper Local GPU (GTX :8095 Offline)</option>
+                        </select>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 20px;">🗣️</span>
-                    <div>
-                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">TTS Giọng Đọc Tiếng Việt</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #38bdf8;">Edge-TTS Neural (Hoài My / Nam Minh)</div>
+
+                <!-- 3 Interactive STT Mode Option Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+                    <!-- Card 1: Auto -->
+                    <div class="stt-option-card" id="sttCard_auto" onclick="selectSTTMode('auto')" style="background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; padding: 12px; cursor: pointer; box-shadow: 0 0 14px rgba(56, 189, 248, 0.25); transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                                <span>🔄 Tự Động</span>
+                            </div>
+                            <span style="background: #0284c7; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">Khuyên Dùng</span>
+                        </div>
+                        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4;">
+                            Ưu tiên Groq Whisper ~0.15s. Tự động chuyển GPU NAS khi mạng chậm hoặc hết hạn mức.
+                        </div>
                     </div>
+
+                    <!-- Card 2: Groq Cloud -->
+                    <div class="stt-option-card" id="sttCard_groq" onclick="selectSTTMode('groq')" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #f97316; display: flex; align-items: center; gap: 6px;">
+                                <span>⚡ Groq Whisper Turbo</span>
+                            </div>
+                            <span style="background: #ea580c; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">2,000 req/ngày</span>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                            Tốc độ cực nhanh ~0.15s, chính xác 100% tiếng Việt, 0% CPU/GPU NAS.
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Local GPU -->
+                    <div class="stt-option-card" id="sttCard_local" onclick="selectSTTMode('local')" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #10b981; display: flex; align-items: center; gap: 6px;">
+                                <span>🖥️ Faster-Whisper Local</span>
+                            </div>
+                            <span style="background: #059669; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">100% Offline</span>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                            Chạy hoàn toàn nội bộ trên NAS (GTX 1660 Ti :8095), hoạt động ngay cả khi đứt mạng.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline TTS Info Line -->
+            <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🗣️</span>
+                    <div>
+                        <span style="font-size: 12px; font-weight: 700; color: #f8fafc;">TTS Giọng Đọc:</span>
+                        <span style="font-size: 12px; color: #38bdf8; font-weight: 600;"> Edge-TTS Neural Tiếng Việt (Hoài My / Nam Minh)</span>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; font-style: italic;">
+                    * Tốc độ phản xạ: Giải mã STT ~0.15s ➔ Loa phát ngay &lt; 0.3s
                 </div>
             </div>
 
@@ -1822,12 +1901,38 @@
                         </div>
                     </label>
                     <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="groq" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #f97316;">⚡ Groq Cloud LPU</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Siêu tốc ~800 tokens/s (Llama 3.3)</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <input type="radio" name="aiProviderRadio" value="openrouter" onchange="updateAIProviderUI()">
                         <div>
                             <div style="font-weight: 700; font-size: 13px; color: #c084fc;">OpenRouter (9 Router)</div>
                             <div style="font-size: 11px; color: #94a3b8;">Tự do chọn Claude, Llama, Qwen...</div>
                         </div>
                     </label>
+                </div>
+
+                <!-- Auto Failover / Fallback (Rollback) Banner & Toggle -->
+                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; margin-top: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="cfgAutoFallback" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #60a5fa; display: flex; align-items: center; gap: 6px;">
+                                <span>🛡️ Cơ Chế Tự Động Dự Phòng (Auto Failover / Rollback)</span>
+                                <span style="background: #1e3a8a; color: #93c5fd; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;">Zero-Downtime</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                                Khi AI chính gặp sự cố (Rate Limit 429, Google quá tải, rớt mạng), hệ thống tự động gọi lần lượt các AI dự phòng hoặc chuyển về <b>Luật nội bộ Home Assistant</b> để lệnh không bao giờ bị đứt đoạn.
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fallbackChainBadge" style="font-size: 11px; color: #38bdf8; background: #0f172a; border: 1px dashed #38bdf8; padding: 5px 10px; border-radius: 6px; font-family: monospace;">
+                        Chuỗi: Gemini ➔ Groq ➔ DeepSeek ➔ HA Offline
+                    </div>
                 </div>
             </div>
 
@@ -1839,9 +1944,14 @@
                         <div style="font-weight: 700; color: #60a5fa; font-size: 13px; display: flex; align-items: center; gap: 6px;">
                             <span>🔷</span> Google Gemini API
                         </div>
-                        <button type="button" onclick="testAIConn('gemini')" style="background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                            ⚡ Thử Kết Nối
-                        </button>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('gemini')" style="background: #1e293b; color: #60a5fa; border: 1px solid #3b82f6; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('gemini')" style="background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                         <div>
@@ -1851,11 +1961,17 @@
                         <div>
                             <label style="font-size: 11px; color: #94a3b8;">Model:</label>
                             <select id="cfgGeminiModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
-                                <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Google AI Studio 2026 - Mới nhất)</option>
-                                <option value="gemini-flash-latest">gemini-flash-latest (Bản Flash mới nhất)</option>
+                                <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Khuyên dùng - Miễn phí tốc độ cao)</option>
+                                <option value="gemini-3.5-flash">gemini-3.5-flash (Bản 3.5 Flash ổn định)</option>
+                                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Bản 3.5 Lite nhẹ)</option>
+                                <option value="gemini-flash-latest">gemini-flash-latest (Google trỏ ngầm về 3.8-flash - Giới hạn 20 req/ngày)</option>
+                                <option value="gemini-3.8-flash">gemini-3.8-flash (Bản 3.8 - Giới hạn 20 req/ngày)</option>
                                 <option value="gemini-pro-latest">gemini-pro-latest (Bản Pro mới nhất)</option>
                             </select>
                         </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
+                        * <i>Lưu ý:</i> Google tự động trỏ <code>gemini-flash-latest</code> sang <code>gemini-3.8-flash</code> (Free Tier bị giới hạn 20 lượt/ngày). Chọn <code>gemini-flash-lite-latest</code> để dùng thả ga!
                     </div>
                     <div id="testRes_gemini" style="font-size: 11px; margin-top: 6px;"></div>
                 </div>
@@ -1866,9 +1982,14 @@
                         <div style="font-weight: 700; color: #38bdf8; font-size: 13px; display: flex; align-items: center; gap: 6px;">
                             <span>🐋</span> DeepSeek API
                         </div>
-                        <button type="button" onclick="testAIConn('deepseek')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                            ⚡ Thử Kết Nối
-                        </button>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('deepseek')" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('deepseek')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                         <div>
@@ -1887,15 +2008,62 @@
                     <div id="testRes_deepseek" style="font-size: 11px; margin-top: 6px;"></div>
                 </div>
 
+                                <!-- Groq Cloud Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #f97316; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>⚡</span> Groq Cloud LPU (Llama 3.3 70B / 8B Siêu Tốc)
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('groq')" style="background: #1e293b; color: #f97316; border: 1px solid #f97316; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('groq')" style="background: #ea580c; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1.5fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (gsk_...):</label>
+                            <input type="password" id="cfgGroqKey" placeholder="Nhập Groq API Key..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <select id="cfgGroqModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="llama-3.3-70b-versatile" selected>llama-3.3-70b-versatile (Khuyên dùng - 70B Siêu tốc)</option>
+                                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Bản 8B Siêu nhẹ ~800 tokens/s)</option>
+                                <option value="llama-3.2-3b-preview">llama-3.2-3b-preview (3B Nhẹ gọn)</option>
+                                <option value="llama-3.2-11b-vision-preview">llama-3.2-11b-vision-preview (11B Đa phương tiện)</option>
+                                <option value="deepseek-r1-distill-llama-70b">deepseek-r1-distill-llama-70b (DeepSeek R1 Suy luận)</option>
+                                <option value="qwen-2.5-32b">qwen-2.5-32b (Qwen 2.5 32B Cân bằng)</option>
+                                <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (MoE 32k Context)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
+                        * <i>Ghi chú:</i> Bấm nút <b>🔄 Quét Model</b> để hệ thống tự động tải danh sách model chat.
+                    </div>
+                    <div style="font-size: 11px; color: #f97316; margin-top: 6px; background: rgba(249, 115, 22, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(249, 115, 22, 0.25); line-height: 1.5;">
+                        🎁 <b>Tích hợp sẵn STT Miễn Phí:</b> Groq cấp <b>whisper-large-v3-turbo</b> (2,000 req/ngày, 28,800 giây nói/ngày). Khi lưu API Key này, hệ thống sẽ tự động dùng Groq Whisper giải mã giọng nói ESP32 trong ~0.15s mà <b>không tốn 1% GPU trên NAS</b>!
+                    </div>
+                    <div id="testRes_groq" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
                 <!-- OpenRouter (9 Router) Card -->
                 <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div style="font-weight: 700; color: #c084fc; font-size: 13px; display: flex; align-items: center; gap: 6px;">
                             <span>🌐</span> OpenRouter (9 Router) API
                         </div>
-                        <button type="button" onclick="testAIConn('openrouter')" style="background: #9333ea; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                            ⚡ Thử Kết Nối
-                        </button>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('openrouter')" style="background: #1e293b; color: #c084fc; border: 1px solid #c084fc; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('openrouter')" style="background: #9333ea; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1.5fr 1.5fr; gap: 10px; margin-bottom: 8px;">
                         <div>
@@ -5040,9 +5208,19 @@ async function openAIConfigModal() {
             const gemKeyInput = document.getElementById('cfgGeminiKey');
             gemKeyInput.value = '';
             gemKeyInput.placeholder = aiCurrentConfig.gemini?.has_key ? `Đã lưu key (${aiCurrentConfig.gemini.api_key_masked}) - Để trống nếu giữ nguyên` : 'Nhập Gemini API Key...';
-            let gModel = aiCurrentConfig.gemini?.model || 'gemini-3.8-flash';
-            if (gModel === 'gemini-2.0-flash' || gModel === 'gemini-2.5-flash') gModel = 'gemini-3.8-flash';
+            let gModel = aiCurrentConfig.gemini?.model || 'gemini-flash-lite-latest';
+            if (gModel === 'gemini-2.0-flash' || gModel === 'gemini-2.5-flash' || gModel === 'gemini-3.8-flash') gModel = 'gemini-flash-lite-latest';
             document.getElementById('cfgGeminiModel').value = gModel;
+
+            const groqKeyInput = document.getElementById('cfgGroqKey');
+            if (groqKeyInput) {
+                groqKeyInput.value = '';
+                groqKeyInput.placeholder = aiCurrentConfig.groq?.has_key ? `Đã lưu key (${aiCurrentConfig.groq.api_key_masked}) - Để trống nếu giữ nguyên` : 'Nhập Groq API Key (gsk_...)...';
+            }
+            const groqModelEl = document.getElementById('cfgGroqModel');
+            if (groqModelEl && aiCurrentConfig.groq?.model) {
+                groqModelEl.value = aiCurrentConfig.groq.model;
+            }
 
             const dsKeyInput = document.getElementById('cfgDeepseekKey');
             dsKeyInput.value = '';
@@ -5057,6 +5235,16 @@ async function openAIConfigModal() {
             document.getElementById('cfgOpenrouterModel').value = aiCurrentConfig.openrouter?.model || 'google/gemini-2.0-flash-exp:free';
 
             document.getElementById('cfgTtsVoice').value = aiCurrentConfig.tts_voice || 'vi-VN-HoaiMyNeural';
+            const sttProvEl = document.getElementById('cfgSTTProvider');
+            if (sttProvEl && aiCurrentConfig.stt_provider) {
+                sttProvEl.value = aiCurrentConfig.stt_provider;
+            }
+            const autoFallbackChk = document.getElementById('cfgAutoFallback');
+            if (autoFallbackChk) {
+                autoFallbackChk.checked = (aiCurrentConfig.auto_fallback !== false);
+            }
+            updateSTTBadge();
+            updateAIProviderUI();
             loadWakeConfig();
         }
     } catch (err) {
@@ -5074,8 +5262,115 @@ function closeAIConfigModal() {
     }
 }
 
+
+function selectSTTMode(mode) {
+    const sel = document.getElementById('cfgSTTProvider');
+    if (sel) {
+        sel.value = mode;
+        updateSTTBadge();
+    }
+}
+
+function updateSTTModeFromSelect() {
+    updateSTTBadge();
+}
+
+function updateSTTBadge() {
+    const el = document.getElementById('cfgSTTProvider');
+    const badge = document.getElementById('sttStatusBadge');
+    const ledDot = document.getElementById('sttLedDot');
+    const ledHalo = document.getElementById('sttLedHalo');
+    const cardContainer = document.getElementById('sttCardContainer');
+    if (!el) return;
+
+    const val = el.value || 'auto';
+
+    // Highlight selected card and dim inactive ones
+    ['auto', 'groq', 'local'].forEach(m => {
+        const c = document.getElementById(`sttCard_${m}`);
+        if (!c) return;
+        if (m === val) {
+            c.style.background = '#1e293b';
+            if (m === 'groq') {
+                c.style.border = '2px solid #f97316';
+                c.style.boxShadow = '0 0 14px rgba(249, 115, 22, 0.35)';
+            } else if (m === 'local') {
+                c.style.border = '2px solid #10b981';
+                c.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.35)';
+            } else {
+                c.style.border = '2px solid #38bdf8';
+                c.style.boxShadow = '0 0 14px rgba(56, 189, 248, 0.35)';
+            }
+        } else {
+            c.style.background = 'rgba(15, 23, 42, 0.8)';
+            c.style.border = '1px solid #334155';
+            c.style.boxShadow = 'none';
+        }
+    });
+
+    if (val === 'groq') {
+        if (badge) {
+            badge.textContent = 'ĐANG BẬT: ⚡ Groq Cloud Whisper Turbo (~0.15s, 0% GPU NAS)';
+            badge.style.color = '#f97316';
+        }
+        if (ledDot) {
+            ledDot.style.background = '#f97316';
+            ledDot.style.boxShadow = '0 0 14px #f97316';
+        }
+        if (ledHalo) {
+            ledHalo.style.background = '#f97316';
+        }
+        if (cardContainer) cardContainer.style.borderColor = '#ea580c';
+    } else if (val === 'local') {
+        if (badge) {
+            badge.textContent = 'ĐANG BẬT: 🖥️ Faster-Whisper Local GPU (GTX :8095 - 100% Offline)';
+            badge.style.color = '#10b981';
+        }
+        if (ledDot) {
+            ledDot.style.background = '#10b981';
+            ledDot.style.boxShadow = '0 0 14px #10b981';
+        }
+        if (ledHalo) {
+            ledHalo.style.background = '#10b981';
+        }
+        if (cardContainer) cardContainer.style.borderColor = '#10b981';
+    } else {
+        if (badge) {
+            badge.textContent = 'ĐANG BẬT: 🔄 Tự động (Ưu tiên Groq Whisper Turbo ~0.15s ➔ Fallback GPU NAS)';
+            badge.style.color = '#38bdf8';
+        }
+        if (ledDot) {
+            ledDot.style.background = '#38bdf8';
+            ledDot.style.boxShadow = '0 0 14px #38bdf8';
+        }
+        if (ledHalo) {
+            ledHalo.style.background = '#38bdf8';
+        }
+        if (cardContainer) cardContainer.style.borderColor = '#38bdf8';
+    }
+}
+
 function updateAIProviderUI() {
-    // Optional highlight logic
+    const prov = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
+    const badge = document.getElementById('fallbackChainBadge');
+    const autoFallbackChk = document.getElementById('cfgAutoFallback');
+    if (!badge) return;
+    if (autoFallbackChk && !autoFallbackChk.checked) {
+        badge.innerHTML = `<span style="color: #f59e0b;">⚠️ Dự phòng tắt: Chỉ dùng <b>${prov.toUpperCase()}</b></span>`;
+        return;
+    }
+    const names = {
+        'gemini': 'Gemini (Chính)',
+        'groq': 'Groq (Chính)',
+        'deepseek': 'DeepSeek (Chính)',
+        'openrouter': 'OpenRouter (Chính)'
+    };
+    const order = [prov];
+    for (const p of ['groq', 'deepseek', 'gemini', 'openrouter']) {
+        if (!order.includes(p)) order.push(p);
+    }
+    const chainStr = order.map(p => names[p] || p.toUpperCase()).join(' ➔ ') + ' ➔ HA Offline';
+    badge.textContent = 'Chuỗi: ' + chainStr;
 }
 
 async function testAIConn(provider) {
@@ -5087,6 +5382,9 @@ async function testAIConn(provider) {
     if (provider === 'gemini') {
         apiKey = document.getElementById('cfgGeminiKey').value.trim();
         model = document.getElementById('cfgGeminiModel').value;
+    } else if (provider === 'groq') {
+        apiKey = document.getElementById('cfgGroqKey').value.trim();
+        model = document.getElementById('cfgGroqModel').value;
     } else if (provider === 'deepseek') {
         apiKey = document.getElementById('cfgDeepseekKey').value.trim();
         model = document.getElementById('cfgDeepseekModel').value;
@@ -5141,10 +5439,17 @@ async function saveAIConfig() {
     const activeProvider = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
     const payload = {
         active_provider: activeProvider,
+        auto_fallback: document.getElementById('cfgAutoFallback') ? document.getElementById('cfgAutoFallback').checked : true,
         tts_voice: document.getElementById('cfgTtsVoice').value,
+        stt_provider: document.getElementById('cfgSTTProvider')?.value || 'auto',
+        stt_groq_model: 'whisper-large-v3-turbo',
         gemini: {
             api_key: document.getElementById('cfgGeminiKey').value.trim(),
             model: document.getElementById('cfgGeminiModel').value
+        },
+        groq: {
+            api_key: document.getElementById('cfgGroqKey')?.value.trim() || '',
+            model: document.getElementById('cfgGroqModel')?.value || 'llama-3.3-70b-versatile'
         },
         deepseek: {
             api_key: document.getElementById('cfgDeepseekKey').value.trim(),
@@ -5174,6 +5479,71 @@ async function saveAIConfig() {
     }
 }
 
+
+
+async function fetchModelsForProvider(provider) {
+    const resEl = document.getElementById(`testRes_${provider}`);
+    if (resEl) resEl.innerHTML = '<span style="color: #38bdf8;">⏳ Đang quét danh sách model từ API...</span>';
+
+    let apiKey = '';
+    let selectEl = null;
+    if (provider === 'gemini') {
+        apiKey = document.getElementById('cfgGeminiKey').value.trim();
+        selectEl = document.getElementById('cfgGeminiModel');
+    } else if (provider === 'groq') {
+        apiKey = document.getElementById('cfgGroqKey').value.trim();
+        selectEl = document.getElementById('cfgGroqModel');
+    } else if (provider === 'deepseek') {
+        apiKey = document.getElementById('cfgDeepseekKey').value.trim();
+        selectEl = document.getElementById('cfgDeepseekModel');
+    } else if (provider === 'openrouter') {
+        apiKey = document.getElementById('cfgOpenrouterKey').value.trim();
+        selectEl = document.getElementById('cfgOpenrouterModel');
+    }
+
+    if (apiKey.includes('...') || apiKey.includes('****')) {
+        apiKey = '';
+    }
+
+    try {
+        const res = await fetch('/api/ai/models', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                provider: provider,
+                api_key: apiKey
+            })
+        });
+        const data = await res.json();
+        if (data.status === 'success' && data.models && data.models.length > 0) {
+            if (selectEl && selectEl.tagName === 'SELECT') {
+                const currentVal = selectEl.value;
+                selectEl.innerHTML = '';
+                let foundCurrent = false;
+                data.models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.name || m.id;
+                    if (m.id === currentVal) {
+                        opt.selected = true;
+                        foundCurrent = true;
+                    }
+                    selectEl.appendChild(opt);
+                });
+                if (!foundCurrent && selectEl.options.length > 0) {
+                    selectEl.options[0].selected = true;
+                }
+            } else if (selectEl && selectEl.tagName === 'INPUT') {
+                selectEl.value = data.models[0].id;
+            }
+            if (resEl) resEl.innerHTML = `<span style="color: #10b981;">✅ Đã quét thành công ${data.models.length} model từ API!</span>`;
+        } else {
+            if (resEl) resEl.innerHTML = `<span style="color: #ef4444;">❌ Không tìm thấy model nào từ API hoặc API Key chưa được lưu/nhập.</span>`;
+        }
+    } catch (err) {
+        if (resEl) resEl.innerHTML = `<span style="color: #ef4444;">❌ Lỗi kết nối quét model: ${err.message}</span>`;
+    }
+}
 
 async function loadWakeConfig() {
     try {
@@ -5282,6 +5652,19 @@ function playWebChime(type) {
             gain.connect(webAudioCtx.destination);
             osc.start(now);
             osc.stop(now + 0.14);
+
+        } else if (type === 'done') {
+            // Action Done Chime "Ting!": E6 (1318Hz, 80ms)
+            const osc = webAudioCtx.createOscillator();
+            const gain = webAudioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1318, now);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+            osc.connect(gain);
+            gain.connect(webAudioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.10);
         }
     } catch (e) {
         console.warn("Chime AudioContext warning:", e);
@@ -5321,6 +5704,94 @@ function stopLiveAudioQueue() {
         currentLiveAudioEl = null;
     }
     isLiveAudioPlaying = false;
+}
+
+// -----------------------------------------------------------------------------
+// SMOOTH TYPEWRITER PACER (XIAOZHI & GEMINI LIVE STYLE)
+// -----------------------------------------------------------------------------
+class SmoothTypewriterPacer {
+    constructor(targetElement, onUpdateCallback) {
+        this.target = targetElement;
+        this.onUpdate = onUpdateCallback;
+        this.fullText = '';
+        this.displayedLength = 0;
+        this.isTyping = false;
+        this.isFinished = false;
+        this.timer = null;
+        this.baseDelay = 18; // ~55 ký tự/giây, nhịp gõ tự nhiên
+    }
+
+    pushStream(newFullText) {
+        this.fullText = newFullText;
+        if (!this.isTyping) {
+            this.startTyping();
+        }
+    }
+
+    finish() {
+        this.isFinished = true;
+    }
+
+    startTyping() {
+        this.isTyping = true;
+        const tick = () => {
+            if (this.displayedLength < this.fullText.length) {
+                const backlog = this.fullText.length - this.displayedLength;
+                let charsToTake = 1;
+                let nextDelay = this.baseDelay;
+
+                // Tự điều tốc nếu văn bản tích tụ nhiều để không trễ so với loa
+                if (backlog > 40) {
+                    charsToTake = 3;
+                    nextDelay = 8;
+                } else if (backlog > 20) {
+                    charsToTake = 2;
+                    nextDelay = 12;
+                }
+
+                const nextChars = this.fullText.substr(this.displayedLength, charsToTake);
+                this.displayedLength += charsToTake;
+
+                const visible = this.fullText.substring(0, this.displayedLength);
+                if (this.target) {
+                    this.target.innerHTML = escapeHtml(visible) + '<span class="typewriter-caret">▌</span>';
+                }
+                if (this.onUpdate) this.onUpdate();
+
+                // Nhịp thở tự nhiên: dừng nhẹ ở dấu câu, dừng nghỉ ở cuối câu
+                const lastChar = nextChars[nextChars.length - 1];
+                if ('.!?\n'.includes(lastChar)) {
+                    nextDelay = Math.max(nextDelay, 90); // Dừng nghỉ cuối câu
+                } else if (',;:'.includes(lastChar)) {
+                    nextDelay = Math.max(nextDelay, 45); // Dừng ngắn ở dấu phẩy
+                }
+
+                this.timer = setTimeout(tick, nextDelay);
+            } else {
+                if (this.isFinished) {
+                    this.isTyping = false;
+                    if (this.target) {
+                        this.target.innerHTML = escapeHtml(this.fullText);
+                    }
+                    if (this.onUpdate) this.onUpdate();
+                } else {
+                    this.timer = setTimeout(tick, 20);
+                }
+            }
+        };
+        tick();
+    }
+
+    flushNow() {
+        if (this.timer) clearTimeout(this.timer);
+        this.displayedLength = this.fullText.length;
+        this.isTyping = false;
+        this.isFinished = true;
+        if (this.target) {
+            this.target.innerHTML = escapeHtml(this.fullText);
+        }
+        if (this.onUpdate) this.onUpdate();
+    }
 }
 
 async function sendAIChatTest() {
@@ -5375,6 +5846,9 @@ async function sendAIChatTest() {
 
     const prov = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'deepseek';
     const textTarget = document.getElementById(bubbleId);
+    const pacer = new SmoothTypewriterPacer(textTarget, () => {
+        chatLogs.scrollTop = chatLogs.scrollHeight;
+    });
 
     try {
         const response = await fetch('/api/ai/chat/stream', {
@@ -5417,8 +5891,7 @@ async function sendAIChatTest() {
                                 playWebChime('ack'); // Nhận diện xong lệnh, phát âm Poong!
                             }
                             accumulatedText = data.accumulated || '';
-                            textTarget.innerHTML = escapeHtml(accumulatedText) + '<span class="typewriter-caret">▌</span>';
-                            chatLogs.scrollTop = chatLogs.scrollHeight;
+                            pacer.pushStream(accumulatedText);
                         } else if (currentEvent === 'sentence_audio') {
                             // Bí quyết Xiaozhi: Câu 1 vừa xong là loa phát ngay lập tức, không chờ cả bài!
                             if (data.audio_wav_base64) {
@@ -5442,17 +5915,19 @@ async function sendAIChatTest() {
                                 }
                             }
                         } else if (currentEvent === 'done') {
-                            textTarget.innerHTML = escapeHtml(accumulatedText);
+                            pacer.finish();
                         } else if (currentEvent === 'error') {
+                            pacer.flushNow();
                             textTarget.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${escapeHtml(data.error || 'Lỗi không xác định')}</span>`;
                         }
                     } catch (e) {}
                 }
             }
         }
-        if (textTarget) textTarget.innerHTML = escapeHtml(accumulatedText);
+        pacer.finish();
 
     } catch (err) {
+        pacer.flushNow();
         if (textTarget) textTarget.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${escapeHtml(err.message)}</span>`;
     } finally {
         btn.disabled = false;

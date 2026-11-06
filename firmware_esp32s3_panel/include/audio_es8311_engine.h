@@ -250,6 +250,17 @@ public:
         mute_speaker(true);
     }
 
+    // Phat am thanh thuc hien thanh cong ("Ting!" - Google Home / Xiaozhi Done Style)
+    void play_done_chime() {
+        write_reg(0x31, 0x00);
+        write_reg(0x32, 0xC4); // +3dB
+        mute_speaker(false);
+        delay(15);
+        play_tone(1318, 80, 0.85f); // E6 (1318Hz, 80ms)
+        delay(20);
+        mute_speaker(true);
+    }
+
     void play_ringtone() {
         write_reg(0x31, 0x00); // Unmute DAC
         write_reg(0x32, 0xC8); // Mức âm lượng chuông to rõ (+4.5dB)

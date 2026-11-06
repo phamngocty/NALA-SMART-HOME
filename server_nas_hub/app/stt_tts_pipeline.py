@@ -26,8 +26,53 @@ class AudioPipeline:
         # In-memory audio cache for common prompt confirmations (<1ms latency)
         self._pcm_cache: Dict[str, bytes] = {}
 
-    async def pcm_to_text(self, pcm_data: bytes) -> str:
-        """Chuyển đổi Raw PCM 16kHz 16-bit Mono sang Text qua Faster-Whisper GPU."""
+    async def prewarm_common_cache(self):
+        """Khởi tạo trước các mẫu âm thanh phản xạ tức thì (<1ms) vào RAM."""
+        common_phrases = ["Dạ,", "Vâng ạ,", "Đã bật.", "Đã tắt.", "Đã tắt toàn bộ thiết bị."]
+        for v in ["vi-VN-NamMinhNeural", "vi-VN-HoaiMyNeural"]:
+            for phrase in common_phrases:
+                try:
+                    await self.text_to_pcm(phrase, voice=v)
+                except Exception:
+                    pass
+        logger.info("⚡ Prewarmed %d instant audio phrases in RAM cache.", len(self._pcm_cache))
+
+    async def groq_whisper_stt(self, wav_bytes: bytes, api_key: str, model: str = "whisper-large-v3-turbo") -> str:
+        """Nhận diện giọng nói tiếng Việt siêu tốc qua Groq Cloud LPU Whisper (~0.15s, miễn phí 2000 req/ngày)."""
+        if not api_key:
+            return ""
+        url = "https://api.groq.com/openai/v1/audio/transcriptions"
+        headers = {
+            "Authorization": f"Bearer {api_key}"
+        }
+        data = aiohttp.FormData()
+        data.add_field('file', io.BytesIO(wav_bytes), filename='speech.wav', content_type='audio/wav')
+        data.add_field('model', model or 'whisper-large-v3-turbo')
+        data.add_field('language', 'vi')
+        data.add_field('response_format', 'json')
+        data.add_field('temperature', '0.0')
+
+        t0 = time.time()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, data=data, timeout=aiohttp.ClientTimeout(total=6)) as response:
+                    if response.status == 200:
+                        res = await response.json()
+                        text = res.get("text", "").strip()
+                        elapsed = time.time() - t0
+                        logger.info("⚡ Groq Cloud Whisper STT (%s): '%s' (in %.3fs)", model, text, elapsed)
+                        return text
+                    else:
+                        err_body = await response.text()
+                        logger.warning("Groq Whisper STT API error %d: %s", response.status, err_body)
+        except Exception as e:
+            logger.warning("Groq Whisper STT request failed: %s", e)
+        return ""
+
+    async def pcm_to_text(self, pcm_data: bytes, groq_api_key: Optional[str] = None, stt_provider: str = "auto", groq_model: str = "whisper-large-v3-turbo") -> str:
+        """Chuyển đổi Raw PCM 16kHz 16-bit Mono sang Text.
+        Tự động ưu tiên Groq Cloud LPU Whisper (~0.15s, 0% GPU) và fallback Faster-Whisper Local GPU.
+        """
         if not pcm_data or len(pcm_data) < 3200:  # < 100ms
             logger.warning("PCM data too short (%d bytes), skipping STT", len(pcm_data) if pcm_data else 0)
             return ""
@@ -39,10 +84,19 @@ class AudioPipeline:
             wav_file.setsampwidth(2)  # 16-bit
             wav_file.setframerate(16000)
             wav_file.writeframes(pcm_data)
-        wav_buffer.seek(0)
+        wav_bytes = wav_buffer.getvalue()
 
+        # 1. Thử qua Groq Cloud Whisper nếu provider là 'groq' hoặc 'auto' (khi có api_key)
+        if stt_provider in ("groq", "auto") and groq_api_key:
+            groq_text = await self.groq_whisper_stt(wav_bytes, groq_api_key, model=groq_model)
+            if groq_text:
+                return groq_text
+            if stt_provider == "groq":
+                logger.warning("Groq STT failed and provider set to groq. Falling back to local Faster-Whisper.")
+
+        # 2. Faster-Whisper Local GPU (http://localhost:8095)
         data = aiohttp.FormData()
-        data.add_field('file', wav_buffer, filename='speech.wav', content_type='audio/wav')
+        data.add_field('file', io.BytesIO(wav_bytes), filename='speech.wav', content_type='audio/wav')
         data.add_field('model', 'Systran/faster-whisper-large-v3')
         data.add_field('language', 'vi')
         data.add_field('response_format', 'json')

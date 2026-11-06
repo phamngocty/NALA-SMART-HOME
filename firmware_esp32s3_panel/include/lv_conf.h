@@ -30,6 +30,7 @@
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_28 1
 #define LV_FONT_MONTSERRAT_32 1
+#define LV_FONT_MONTSERRAT_40 1
 
 // Widgets
 #define LV_USE_ARC        1

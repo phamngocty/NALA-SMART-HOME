@@ -846,6 +846,7 @@ void send_device_registration() {
 
 void on_ws_connected() {
     send_device_registration();
+    wsManager.send_text("{\"type\":\"get_time\"}");
     if (lvgl_mutex != NULL && xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         uiDashboard.set_ws_connected(true);
         xSemaphoreGive(lvgl_mutex);
@@ -883,13 +884,36 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(1000)) == pdTRUE);
     }
 
-    // Đồng bộ thời gian thực từ NAS Hub
-    if (doc.containsKey("epoch") || doc.containsKey("timestamp")) {
-        unsigned long ep = doc["epoch"] | doc["timestamp"] | 0;
-        if (ep > 100000000) {
-            rtc.setTime(ep);
-            Serial.printf("[RTC] Dong bo gio tu NAS Hub thanh cong: %s\n", rtc.getTime("%H:%M:%S").c_str());
+    // Đồng bộ thời gian thực từ NAS Hub vào RTC nội bộ ESP32Time (chỉ chạy khi server gửi epoch)
+    unsigned long ep = 0;
+    if (doc.containsKey("epoch")) {
+        ep = doc["epoch"].as<unsigned long>();
+    } else if (doc.containsKey("timestamp")) {
+        ep = doc["timestamp"].as<unsigned long>();
+    } else if (doc["payload"].is<JsonObject>() && doc["payload"].containsKey("epoch")) {
+        ep = doc["payload"]["epoch"].as<unsigned long>();
+    } else if (doc["payload"].is<JsonObject>() && doc["payload"].containsKey("timestamp")) {
+        ep = doc["payload"]["timestamp"].as<unsigned long>();
+    }
+
+    if (ep > 1000000000) {
+        rtc.setTime(ep);
+        Serial.printf("[RTC] Dong bo gio thanh cong tu NAS Hub: %s - %s\n", 
+                      rtc.getTime("%H:%M:%S").c_str(), rtc.getTime("%d/%m/%Y").c_str());
+        if (taken && uiDashboard.is_screensaver_active()) {
+            String time_str = rtc.getTime("%H:%M");
+            String sec_str = rtc.getTime(":%S");
+            int wday = rtc.getDayofWeek();
+            const char* wday_names[7] = {"CHỦ NHẬT", "THỨ HAI", "THỨ BA", "THỨ TƯ", "THỨ NĂM", "THỨ SÁU", "THỨ BẢY"};
+            const char* wday_name = (wday >= 0 && wday < 7) ? wday_names[wday] : "HÔM NAY";
+            String date_str = rtc.getTime("%d/%m/%Y");
+            uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), wday_name, date_str.c_str());
         }
+    }
+
+    if (type == "time_sync") {
+        if (taken) xSemaphoreGive(lvgl_mutex);
+        return;
     }
 
     Serial.printf("[WS-TEXT] Handling type: %s, FreeHeap: %lu\n", type.c_str(), (unsigned long)ESP.getFreeHeap());
@@ -901,6 +925,9 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         Serial.println("[AI] Nhan lenh phat am thanh nhan lenh Poong!");
         audioEngine.play_ack_chime();
         if (taken) uiDashboard.set_ai_state("thinking", "Đang xử lý...");
+    } else if (type == "done_chime") {
+        Serial.println("[AI] Nhan lenh phat am thanh hoan thanh Ting!");
+        audioEngine.play_done_chime();
     } else if (type == "ai_state") {
         String state = doc["payload"]["state"] | "IDLE";
         String txt = doc["payload"]["text"] | "";
@@ -1251,10 +1278,10 @@ void Task_LVGL_UI(void *p) {
                         String time_str = rtc.getTime("%H:%M");
                         String sec_str = rtc.getTime(":%S");
                         int wday = rtc.getDayofWeek();
-                        const char* wday_names[7] = {"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
-                        const char* wday_name = (wday >= 0 && wday < 7) ? wday_names[wday] : "Hôm nay";
-                        String date_str = String(wday_name) + ", " + rtc.getTime("%d/%m/%Y");
-                        uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), date_str.c_str());
+                        const char* wday_names[7] = {"CHỦ NHẬT", "THỨ HAI", "THỨ BA", "THỨ TƯ", "THỨ NĂM", "THỨ SÁU", "THỨ BẢY"};
+                        const char* wday_name = (wday >= 0 && wday < 7) ? wday_names[wday] : "HÔM NAY";
+                        String date_str = rtc.getTime("%d/%m/%Y");
+                        uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), wday_name, date_str.c_str());
                     }
                 }
 

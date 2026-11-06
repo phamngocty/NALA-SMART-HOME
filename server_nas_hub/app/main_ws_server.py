@@ -682,6 +682,7 @@ async def startup_event():
     load_devices()
     ha_bridge.add_state_listener(on_ha_state_change)
     asyncio.create_task(ha_bridge.connect())
+    asyncio.create_task(audio_pipeline.prewarm_common_cache())
     asyncio.create_task(history_cleanup_task())
     asyncio.create_task(device_heartbeat_task())
 
@@ -1054,6 +1055,17 @@ async def test_ai_provider(req: AITestRequest):
     """Kiểm tra kết nối trực tiếp đến mô hình AI đã chọn và đo latency."""
     res = await ai_router.test_connection(req.provider, req.api_key, req.model, req.base_url)
     return JSONResponse(res)
+
+class AIModelsRequest(BaseModel):
+    provider: str
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+@app.post("/api/ai/models")
+async def get_ai_models(req: AIModelsRequest):
+    """Lấy danh sách các model khả dụng trực tiếp từ API của từng hãng."""
+    models = await ai_router.list_available_models(req.provider, req.api_key, req.base_url)
+    return JSONResponse({"status": "success", "provider": req.provider, "models": models})
 
 class AIChatRequest(BaseModel):
     message: str
@@ -1840,12 +1852,21 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                             "floor": dev.get("floor", "")
                         })
 
+                        # Đồng bộ thời gian thực cho RTC nội bộ ESP32Time (1 lần duy nhất khi kết nối)
+                        cur_epoch = int(time.time())
+                        await websocket.send_json({
+                            "type": "time_sync",
+                            "epoch": cur_epoch
+                        })
+
                         # Tự động sync cấu hình đã lưu xuống Panel kèm kênh đàm thoại
                         targets = intercom.get_targets(exclude_device_key=code)
                         rname = dev.get("room_name", f"Panel {code}")
                         await websocket.send_json({
                             "type": "config_sync",
+                            "epoch": cur_epoch,
                             "payload": {
+                                "epoch": cur_epoch,
                                 "room": f"{dev['room_name']} - {dev['floor']}",
                                 "floor": dev['floor'],
                                 "my_intercom_id": assigned_intercom_id,
@@ -1924,6 +1945,13 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                                     entity_id=entity_id,
                                     service_data=service_data
                                 )
+
+                # Yêu cầu lấy giờ từ Panel ESP32
+                elif msg_type in ("get_time", "time_sync_request", "time_sync"):
+                    await websocket.send_json({
+                        "type": "time_sync",
+                        "epoch": int(time.time())
+                    })
 
                 # Đồng bộ cập nhật cài đặt từ Panel lên Server và Web Admin
                 elif msg_type == "settings_update":
@@ -2100,41 +2128,105 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
         await ws.send_json({"type": "ack_chime"})
         await ws.send_json({"type": "ai_state", "payload": {"state": "thinking", "text": "Đang suy nghĩ..."}})
 
-        # 1. Faster-Whisper STT
-        text = await audio_pipeline.pcm_to_text(pcm_audio)
+        # 1. Speech-to-Text: Tu dong uu tien Groq Whisper Turbo 0.15s (0% GPU NAS), fallback Faster-Whisper
+        groq_cfg = ai_router.config.get("groq", {})
+        groq_key = groq_cfg.get("api_key", "")
+        stt_provider = ai_router.config.get("stt_provider", "auto")
+        stt_model = ai_router.config.get("stt_groq_model", "whisper-large-v3-turbo")
+
+        text = await audio_pipeline.pcm_to_text(
+            pcm_audio,
+            groq_api_key=groq_key,
+            stt_provider=stt_provider,
+            groq_model=stt_model
+        )
         if not text:
             await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Không nhận diện được giọng nói."}})
             return
 
-        # 2. AI Intent & Sentence Chunking TTS Pipeline (Bí Quyết Xiaozhi & Gemini Live)
+        # 2. Phân loại lệnh & Kiến trúc Pipelined Queue Phản xạ tức thì (Sub-200ms)
         dev = devices_db.get(device_id, {})
         room_name = dev.get("room_name", "")
         tts_voice = ai_router.config.get("tts_voice", "vi-VN-NamMinhNeural")
 
-        accumulated_text = ""
-        sentence_buffer = ""
-        seq = 0
+        lower_text = text.lower().strip()
+        is_turn_on = any(w in lower_text for w in ["bật", "mở", "khởi động", "set", "chỉnh"])
+        is_turn_off = any(w in lower_text for w in ["tắt", "đóng", "ngắt", "dừng"])
+        is_master_off = any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "đi ngủ", "ra khỏi nhà"])
+        is_device_keyword = any(w in lower_text for w in ["đèn", "quạt", "máy lạnh", "điều hòa", "ac", "công tắc", "ổ cắm", "rèm", "bình nóng lạnh"])
 
-        async def send_pcm_to_esp32(pcm_data: bytes, is_last_packet: bool):
-            nonlocal seq
-            if not pcm_data:
-                return
-            tot = len(pcm_data)
-            for i in range(0, tot, 512):
-                c = pcm_data[i:i+512]
-                if len(c) < 512:
-                    c = c + b'\x00' * (512 - len(c))
-                is_end = (i + 512 >= tot) and is_last_packet
-                flag = 0x01 if seq == 0 else (0x03 if is_end else 0x02)
-                hdr = bytearray(7)
-                hdr[0:2] = (0xA55A).to_bytes(2, 'little')
-                hdr[2] = 0x00 # Server
-                hdr[3] = 0x01 # ESP32
-                hdr[4:6] = seq.to_bytes(2, 'little')
-                hdr[6] = flag
-                await ws.send_bytes(bytes(hdr + c + b'\x00'))
-                seq += 1
-                await asyncio.sleep(0.012)
+        # -------------------------------------------------------------
+        # ⚡ CẤP ĐỘ 1: FAST-PATH SMART HOME (< 150ms TỨC THÌ)
+        # -------------------------------------------------------------
+        fast_handled = False
+        fast_reply = ""
+
+        if is_master_off and ai_router.ha_bridge:
+            res = await ai_router.ha_bridge.master_turn_off_all()
+            cnt = res.get("turned_off_count", 0)
+            fast_reply = f"Đã tắt toàn bộ {cnt} thiết bị trong nhà cho bạn."
+            fast_handled = True
+        elif (is_turn_on or is_turn_off) and is_device_keyword and ai_router.ha_bridge:
+            local_res = await ai_router._try_local_rule_fallback(text, context_room=room_name)
+            if local_res:
+                fast_reply = local_res
+                fast_handled = True
+
+        if fast_handled and fast_reply:
+            # 1. Phát ngay Done Chime ("Ting!" 80ms) tới ESP32 trong < 50ms!
+            try:
+                await ws.send_json({"type": "done_chime"})
+            except Exception:
+                pass
+
+            # 2. Hiển thị UI tức thì trên màn hình LVGL
+            await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": fast_reply}})
+
+            # 3. Phát âm thanh xác nhận ngắn từ RAM Cache (< 10ms)
+            confirm_pcm = await audio_pipeline.text_to_pcm(fast_reply, voice=tts_voice)
+            if confirm_pcm:
+                seq = 0
+                tot = len(confirm_pcm)
+                for i in range(0, tot, 512):
+                    c = confirm_pcm[i:i+512]
+                    if len(c) < 512:
+                        c = c + b'\x00' * (512 - len(c))
+                    is_end = (i + 512 >= tot)
+                    flag = 0x01 if seq == 0 else (0x03 if is_end else 0x02)
+                    hdr = bytearray(7)
+                    hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+                    hdr[2] = 0x00 # Server Hub
+                    hdr[3] = 0x01 # ESP32
+                    hdr[4:6] = seq.to_bytes(2, 'little')
+                    hdr[6] = flag
+                    await ws.send_bytes(bytes(hdr + c + b'\x00'))
+                    seq += 1
+                    await asyncio.sleep(0.012)
+
+            rec = history_mgr.add_record(
+                device_code=device_id,
+                room_name=dev.get("room_name", f"Panel {device_id}"),
+                session_type="voice_ai",
+                text=text,
+                response=fast_reply,
+                pcm_data=pcm_audio
+            )
+            asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
+            return
+
+        # -------------------------------------------------------------
+        # 🧠 CẤP ĐỘ 2: HỎI ĐÁP / HỘI THOẠI AI: PIPELINED GAPLESS STREAMING (0ms KHOẢNG LẶNG)
+        # -------------------------------------------------------------
+        audio_queue = asyncio.Queue()     # Chứa (pcm_bytes: Optional[bytes], is_final: bool)
+        sentence_queue = asyncio.Queue()  # Chứa str (nội dung câu) hoặc None (kết thúc)
+        accumulated_text = ""
+
+        # Nạp ngay Instant Audio Filler ("Dạ,") vào đầu Queue nếu có trong Cache
+        # Giúp loa ESP32 bật tiếng ngay sau 50ms khi người dùng vừa dứt lời!
+        filler_pcm = await audio_pipeline.text_to_pcm("Dạ,", voice=tts_voice)
+        if filler_pcm:
+            await audio_queue.put((filler_pcm, False))
 
         def is_boundary(buf: str) -> bool:
             buf = buf.strip()
@@ -2145,32 +2237,98 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
                 return True
             if any(buf.endswith(p) for p in [",", ":"]) and len(words) >= 5:
                 return True
-            if len(words) >= 11:
+            if len(words) >= 10:
                 return True
             return False
 
-        async for token in ai_router.stream_intent(text, context_room=room_name):
-            accumulated_text += token
-            sentence_buffer += token
+        async def llm_producer():
+            nonlocal accumulated_text
+            sentence_buffer = ""
+            last_ws_send_time = 0.0
+            try:
+                loop = asyncio.get_event_loop()
+                async for token in ai_router.stream_intent(text, context_room=room_name):
+                    accumulated_text += token
+                    sentence_buffer += token
 
-            # Cập nhật text trực tiếp hiển thị typewriter trên màn hình LVGL ESP32
-            await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": accumulated_text}})
+                    now = loop.time()
+                    # Điều tốc mượt cho màn hình ESP32: nhịp thở tự nhiên theo từ hoặc tối thiểu 50ms
+                    if (now - last_ws_send_time >= 0.06) or token.endswith((" ", ".", ",", "!", "?", "\n")):
+                        last_ws_send_time = now
+                        await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": accumulated_text}})
 
-            # Khi đủ 1 câu, ném ngay vào TTS để loa ESP32 phát ngay sau 1.2s!
-            if is_boundary(sentence_buffer):
-                sent = sentence_buffer.strip()
-                sentence_buffer = ""
-                if sent:
+                    if is_boundary(sentence_buffer):
+                        sent = sentence_buffer.strip()
+                        sentence_buffer = ""
+                        if sent:
+                            await sentence_queue.put(sent)
+
+                # Đảm bảo hiển thị trọn vẹn văn bản cuối cùng lên màn hình ESP32
+                await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": accumulated_text}})
+
+                rem = sentence_buffer.strip()
+                if rem:
+                    await sentence_queue.put(rem)
+            except Exception as ex:
+                logger.error("Error in LLM stream producer: %s", ex)
+            finally:
+                await sentence_queue.put(None)  # Báo hiệu hết token từ LLM
+
+        async def tts_worker():
+            """Tổng hợp câu tiếp theo song song trong RAM trong lúc câu trước đang phát ra loa."""
+            while True:
+                sent = await sentence_queue.get()
+                if sent is None:
+                    await audio_queue.put((None, True))  # Hết toàn bộ bài nói
+                    break
+                try:
                     chunk_pcm = await audio_pipeline.text_to_pcm(sent, voice=tts_voice)
                     if chunk_pcm:
-                        await send_pcm_to_esp32(chunk_pcm, is_last_packet=False)
+                        await audio_queue.put((chunk_pcm, False))
+                except Exception as ex:
+                    logger.warning("TTS error for chunk '%s': %s", sent, ex)
 
-        # Xử lý đoạn text còn lại ở cuối câu
-        rem = sentence_buffer.strip()
-        if rem:
-            chunk_pcm = await audio_pipeline.text_to_pcm(rem, voice=tts_voice)
-            if chunk_pcm:
-                await send_pcm_to_esp32(chunk_pcm, is_last_packet=True)
+        async def audio_streamer():
+            """Đẩy liên tục audio xuống ESP32, câu 2 nối tiếp câu 1 với 0ms khoảng lặng."""
+            seq = 0
+            while True:
+                item, is_final = await audio_queue.get()
+                if is_final:
+                    break
+                if not item:
+                    continue
+
+                tot = len(item)
+                for i in range(0, tot, 512):
+                    c = item[i:i+512]
+                    if len(c) < 512:
+                        c = c + b'\x00' * (512 - len(c))
+                    flag = 0x01 if seq == 0 else 0x02
+                    hdr = bytearray(7)
+                    hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+                    hdr[2] = 0x00 # Server Hub
+                    hdr[3] = 0x01 # ESP32
+                    hdr[4:6] = seq.to_bytes(2, 'little')
+                    hdr[6] = flag
+                    await ws.send_bytes(bytes(hdr + c + b'\x00'))
+                    seq += 1
+                    await asyncio.sleep(0.012)
+
+            # Gửi gói kết thúc STREAM_FLAG_END (0x03) duy nhất một lần khi nói xong toàn bộ
+            end_hdr = bytearray(7)
+            end_hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+            end_hdr[2] = 0x00
+            end_hdr[3] = 0x01
+            end_hdr[4:6] = seq.to_bytes(2, 'little')
+            end_hdr[6] = 0x03
+            await ws.send_bytes(bytes(end_hdr + b'\x00' * 513))
+
+        # Chạy song song cả 3 worker qua asyncio.gather
+        await asyncio.gather(
+            llm_producer(),
+            tts_worker(),
+            audio_streamer()
+        )
 
         # Lưu vào Lịch sử Giọng nói & Ghi âm Audio
         rec = history_mgr.add_record(
