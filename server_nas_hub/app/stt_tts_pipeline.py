@@ -69,6 +69,16 @@ class AudioPipeline:
             return b""
 
         clean_text = text.strip()
+        # Sanitize text for TTS (prevent SSML / XML parser crashes)
+        import re
+        if clean_text.startswith("{") or ('"error"' in clean_text and '"code"' in clean_text):
+            clean_text = "Hệ thống AI phản hồi lỗi, vui lòng kiểm tra lại API key hoặc model."
+        else:
+            clean_text = re.sub(r'[*`#_{}\[\]<>]', '', clean_text).strip()
+            # Rút ngắn nếu quá dài
+            if len(clean_text) > 300:
+                clean_text = clean_text[:300]
+
         selected_voice = voice or self.default_voice
 
         cache_key = f"{selected_voice}:{clean_text}"
