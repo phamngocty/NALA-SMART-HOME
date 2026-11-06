@@ -36,8 +36,8 @@ def mask_key(k: Optional[str]) -> str:
 
 def normalize_gemini_model(model: Optional[str]) -> str:
     m = (model or "").strip()
-    if not m or m in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
-        return "gemini-2.5-flash"
+    if not m or m in ["gemini-2.0-flash", "models/gemini-2.0-flash", "gemini-2.5-flash", "models/gemini-2.5-flash"]:
+        return "gemini-3.8-flash"
     if m.startswith("models/"):
         return m.replace("models/", "")
     return m
@@ -65,12 +65,12 @@ class AIAgentRouter:
             "active_provider": "gemini",
             "gemini": {
                 "api_key": default_gemini or os.getenv("GEMINI_API_KEY", ""),
-                "model": "gemini-2.5-flash",
+                "model": "gemini-3.8-flash",
                 "base_url": "https://generativelanguage.googleapis.com/v1beta"
             },
             "deepseek": {
                 "api_key": default_deepseek or os.getenv("DEEPSEEK_API_KEY", ""),
-                "model": "deepseek-chat",
+                "model": "deepseek-flash",
                 "base_url": "https://api.deepseek.com"
             },
             "openrouter": {
@@ -119,7 +119,7 @@ class AIAgentRouter:
             "deepseek": {
                 "api_key_masked": mask_key(self.config["deepseek"].get("api_key")),
                 "has_key": bool(self.config["deepseek"].get("api_key")),
-                "model": self.config["deepseek"].get("model", "deepseek-chat"),
+                "model": self.config["deepseek"].get("model", "deepseek-flash"),
                 "base_url": self.config["deepseek"].get("base_url", "https://api.deepseek.com")
             },
             "openrouter": {
@@ -368,33 +368,46 @@ class AIAgentRouter:
             return {"status": "error", "message": f"Chưa có API Key cho {provider}"}
 
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                # 1. GOOGLE GEMINI NATIVE REST API (Official Google AI Studio)
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                # 1. GOOGLE GEMINI (Interactions API / generateContent)
                 if provider == "gemini":
                     norm_mod = normalize_gemini_model(mod)
-                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
+                    endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
                     headers = {
                         "x-goog-api-key": key,
                         "Content-Type": "application/json"
                     }
                     payload = {
-                        "contents": [
-                            {"parts": [{"text": "Trả lời 'OK' nếu bạn nhận được tin này."}]}
-                        ],
-                        "generationConfig": {"maxOutputTokens": 10, "temperature": 0.2}
+                        "model": norm_mod,
+                        "input": "Trả lời 'OK' nếu bạn nhận được tin này."
                     }
                     res = await client.post(endpoint, headers=headers, json=payload)
                     elapsed = int((time.time() - t0) * 1000)
                     if res.status_code == 200:
                         data = res.json()
-                        reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                        reply = data.get("output_text") or data.get("text") or "OK"
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply.strip(), "model": norm_mod, "provider": provider}
+                    elif res.status_code == 503:
+                        return {"status": "warning", "http_code": 503, "message": f"Máy chủ Google báo model {norm_mod} đang chịu tải cao tạm thời (High Demand). API key và kết nối hoàn toàn hợp lệ!", "latency_ms": elapsed}
                     else:
+                        # Fallback thử endpoint generateContent
+                        fb_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
+                        fb_payload = {
+                            "contents": [{"parts": [{"text": "Trả lời 'OK'"}]}],
+                            "generationConfig": {"maxOutputTokens": 10, "temperature": 0.2}
+                        }
+                        res_fb = await client.post(fb_endpoint, headers=headers, json=fb_payload)
+                        if res_fb.status_code == 200:
+                            data = res_fb.json()
+                            reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                            return {"status": "success", "latency_ms": int((time.time() - t0) * 1000), "reply": reply, "model": norm_mod, "provider": provider}
+                        elif res_fb.status_code == 503:
+                            return {"status": "warning", "http_code": 503, "message": f"Máy chủ Google báo model {norm_mod} đang chịu tải cao (High Demand). API key đã xác thực thành công!", "latency_ms": int((time.time() - t0) * 1000)}
                         return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
 
                 # 2. DEEPSEEK OFFICIAL API (api.deepseek.com/chat/completions)
                 elif provider == "deepseek":
-                    norm_mod = mod or "deepseek-chat"
+                    norm_mod = mod or "deepseek-flash"
                     endpoint = "https://api.deepseek.com/chat/completions"
                     headers = {
                         "Authorization": f"Bearer {key}",
@@ -414,6 +427,8 @@ class AIAgentRouter:
                         data = res.json()
                         reply = data["choices"][0]["message"]["content"].strip()
                         return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    elif res.status_code == 401:
+                        return {"status": "error", "http_code": 401, "message": "API Key DeepSeek không hợp lệ hoặc đã hết hạn (Authentication Fails). Vui lòng kiểm tra lại trên platform.deepseek.com/api_keys", "latency_ms": elapsed}
                     else:
                         return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
 

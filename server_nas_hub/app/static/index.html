@@ -1723,15 +1723,15 @@
                     </div>
                     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                         <div>
-                            <label style="font-size: 11px; color: #94a3b8;">API Key (bắt đầu bằng AIza...):</label>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (bắt đầu bằng AIza... hoặc AQ...):</label>
                             <input type="password" id="cfgGeminiKey" placeholder="Nhập Gemini API Key hoặc giữ nguyên..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
                         </div>
                         <div>
                             <label style="font-size: 11px; color: #94a3b8;">Model:</label>
                             <select id="cfgGeminiModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
-                                <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Khuyên dùng - Mới & Nhanh)</option>
-                                <option value="gemini-1.5-flash">gemini-1.5-flash (Ổn định cao)</option>
-                                <option value="gemini-1.5-pro">gemini-1.5-pro (Suy luận sâu)</option>
+                                <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Google AI Studio 2026 - Mới nhất)</option>
+                                <option value="gemini-flash-latest">gemini-flash-latest (Bản Flash mới nhất)</option>
+                                <option value="gemini-pro-latest">gemini-pro-latest (Bản Pro mới nhất)</option>
                             </select>
                         </div>
                     </div>
@@ -1755,7 +1755,11 @@
                         </div>
                         <div>
                             <label style="font-size: 11px; color: #94a3b8;">Model:</label>
-                            <input type="text" id="cfgDeepseekModel" value="deepseek-chat" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <select id="cfgDeepseekModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="deepseek-flash" selected>deepseek-flash (V4.1 Flash - Khuyên dùng)</option>
+                                <option value="deepseek-v4-pro">deepseek-v4-pro (Bản Pro cao cấp)</option>
+                                <option value="deepseek-chat">deepseek-chat (Tương thích chuẩn)</option>
+                            </select>
                         </div>
                     </div>
                     <div id="testRes_deepseek" style="font-size: 11px; margin-top: 6px;"></div>
@@ -4512,12 +4516,14 @@ async function openAIConfigModal() {
             if (radio) radio.checked = true;
 
             document.getElementById('cfgGeminiKey').value = aiCurrentConfig.gemini?.api_key_masked || '';
-            let gModel = aiCurrentConfig.gemini?.model || 'gemini-2.5-flash';
-            if (gModel === 'gemini-2.0-flash') gModel = 'gemini-2.5-flash';
+            let gModel = aiCurrentConfig.gemini?.model || 'gemini-3.8-flash';
+            if (gModel === 'gemini-2.0-flash' || gModel === 'gemini-2.5-flash') gModel = 'gemini-3.8-flash';
             document.getElementById('cfgGeminiModel').value = gModel;
 
             document.getElementById('cfgDeepseekKey').value = aiCurrentConfig.deepseek?.api_key_masked || '';
-            document.getElementById('cfgDeepseekModel').value = aiCurrentConfig.deepseek?.model || 'deepseek-chat';
+            let dsModel = aiCurrentConfig.deepseek?.model || 'deepseek-flash';
+            if (dsModel === 'deepseek-chat') dsModel = 'deepseek-flash';
+            document.getElementById('cfgDeepseekModel').value = dsModel;
 
             document.getElementById('cfgOpenrouterKey').value = aiCurrentConfig.openrouter?.api_key_masked || '';
             document.getElementById('cfgOpenrouterModel').value = aiCurrentConfig.openrouter?.model || 'google/gemini-2.0-flash-exp:free';
