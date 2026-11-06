@@ -1108,6 +1108,9 @@
                 <button class="btn-intercom-header" onclick="openIntercomModal()">
                     🎙️ Đàm Thoại Intercom
                 </button>
+                <button class="btn-ai-header" onclick="openAIConfigModal()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.35);">
+                    🤖 Cấu Hình Voice AI & STT/TTS
+                </button>
                 <button class="btn-history-header" onclick="openHistoryModal()">
                     📜 Lịch Sử & Tự Động Xóa
                 </button>
@@ -1644,7 +1647,183 @@
         <!-- ======================================================================= -->
     <!-- MODAL CẤU HÌNH NÚT TOÀN NHÀ & TẮT HẾT (ALL-HOUSE MASTER CONFIG MODAL)     -->
     <!-- ======================================================================= -->
-    <div class="modal-overlay" id="allHouseConfigModal" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
+    <!-- ======================================================================= -->
+<!-- AI AGENT ROUTER & AUDIO PIPELINE CONFIGURATION MODAL -->
+<!-- ======================================================================= -->
+<div class="modal-overlay" id="aiConfigModal" style="display: none; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="modal-box" style="max-width: 820px; width: 95%; max-height: 90vh; overflow-y: auto; background: #0b1120; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 18px 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: #0f172a;">
+            <div class="modal-title" style="display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #f8fafc;">
+                <span style="font-size: 24px;">🤖</span>
+                <span>Cấu Hình Voice AI Đa Nguồn & Pipeline STT / TTS</span>
+            </div>
+            <button class="btn-close" onclick="closeAIConfigModal()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer;">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 18px;">
+            <!-- Pipeline Hardware Status -->
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 14px; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">⚡</span>
+                    <div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">STT Nhận Diện Giọng Nói</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #10b981;">Faster-Whisper GPU (GTX 1660 Ti :8095)</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">🗣️</span>
+                    <div>
+                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">TTS Giọng Đọc Tiếng Việt</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #38bdf8;">Edge-TTS Neural (Hoài My / Nam Minh)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Provider Selector -->
+            <div>
+                <label style="font-size: 13px; font-weight: 700; color: #f1f5f9; display: block; margin-bottom: 8px;">
+                    🌟 Chọn AI Provider Mặc Định Điều Khiển Nhà:
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="gemini" checked onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #60a5fa;">Google Gemini</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Phản xạ cực nhanh, Tool calling</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="deepseek" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #38bdf8;">DeepSeek Chat</div>
+                            <div style="font-size: 11px; color: #94a3b8;">DeepSeek V3 thông minh</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="openrouter" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #c084fc;">OpenRouter (9 Router)</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Tự do chọn Claude, Llama, Qwen...</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Provider Settings Cards -->
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Gemini Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #60a5fa; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🔷</span> Google Gemini API
+                        </div>
+                        <button type="button" onclick="testAIConn('gemini')" style="background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            ⚡ Thử Kết Nối
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (bắt đầu bằng AIza...):</label>
+                            <input type="password" id="cfgGeminiKey" placeholder="Nhập Gemini API Key hoặc giữ nguyên..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <input type="text" id="cfgGeminiModel" value="gemini-2.0-flash" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                    </div>
+                    <div id="testRes_gemini" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- DeepSeek Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #38bdf8; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🐋</span> DeepSeek API
+                        </div>
+                        <button type="button" onclick="testAIConn('deepseek')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            ⚡ Thử Kết Nối
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (sk-...):</label>
+                            <input type="password" id="cfgDeepseekKey" placeholder="Nhập DeepSeek API Key..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <input type="text" id="cfgDeepseekModel" value="deepseek-chat" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                    </div>
+                    <div id="testRes_deepseek" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- OpenRouter (9 Router) Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #c084fc; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🌐</span> OpenRouter (9 Router) API
+                        </div>
+                        <button type="button" onclick="testAIConn('openrouter')" style="background: #9333ea; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                            ⚡ Thử Kết Nối
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1.5fr; gap: 10px; margin-bottom: 8px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key OpenRouter:</label>
+                            <input type="password" id="cfgOpenrouterKey" placeholder="sk-or-v1-..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model ID (tuỳ ý bất kỳ model nào):</label>
+                            <input type="text" id="cfgOpenrouterModel" value="google/gemini-2.0-flash-exp:free" placeholder="e.g. anthropic/claude-3.5-haiku" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b;">
+                        * Gợi ý model miễn phí / tốc độ cao: <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code>, <code>meta-llama/llama-3.3-70b-instruct</code>
+                    </div>
+                    <div id="testRes_openrouter" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- Voice Selection -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700; color: #f8fafc; font-size: 13px;">Giọng Đọc Tiếng Việt Trợ Lý Nala (TTS):</div>
+                        <div style="font-size: 11px; color: #94a3b8;">Giọng đọc Microsoft Neural tự nhiên truyền cảm</div>
+                    </div>
+                    <select id="cfgTtsVoice" style="background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                        <option value="vi-VN-HoaiMyNeural">Hoài My (Nữ - Truyền cảm, dịu dàng)</option>
+                        <option value="vi-VN-NamMinhNeural">Nam Minh (Nam - Rõ ràng, ấm áp)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live Chat & Voice Demo Playground -->
+            <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                <div style="font-weight: 700; color: #f59e0b; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <span>🎙️</span> Thử Nghiệm Trực Tiếp AI & Nghe Giọng Đọc:
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="aiTestInput" placeholder="Ví dụ: 'Bật đèn phòng khách', 'Hôm nay thời tiết thế nào?'..." style="flex: 1; background: #1e293b; border: 1px solid #475569; color: white; padding: 9px 12px; border-radius: 8px; font-size: 13px;" onkeydown="if(event.key==='Enter') sendAIChatTest()">
+                    <button type="button" onclick="sendAIChatTest()" id="btnSendAIChat" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: black; font-weight: 700; padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;">
+                        Gửi Thử
+                    </button>
+                </div>
+
+                <div id="aiTestResultBox" style="display: none; background: #182234; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
+                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Phản hồi từ Nala AI:</div>
+                    <div id="aiTestReplyText" style="font-size: 13px; color: #f8fafc; font-weight: 600; margin-bottom: 8px;"></div>
+                    <audio id="aiTestAudioPlayer" controls style="width: 100%; height: 36px;"></audio>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #1e293b; display: flex; justify-content: flex-end; gap: 12px; background: #0f172a;">
+            <button type="button" class="btn-cancel" onclick="closeAIConfigModal()" style="padding: 9px 18px; border-radius: 8px; background: #334155; border: none; color: #f1f5f9; cursor: pointer; font-size: 13px;">Đóng</button>
+            <button type="button" class="btn-primary" onclick="saveAIConfig()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 9px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;">💾 Lưu Cấu Hình AI</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="allHouseConfigModal" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
         <div class="modal-box" style="max-width: 820px; width: 95%; max-height: 90vh; overflow-y: auto; background: #0f172a; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); color: #f8fafc;">
             <div class="modal-header" style="padding: 18px 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: #1e293b;">
                 <div class="modal-title" style="display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800;">
@@ -4250,5 +4429,165 @@
             initWebSocket();
         });
     </script>
+<script>
+// -----------------------------------------------------------------------------
+// AI AGENT ROUTER & PIPELINE WEB CONTROLS
+// -----------------------------------------------------------------------------
+let aiCurrentConfig = {};
+
+async function openAIConfigModal() {
+    const modal = document.getElementById('aiConfigModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    try {
+        const res = await fetch('/api/ai/config');
+        if (res.ok) {
+            aiCurrentConfig = await res.json();
+            const prov = aiCurrentConfig.active_provider || 'gemini';
+            const radio = document.querySelector(`input[name="aiProviderRadio"][value="${prov}"]`);
+            if (radio) radio.checked = true;
+
+            document.getElementById('cfgGeminiKey').value = aiCurrentConfig.gemini?.api_key_masked || '';
+            document.getElementById('cfgGeminiModel').value = aiCurrentConfig.gemini?.model || 'gemini-2.0-flash';
+
+            document.getElementById('cfgDeepseekKey').value = aiCurrentConfig.deepseek?.api_key_masked || '';
+            document.getElementById('cfgDeepseekModel').value = aiCurrentConfig.deepseek?.model || 'deepseek-chat';
+
+            document.getElementById('cfgOpenrouterKey').value = aiCurrentConfig.openrouter?.api_key_masked || '';
+            document.getElementById('cfgOpenrouterModel').value = aiCurrentConfig.openrouter?.model || 'google/gemini-2.0-flash-exp:free';
+
+            document.getElementById('cfgTtsVoice').value = aiCurrentConfig.tts_voice || 'vi-VN-HoaiMyNeural';
+        }
+    } catch (err) {
+        console.error("Error loading AI config:", err);
+    }
+}
+
+function closeAIConfigModal() {
+    const modal = document.getElementById('aiConfigModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function updateAIProviderUI() {
+    // Optional highlight logic
+}
+
+async function testAIConn(provider) {
+    const resEl = document.getElementById(`testRes_${provider}`);
+    if (resEl) resEl.innerHTML = '<span style="color: #f59e0b;">⏳ Đang kiểm tra kết nối...</span>';
+
+    let apiKey = '';
+    let model = '';
+    if (provider === 'gemini') {
+        apiKey = document.getElementById('cfgGeminiKey').value;
+        model = document.getElementById('cfgGeminiModel').value;
+    } else if (provider === 'deepseek') {
+        apiKey = document.getElementById('cfgDeepseekKey').value;
+        model = document.getElementById('cfgDeepseekModel').value;
+    } else if (provider === 'openrouter') {
+        apiKey = document.getElementById('cfgOpenrouterKey').value;
+        model = document.getElementById('cfgOpenrouterModel').value;
+    }
+
+    try {
+        const res = await fetch('/api/ai/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                provider: provider,
+                api_key: apiKey,
+                model: model
+            })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            resEl.innerHTML = `<span style="color: #10b981;">✅ Kết nối thành công! (${data.latency_ms}ms) | Phản hồi: "${data.reply}"</span>`;
+        } else {
+            resEl.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${data.message || 'Không kết nối được'}</span>`;
+        }
+    } catch (err) {
+        if (resEl) resEl.innerHTML = `<span style="color: #ef4444;">❌ Lỗi mạng: ${err.message}</span>`;
+    }
+}
+
+async function saveAIConfig() {
+    const activeProvider = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
+    const payload = {
+        active_provider: activeProvider,
+        tts_voice: document.getElementById('cfgTtsVoice').value,
+        gemini: {
+            api_key: document.getElementById('cfgGeminiKey').value,
+            model: document.getElementById('cfgGeminiModel').value
+        },
+        deepseek: {
+            api_key: document.getElementById('cfgDeepseekKey').value,
+            model: document.getElementById('cfgDeepseekModel').value
+        },
+        openrouter: {
+            api_key: document.getElementById('cfgOpenrouterKey').value,
+            model: document.getElementById('cfgOpenrouterModel').value
+        }
+    };
+
+    try {
+        const res = await fetch('/api/ai/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert("✅ Đã lưu cấu hình Voice AI Router thành công!");
+            closeAIConfigModal();
+        } else {
+            alert("❌ Lỗi: " + (data.message || 'Không thể lưu'));
+        }
+    } catch (err) {
+        alert("❌ Lỗi kết nối khi lưu: " + err.message);
+    }
+}
+
+async function sendAIChatTest() {
+    const input = document.getElementById('aiTestInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const btn = document.getElementById('btnSendAIChat');
+    const box = document.getElementById('aiTestResultBox');
+    const textEl = document.getElementById('aiTestReplyText');
+    const player = document.getElementById('aiTestAudioPlayer');
+
+    btn.disabled = true;
+    btn.innerText = 'Đang xử lý...';
+    box.style.display = 'block';
+    textEl.innerText = 'Đang gửi tới AI và tổng hợp giọng nói...';
+
+    const prov = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
+
+    try {
+        const res = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message: msg, provider: prov })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            textEl.innerText = data.reply;
+            if (data.audio_wav_base64) {
+                player.src = 'data:audio/wav;base64,' + data.audio_wav_base64;
+                player.play().catch(e => console.log('Autoplay blocked:', e));
+            }
+        } else {
+            textEl.innerText = '❌ Lỗi: ' + (data.message || 'Không có phản hồi');
+        }
+    } catch (err) {
+        textEl.innerText = '❌ Lỗi kết nối: ' + err.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Gửi Thử';
+    }
+}
+</script>
 </body>
 </html>

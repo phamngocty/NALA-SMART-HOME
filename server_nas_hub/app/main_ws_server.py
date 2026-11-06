@@ -66,7 +66,7 @@ HA_WS_URL = os.getenv("HA_WS_URL", "ws://192.168.1.5:8123/api/websocket")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-STT_URL = os.getenv("STT_SERVICE_URL", "http://localhost:8000/v1/audio/transcriptions")
+STT_URL = os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions")
 TTS_URL = os.getenv("TTS_SERVICE_URL", "http://localhost:5000/api/tts")
 
 app = FastAPI(title="NALA Central WebSocket & Web Management Hub")
@@ -99,7 +99,7 @@ def get_buttons_with_state(dev: dict, include_all_house_active: bool = False) ->
         eid = b.get("entity_id", "")
         if eid:
             local_eids.add(eid)
-            if len(room_buttons) >= 6:
+            if len(buttons_with_state) >= 6:
                 continue
             raw_s = ha_bridge.states.get(eid, {})
             cur_state = raw_s.get("state", "off")
@@ -1011,6 +1011,37 @@ async def test_ai_provider(req: AITestRequest):
     res = await ai_router.test_connection(req.provider, req.api_key, req.model, req.base_url)
     return JSONResponse(res)
 
+class AIChatRequest(BaseModel):
+    message: str
+    provider: Optional[str] = None
+
+@app.post("/api/ai/chat")
+async def ai_chat_endpoint(req: AIChatRequest):
+    """Gửi tin nhắn test AI từ Web Admin và nhận câu trả lời cùng audio base64 để nghe thử trực tiếp trên trình duyệt."""
+    try:
+        reply = await ai_router.process_intent(req.message, model_preference=req.provider)
+        voice = ai_router.config.get("tts_voice", "vi-VN-HoaiMyNeural")
+        pcm = await audio_pipeline.text_to_pcm(reply, voice=voice)
+        wav_b64 = ""
+        if pcm:
+            import io, wave, base64
+            wav_buf = io.BytesIO()
+            with wave.open(wav_buf, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(16000)
+                wf.writeframes(pcm)
+            wav_b64 = base64.b64encode(wav_buf.getvalue()).decode('ascii')
+        return JSONResponse({
+            "status": "success",
+            "reply": reply,
+            "voice": voice,
+            "audio_wav_base64": wav_b64
+        })
+    except Exception as e:
+        logger.error("Error in ai_chat_endpoint: %s", e)
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 # -----------------------------------------------------------------------------
 # ALL-HOUSE MASTER CONFIGURATION & CONTROL APIS
 # -----------------------------------------------------------------------------
@@ -1838,8 +1869,9 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
         )
         asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
 
-        # 3. Piper TTS
-        response_pcm = await audio_pipeline.text_to_pcm(response_text)
+        # 3. Neural Vietnamese TTS (Edge-TTS / Piper)
+        tts_voice = ai_router.config.get("tts_voice", "vi-VN-HoaiMyNeural")
+        response_pcm = await audio_pipeline.text_to_pcm(response_text, voice=tts_voice)
         if response_pcm:
             seq = 0
             for i in range(0, len(response_pcm), 512):
