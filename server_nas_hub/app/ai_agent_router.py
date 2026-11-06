@@ -478,7 +478,10 @@ class AIAgentRouter:
 
         except Exception as e:
             elapsed = int((time.time() - t0) * 1000)
-            return {"status": "error", "message": str(e), "latency_ms": elapsed}
+            err_msg = str(e)
+            if isinstance(e, httpx.TimeoutException):
+                err_msg = f"Hết thời gian chờ phản hồi từ {provider} ({elapsed}ms). Máy chủ có thể đang chịu tải cao hoặc đường truyền chậm."
+            return {"status": "error", "message": err_msg, "latency_ms": elapsed}
 
     async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> str:
         """Xử lý giọng nói người dùng, kết hợp Fast-Rule và Multi-AI Function Calling."""
