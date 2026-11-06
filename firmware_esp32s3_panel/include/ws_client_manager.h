@@ -65,6 +65,8 @@ public:
         client.onMessage([this](WebsocketsMessage msg) {
             this->last_rx_time = millis();
             if (msg.isText()) {
+                Serial.printf("[WS-RX] Text len: %u, FreeHeap: %lu, MaxBlock: %lu\n",
+                              (unsigned int)msg.length(), (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getMaxAllocHeap());
                 JsonDocument doc;
                 DeserializationError err = deserializeJson(doc, msg.data());
                 if (!err && on_text_cb) {

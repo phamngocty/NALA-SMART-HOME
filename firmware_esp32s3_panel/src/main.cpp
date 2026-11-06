@@ -105,7 +105,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include "ota_manager.h"
 #include "esp_ota_ops.h"
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.2.1"
+#define CURRENT_FIRMWARE_VERSION "v3.3.1"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -881,6 +881,7 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(1000)) == pdTRUE);
     }
 
+    Serial.printf("[WS-TEXT] Handling type: %s, FreeHeap: %lu\n", type.c_str(), (unsigned long)ESP.getFreeHeap());
     if (type == "ai_state") {
         String state = doc["payload"]["state"] | "IDLE";
         String txt = doc["payload"]["text"] | "";
@@ -908,13 +909,19 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
 
         JsonArrayConst buttons = doc["payload"]["buttons"];
         if (buttons.size() > 0 && taken) {
+            Serial.printf("[MAIN] Before sync_buttons: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
             uiDashboard.sync_buttons(buttons);
+            Serial.printf("[MAIN] After sync_buttons: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
         }
         if (doc["payload"].containsKey("all_rooms") && taken) {
+            Serial.printf("[MAIN] Before sync_all_rooms: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
             uiDashboard.sync_all_rooms(doc["payload"]["all_rooms"]);
+            Serial.printf("[MAIN] After sync_all_rooms: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
         }
         if (doc["payload"].containsKey("house_status") && taken) {
+            Serial.printf("[MAIN] Before sync_house_status: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
             uiDashboard.sync_house_status(doc["payload"]["house_status"]);
+            Serial.printf("[MAIN] After sync_house_status: FreeHeap=%lu\n", (unsigned long)ESP.getFreeHeap());
         }
 
         if (doc["payload"].containsKey("settings")) {
@@ -956,6 +963,16 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
                 if (strcmp(nvsStore.get().ai_model, aim) != 0) {
                     strncpy(nvsStore.get().ai_model, aim, sizeof(nvsStore.get().ai_model));
                     changed = true;
+                }
+            }
+            if (st.containsKey("room_view_timeout")) {
+                uint8_t to = st["room_view_timeout"] | 15;
+                if (to != nvsStore.get().room_view_timeout) {
+                    nvsStore.get().room_view_timeout = to;
+                    changed = true;
+                }
+                if (taken) {
+                    uiDashboard.set_room_view_timeout(to);
                 }
             }
 
@@ -1179,6 +1196,7 @@ void Task_LVGL_UI(void *p) {
         if (!is_ota_running) {
             if (lvgl_mutex != NULL && xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 uiDashboard.check_flush_climate_setpoint();
+                uiDashboard.tick_countdown(millis());
                 lv_timer_handler();
                 xSemaphoreGive(lvgl_mutex);
             }
@@ -1365,6 +1383,7 @@ void setup() {
                 nvsStore.get().ring_on_call,
                 nvsStore.get_mic_gain()
             );
+            uiDashboard.set_room_view_timeout(nvsStore.get().room_view_timeout);
             float psram_mb = psramFound() ? ((float)ESP.getFreePsram() / (1024.0f * 1024.0f)) : 0.0f;
             uiDashboard.set_firmware_version(CURRENT_FIRMWARE_VERSION, psram_mb);
             Serial.printf("[SYSTEM] Firmware %s | PSRAM: %.2f MB free | Heap: %lu KB free\n", 
