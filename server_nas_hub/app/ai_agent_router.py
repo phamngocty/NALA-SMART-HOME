@@ -54,7 +54,7 @@ class AIAgentRouter:
             "active_provider": "gemini",
             "gemini": {
                 "api_key": default_gemini or os.getenv("GEMINI_API_KEY", ""),
-                "model": "gemini-2.0-flash",
+                "model": "gemini-2.5-flash",
                 "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
             },
             "deepseek": {
@@ -101,7 +101,7 @@ class AIAgentRouter:
             "gemini": {
                 "api_key_masked": mask_key(self.config["gemini"].get("api_key")),
                 "has_key": bool(self.config["gemini"].get("api_key")),
-                "model": self.config["gemini"].get("model", "gemini-2.0-flash"),
+                "model": self.config["gemini"].get("model", "gemini-2.5-flash"),
                 "base_url": self.config["gemini"].get("base_url", "https://generativelanguage.googleapis.com/v1beta/openai")
             },
             "deepseek": {
@@ -293,6 +293,8 @@ class AIAgentRouter:
         key = api_key or prov_cfg.get("api_key", "")
         mod = model or prov_cfg.get("model", "")
         url = base_url or prov_cfg.get("base_url", "")
+        if provider == "gemini" and mod in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
+            mod = "gemini-2.5-flash" 
 
         if not key:
             return {"status": "error", "message": f"Chưa có API Key cho {provider}"}
@@ -365,6 +367,8 @@ class AIAgentRouter:
         api_key = prov_cfg.get("api_key", "")
         model = prov_cfg.get("model", "")
         base_url = prov_cfg.get("base_url", "")
+        if prov == "gemini" and model in ["gemini-2.0-flash", "models/gemini-2.0-flash"]:
+            model = "gemini-2.5-flash" 
 
         if not api_key:
             return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI."

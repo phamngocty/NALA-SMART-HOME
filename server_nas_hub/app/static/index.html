@@ -1728,7 +1728,11 @@
                         </div>
                         <div>
                             <label style="font-size: 11px; color: #94a3b8;">Model:</label>
-                            <input type="text" id="cfgGeminiModel" value="gemini-2.0-flash" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <select id="cfgGeminiModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Khuyên dùng - Mới & Nhanh)</option>
+                                <option value="gemini-1.5-flash">gemini-1.5-flash (Ổn định cao)</option>
+                                <option value="gemini-1.5-pro">gemini-1.5-pro (Suy luận sâu)</option>
+                            </select>
                         </div>
                     </div>
                     <div id="testRes_gemini" style="font-size: 11px; margin-top: 6px;"></div>
@@ -4508,7 +4512,9 @@ async function openAIConfigModal() {
             if (radio) radio.checked = true;
 
             document.getElementById('cfgGeminiKey').value = aiCurrentConfig.gemini?.api_key_masked || '';
-            document.getElementById('cfgGeminiModel').value = aiCurrentConfig.gemini?.model || 'gemini-2.0-flash';
+            let gModel = aiCurrentConfig.gemini?.model || 'gemini-2.5-flash';
+            if (gModel === 'gemini-2.0-flash') gModel = 'gemini-2.5-flash';
+            document.getElementById('cfgGeminiModel').value = gModel;
 
             document.getElementById('cfgDeepseekKey').value = aiCurrentConfig.deepseek?.api_key_masked || '';
             document.getElementById('cfgDeepseekModel').value = aiCurrentConfig.deepseek?.model || 'deepseek-chat';
