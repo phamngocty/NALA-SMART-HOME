@@ -4515,17 +4515,23 @@ async function openAIConfigModal() {
             const radio = document.querySelector(`input[name="aiProviderRadio"][value="${prov}"]`);
             if (radio) radio.checked = true;
 
-            document.getElementById('cfgGeminiKey').value = aiCurrentConfig.gemini?.api_key_masked || '';
+            const gemKeyInput = document.getElementById('cfgGeminiKey');
+            gemKeyInput.value = '';
+            gemKeyInput.placeholder = aiCurrentConfig.gemini?.has_key ? `Đã lưu key (${aiCurrentConfig.gemini.api_key_masked}) - Để trống nếu giữ nguyên` : 'Nhập Gemini API Key...';
             let gModel = aiCurrentConfig.gemini?.model || 'gemini-3.8-flash';
             if (gModel === 'gemini-2.0-flash' || gModel === 'gemini-2.5-flash') gModel = 'gemini-3.8-flash';
             document.getElementById('cfgGeminiModel').value = gModel;
 
-            document.getElementById('cfgDeepseekKey').value = aiCurrentConfig.deepseek?.api_key_masked || '';
+            const dsKeyInput = document.getElementById('cfgDeepseekKey');
+            dsKeyInput.value = '';
+            dsKeyInput.placeholder = aiCurrentConfig.deepseek?.has_key ? `Đã lưu key (${aiCurrentConfig.deepseek.api_key_masked}) - Để trống nếu giữ nguyên` : 'Nhập DeepSeek API Key...';
             let dsModel = aiCurrentConfig.deepseek?.model || 'deepseek-flash';
             if (dsModel === 'deepseek-chat') dsModel = 'deepseek-flash';
             document.getElementById('cfgDeepseekModel').value = dsModel;
 
-            document.getElementById('cfgOpenrouterKey').value = aiCurrentConfig.openrouter?.api_key_masked || '';
+            const orKeyInput = document.getElementById('cfgOpenrouterKey');
+            orKeyInput.value = '';
+            orKeyInput.placeholder = aiCurrentConfig.openrouter?.has_key ? `Đã lưu key (${aiCurrentConfig.openrouter.api_key_masked}) - Để trống nếu giữ nguyên` : 'Nhập OpenRouter API Key...';
             document.getElementById('cfgOpenrouterModel').value = aiCurrentConfig.openrouter?.model || 'google/gemini-2.0-flash-exp:free';
 
             document.getElementById('cfgTtsVoice').value = aiCurrentConfig.tts_voice || 'vi-VN-HoaiMyNeural';
@@ -4557,14 +4563,18 @@ async function testAIConn(provider) {
     let apiKey = '';
     let model = '';
     if (provider === 'gemini') {
-        apiKey = document.getElementById('cfgGeminiKey').value;
+        apiKey = document.getElementById('cfgGeminiKey').value.trim();
         model = document.getElementById('cfgGeminiModel').value;
     } else if (provider === 'deepseek') {
-        apiKey = document.getElementById('cfgDeepseekKey').value;
+        apiKey = document.getElementById('cfgDeepseekKey').value.trim();
         model = document.getElementById('cfgDeepseekModel').value;
     } else if (provider === 'openrouter') {
-        apiKey = document.getElementById('cfgOpenrouterKey').value;
+        apiKey = document.getElementById('cfgOpenrouterKey').value.trim();
         model = document.getElementById('cfgOpenrouterModel').value;
+    }
+
+    if (apiKey.includes('...') || apiKey.includes('****')) {
+        apiKey = '';
     }
 
     try {
@@ -4611,15 +4621,15 @@ async function saveAIConfig() {
         active_provider: activeProvider,
         tts_voice: document.getElementById('cfgTtsVoice').value,
         gemini: {
-            api_key: document.getElementById('cfgGeminiKey').value,
+            api_key: document.getElementById('cfgGeminiKey').value.trim(),
             model: document.getElementById('cfgGeminiModel').value
         },
         deepseek: {
-            api_key: document.getElementById('cfgDeepseekKey').value,
+            api_key: document.getElementById('cfgDeepseekKey').value.trim(),
             model: document.getElementById('cfgDeepseekModel').value
         },
         openrouter: {
-            api_key: document.getElementById('cfgOpenrouterKey').value,
+            api_key: document.getElementById('cfgOpenrouterKey').value.trim(),
             model: document.getElementById('cfgOpenrouterModel').value
         }
     };

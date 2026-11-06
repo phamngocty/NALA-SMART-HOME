@@ -360,7 +360,12 @@ class AIAgentRouter:
         """Test latency và kết nối đến AI provider theo chuẩn chính thức của từng hãng."""
         t0 = time.time()
         prov_cfg = self.config.get(provider, {})
-        key = api_key or prov_cfg.get("api_key", "")
+        raw_key = (api_key or "").strip()
+        if not raw_key or "..." in raw_key or "****" in raw_key:
+            key = prov_cfg.get("api_key", "")
+        else:
+            key = raw_key
+
         mod = model or prov_cfg.get("model", "")
         url = base_url or prov_cfg.get("base_url", "")
 
@@ -418,7 +423,8 @@ class AIAgentRouter:
                         "messages": [
                             {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
                         ],
-                        "max_tokens": 10,
+                        "thinking": {"type": "disabled"},
+                        "max_tokens": 100,
                         "temperature": 0.2
                     }
                     res = await client.post(endpoint, headers=headers, json=payload)
@@ -579,7 +585,7 @@ class AIAgentRouter:
                     if prov == "deepseek":
                         endpoint = "https://api.deepseek.com/chat/completions"
                         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                        use_model = model or "deepseek-chat"
+                        use_model = model or "deepseek-flash"
                     elif prov == "openrouter":
                         endpoint = "https://openrouter.ai/api/v1/chat/completions"
                         headers = {
@@ -605,6 +611,8 @@ class AIAgentRouter:
                         "max_tokens": 150,
                         "temperature": 0.4
                     }
+                    if prov == "deepseek":
+                        payload["thinking"] = {"type": "disabled"}
 
                     res = await client.post(endpoint, headers=headers, json=payload)
                     if res.status_code == 200:
