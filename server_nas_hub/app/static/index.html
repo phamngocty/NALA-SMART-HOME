@@ -5227,10 +5227,110 @@ function escapeHtml(text) {
     return (text || '').replace(/[&<>"']/g, m => map[m]);
 }
 
+// -----------------------------------------------------------------------------
+// WEBAUDIO SYNTHESIZER & SEQUENTIAL AUDIO QUEUE (XIAOZHI & GEMINI LIVE)
+// -----------------------------------------------------------------------------
+let webAudioCtx = null;
+let liveAudioQueue = [];
+let isLiveAudioPlaying = false;
+let currentLiveAudioEl = null;
+
+function playWebChime(type) {
+    try {
+        if (!webAudioCtx) {
+            webAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (webAudioCtx.state === 'suspended') {
+            webAudioCtx.resume();
+        }
+        const now = webAudioCtx.currentTime;
+
+        if (type === 'wake') {
+            // Wake Chime "Ding!": C6 (1046Hz, 70ms) -> E6 (1318Hz, 120ms)
+            const osc1 = webAudioCtx.createOscillator();
+            const gain1 = webAudioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(1046, now);
+            gain1.gain.setValueAtTime(0.2, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc1.connect(gain1);
+            gain1.connect(webAudioCtx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.08);
+
+            const osc2 = webAudioCtx.createOscillator();
+            const gain2 = webAudioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1318, now + 0.07);
+            gain2.gain.setValueAtTime(0.25, now + 0.07);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc2.connect(gain2);
+            gain2.connect(webAudioCtx.destination);
+            osc2.start(now + 0.07);
+            osc2.stop(now + 0.22);
+
+        } else if (type === 'ack') {
+            // Ack Chime "Poong!": A5 (880Hz, 50ms) -> E5 (659Hz, 90ms)
+            const osc = webAudioCtx.createOscillator();
+            const gain = webAudioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(659, now + 0.12);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc.connect(gain);
+            gain.connect(webAudioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.14);
+        }
+    } catch (e) {
+        console.warn("Chime AudioContext warning:", e);
+    }
+}
+
+function enqueueAudioChunk(b64) {
+    if (!b64) return;
+    liveAudioQueue.push('data:audio/wav;base64,' + b64);
+    if (!isLiveAudioPlaying) {
+        playNextLiveChunk();
+    }
+}
+
+function playNextLiveChunk() {
+    if (liveAudioQueue.length === 0) {
+        isLiveAudioPlaying = false;
+        currentLiveAudioEl = null;
+        return;
+    }
+    isLiveAudioPlaying = true;
+    const src = liveAudioQueue.shift();
+    const aud = new Audio(src);
+    currentLiveAudioEl = aud;
+    aud.onended = () => { playNextLiveChunk(); };
+    aud.onerror = () => { playNextLiveChunk(); };
+    aud.play().catch(e => {
+        console.log("Autoplay policy caught chunk, skipping:", e);
+        playNextLiveChunk();
+    });
+}
+
+function stopLiveAudioQueue() {
+    liveAudioQueue = [];
+    if (currentLiveAudioEl) {
+        try { currentLiveAudioEl.pause(); } catch(e) {}
+        currentLiveAudioEl = null;
+    }
+    isLiveAudioPlaying = false;
+}
+
 async function sendAIChatTest() {
     const input = document.getElementById('aiTestInput');
     const msg = input.value.trim();
     if (!msg) return;
+
+    // 1. Phát âm thanh thức tỉnh Wake Chime Ding! ngay lập tức
+    playWebChime('wake');
+    stopLiveAudioQueue();
 
     const btn = document.getElementById('btnSendAIChat');
     const chatLogs = document.getElementById('aiLiveChatLogs');
@@ -5293,6 +5393,7 @@ async function sendAIChatTest() {
         let buffer = '';
         let currentEvent = 'message';
         let accumulatedText = '';
+        let hasPlayedAck = false;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -5311,9 +5412,18 @@ async function sendAIChatTest() {
                     try {
                         const data = JSON.parse(dataStr);
                         if (currentEvent === 'token') {
+                            if (!hasPlayedAck) {
+                                hasPlayedAck = true;
+                                playWebChime('ack'); // Nhận diện xong lệnh, phát âm Poong!
+                            }
                             accumulatedText = data.accumulated || '';
                             textTarget.innerHTML = escapeHtml(accumulatedText) + '<span class="typewriter-caret">▌</span>';
                             chatLogs.scrollTop = chatLogs.scrollHeight;
+                        } else if (currentEvent === 'sentence_audio') {
+                            // Bí quyết Xiaozhi: Câu 1 vừa xong là loa phát ngay lập tức, không chờ cả bài!
+                            if (data.audio_wav_base64) {
+                                enqueueAudioChunk(data.audio_wav_base64);
+                            }
                         } else if (currentEvent === 'audio') {
                             if (data.audio_wav_base64) {
                                 const audioContainerId = 'audio_' + bubbleId;
@@ -5323,15 +5433,11 @@ async function sendAIChatTest() {
                                     audioWrap.id = audioContainerId;
                                     audioWrap.style.cssText = 'margin-top: 8px; display: flex; align-items: center; gap: 8px;';
                                     audioWrap.innerHTML = `
-                                        <audio controls autoplay style="height: 32px; width: 100%; max-width: 290px; border-radius: 6px; outline: none;">
+                                        <audio controls style="height: 32px; width: 100%; max-width: 290px; border-radius: 6px; outline: none;">
                                             <source src="data:audio/wav;base64,${data.audio_wav_base64}" type="audio/wav">
                                         </audio>
                                     `;
                                     textTarget.parentElement.appendChild(audioWrap);
-                                    const inlineAudio = audioWrap.querySelector('audio');
-                                    if (inlineAudio) {
-                                        inlineAudio.play().catch(e => console.log('Autoplay policy caught:', e));
-                                    }
                                     chatLogs.scrollTop = chatLogs.scrollHeight;
                                 }
                             }

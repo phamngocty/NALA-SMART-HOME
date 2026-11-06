@@ -882,7 +882,15 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
     }
 
     Serial.printf("[WS-TEXT] Handling type: %s, FreeHeap: %lu\n", type.c_str(), (unsigned long)ESP.getFreeHeap());
-    if (type == "ai_state") {
+    if (type == "wake_chime") {
+        Serial.println("[AI] Nhan lenh phat am thanh thuc tinh Ding!");
+        audioEngine.play_wake_chime();
+        if (taken) uiDashboard.set_ai_state("listening", "Đang nghe...");
+    } else if (type == "ack_chime") {
+        Serial.println("[AI] Nhan lenh phat am thanh nhan lenh Poong!");
+        audioEngine.play_ack_chime();
+        if (taken) uiDashboard.set_ai_state("thinking", "Đang xử lý...");
+    } else if (type == "ai_state") {
         String state = doc["payload"]["state"] | "IDLE";
         String txt = doc["payload"]["text"] | "";
         if (taken) uiDashboard.set_ai_state(state.c_str(), txt.c_str());

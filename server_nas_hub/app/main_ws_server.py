@@ -94,6 +94,8 @@ async def on_wake_winner(device_id: str, candidate_info: dict):
     room_name = dev_info.get("room_name", f"Panel {device_id}")
     if ws:
         try:
+            # Gửi lệnh phát âm thanh thức tỉnh Wake Word Ding! (Xiaozhi Style)
+            await ws.send_json({"type": "wake_chime"})
             await ws.send_json({
                 "type": "wake_event",
                 "payload": {
@@ -1117,22 +1119,74 @@ async def ai_chat_endpoint(req: AIChatRequest):
 @app.post("/api/ai/chat/stream")
 async def ai_chat_stream_endpoint(req: AIChatRequest):
     """
-    Stream token-by-token real-time SSE for typewriter effect & live audio (Xiaozhi / Gemini style).
+    Stream token-by-token real-time SSE for typewriter effect & Sentence-Chunked Pipelined Audio (Xiaozhi / Gemini style).
     SSE events:
     - event: token, data: {"chunk": "...", "accumulated": "..."}
+    - event: sentence_audio, data: {"sentence_index": int, "text": "...", "audio_wav_base64": "..."}
     - event: audio, data: {"audio_wav_base64": "..."}
     - event: done, data: {"full_text": "...", "voice": "..."}
     """
     async def event_generator():
         accumulated = ""
+        sentence_buffer = ""
+        sentence_idx = 0
         voice = ai_router.config.get("tts_voice", "vi-VN-NamMinhNeural")
+
+        def is_boundary(buf: str) -> bool:
+            buf = buf.strip()
+            words = buf.split()
+            if len(words) < 2:
+                return False
+            if any(buf.endswith(p) for p in [".", "!", "?", "\n", "…"]):
+                return True
+            if any(buf.endswith(p) for p in [",", ":"]) and len(words) >= 5:
+                return True
+            if len(words) >= 11:
+                return True
+            return False
+
+        async def render_sentence_wav(sent_text: str, idx: int):
+            pcm = await audio_pipeline.text_to_pcm(sent_text, voice=voice)
+            if pcm:
+                import io, wave, base64
+                wav_buf = io.BytesIO()
+                with wave.open(wav_buf, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    wf.writeframes(pcm)
+                wav_b64 = base64.b64encode(wav_buf.getvalue()).decode('ascii')
+                payload = json.dumps({"sentence_index": idx, "text": sent_text, "audio_wav_base64": wav_b64}, ensure_ascii=False)
+                return f"event: sentence_audio\ndata: {payload}\n\n"
+            return ""
+
         try:
             async for token in ai_router.stream_intent(req.message, model_preference=req.provider):
                 accumulated += token
+                sentence_buffer += token
+
+                # 1. Bắn token chữ ra ngay cho hiệu ứng đánh máy (Typewriter)
                 payload = json.dumps({"chunk": token, "accumulated": accumulated}, ensure_ascii=False)
                 yield f"event: token\ndata: {payload}\n\n"
 
-            # Sau khi sinh xong text, tổng hợp audio ngay lập tức
+                # 2. Kiểm tra ngắt câu (Bí quyết Xiaozhi) -> Sinh audio câu này ngay!
+                if is_boundary(sentence_buffer):
+                    sent = sentence_buffer.strip()
+                    sentence_buffer = ""
+                    if sent:
+                        evt = await render_sentence_wav(sent, sentence_idx)
+                        sentence_idx += 1
+                        if evt:
+                            yield evt
+
+            # 3. Render câu còn lại cuối cùng
+            rem = sentence_buffer.strip()
+            if rem:
+                evt = await render_sentence_wav(rem, sentence_idx)
+                if evt:
+                    yield evt
+
+            # 4. Tạo file audio hoàn chỉnh phục vụ nghe lại
             pcm = await audio_pipeline.text_to_pcm(accumulated, voice=voice)
             wav_b64 = ""
             if pcm:
@@ -1968,9 +2022,11 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
             })
 
 async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
-    """Luồng xử lý giọng nói hoàn chỉnh: STT -> AI Intent / HA Action -> TTS -> Gửi Binary Audio về ESP32."""
+    """Luồng xử lý giọng nói hoàn chỉnh: STT -> AI Intent / HA Action -> Sentence Chunking TTS -> Gửi Binary Audio về ESP32."""
     try:
-        await ws.send_json({"type": "ai_state", "payload": {"state": "thinking"}})
+        # Phát âm thanh đã nhận trọn vẹn câu lệnh ("Poong!" - Xiaozhi Ack Style)
+        await ws.send_json({"type": "ack_chime"})
+        await ws.send_json({"type": "ai_state", "payload": {"state": "thinking", "text": "Đang suy nghĩ..."}})
 
         # 1. Faster-Whisper STT
         text = await audio_pipeline.pcm_to_text(pcm_audio)
@@ -1978,47 +2034,82 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Không nhận diện được giọng nói."}})
             return
 
-        # 2. AI Intent & Home Assistant Action
+        # 2. AI Intent & Sentence Chunking TTS Pipeline (Bí Quyết Xiaozhi & Gemini Live)
         dev = devices_db.get(device_id, {})
         room_name = dev.get("room_name", "")
-        response_text = await ai_router.process_intent(text, context_room=room_name)
-        await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": response_text}})
+        tts_voice = ai_router.config.get("tts_voice", "vi-VN-NamMinhNeural")
+
+        accumulated_text = ""
+        sentence_buffer = ""
+        seq = 0
+
+        async def send_pcm_to_esp32(pcm_data: bytes, is_last_packet: bool):
+            nonlocal seq
+            if not pcm_data:
+                return
+            tot = len(pcm_data)
+            for i in range(0, tot, 512):
+                c = pcm_data[i:i+512]
+                if len(c) < 512:
+                    c = c + b'\x00' * (512 - len(c))
+                is_end = (i + 512 >= tot) and is_last_packet
+                flag = 0x01 if seq == 0 else (0x03 if is_end else 0x02)
+                hdr = bytearray(7)
+                hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+                hdr[2] = 0x00 # Server
+                hdr[3] = 0x01 # ESP32
+                hdr[4:6] = seq.to_bytes(2, 'little')
+                hdr[6] = flag
+                await ws.send_bytes(bytes(hdr + c + b'\x00'))
+                seq += 1
+                await asyncio.sleep(0.012)
+
+        def is_boundary(buf: str) -> bool:
+            buf = buf.strip()
+            words = buf.split()
+            if len(words) < 2:
+                return False
+            if any(buf.endswith(p) for p in [".", "!", "?", "\n", "…"]):
+                return True
+            if any(buf.endswith(p) for p in [",", ":"]) and len(words) >= 5:
+                return True
+            if len(words) >= 11:
+                return True
+            return False
+
+        async for token in ai_router.stream_intent(text, context_room=room_name):
+            accumulated_text += token
+            sentence_buffer += token
+
+            # Cập nhật text trực tiếp hiển thị typewriter trên màn hình LVGL ESP32
+            await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": accumulated_text}})
+
+            # Khi đủ 1 câu, ném ngay vào TTS để loa ESP32 phát ngay sau 1.2s!
+            if is_boundary(sentence_buffer):
+                sent = sentence_buffer.strip()
+                sentence_buffer = ""
+                if sent:
+                    chunk_pcm = await audio_pipeline.text_to_pcm(sent, voice=tts_voice)
+                    if chunk_pcm:
+                        await send_pcm_to_esp32(chunk_pcm, is_last_packet=False)
+
+        # Xử lý đoạn text còn lại ở cuối câu
+        rem = sentence_buffer.strip()
+        if rem:
+            chunk_pcm = await audio_pipeline.text_to_pcm(rem, voice=tts_voice)
+            if chunk_pcm:
+                await send_pcm_to_esp32(chunk_pcm, is_last_packet=True)
 
         # Lưu vào Lịch sử Giọng nói & Ghi âm Audio
-        dev = devices_db.get(device_id, {})
-        room_name = dev.get("room_name", f"Panel {device_id}")
         rec = history_mgr.add_record(
             device_code=device_id,
-            room_name=room_name,
+            room_name=dev.get("room_name", f"Panel {device_id}"),
             session_type="voice_ai",
             text=text,
-            response=response_text,
+            response=accumulated_text,
             pcm_data=pcm_audio
         )
         asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
-
-        # 3. Neural Vietnamese TTS (Edge-TTS / Piper)
-        tts_voice = ai_router.config.get("tts_voice", "vi-VN-HoaiMyNeural")
-        response_pcm = await audio_pipeline.text_to_pcm(response_text, voice=tts_voice)
-        if response_pcm:
-            seq = 0
-            for i in range(0, len(response_pcm), 512):
-                chunk = response_pcm[i:i+512]
-                if len(chunk) < 512:
-                    chunk = chunk + b'\x00' * (512 - len(chunk))
-
-                flag = 0x01 if i == 0 else (0x03 if i + 512 >= len(response_pcm) else 0x02)
-                header = bytearray(7)
-                header[0:2] = (0xA55A).to_bytes(2, 'little')
-                header[2] = 0x00 # Server sender
-                header[3] = 0x01 # Target ESP32
-                header[4:6] = seq.to_bytes(2, 'little')
-                header[6] = flag
-
-                packet = header + chunk + b'\x00'
-                await ws.send_bytes(bytes(packet))
-                seq += 1
-                await asyncio.sleep(0.015)
 
         await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
 
