@@ -8,10 +8,12 @@ Includes Home Assistant Tool Calling & Room-Context Awareness.
 """
 
 import os
+import re
 import json
 import time
 import asyncio
 import logging
+import unicodedata
 from typing import Dict, Any, List, Optional, AsyncGenerator
 import httpx
 
@@ -22,7 +24,8 @@ Nhiệm vụ của bạn:
 1. Trả lời cực kỳ ngắn gọn, tự nhiên, thân thiện bằng tiếng Việt (tối đa 1-2 câu) để đọc qua loa không bị rườm rà.
 2. Điều khiển thiết bị nhà thông minh bằng cách gọi các công cụ (tools) phù hợp khi người dùng yêu cầu bật/tắt thiết bị, điều chỉnh nhiệt độ máy lạnh, tắt hết toàn nhà,...
 3. NGỮ CẢNH VỊ TRÍ: Người dùng đang đứng tại phòng: [{current_room}]. Nếu người dùng ra lệnh điều khiển chung chung như 'bật đèn', 'tắt quạt', 'máy lạnh 24 độ' mà không nhắc tên phòng khác, BẮT BUỘC ưu tiên chọn thiết bị thuộc phòng [{current_room}].
-4. Nếu người dùng hỏi thông tin bình thường (thời tiết, kiến thức, chào hỏi...), hãy trả lời hóm hỉnh và súc tích.
+4. QUY TẮC CHỌN ENTITY ID: BẮT BUỘC chỉ sử dụng chính xác mã `entity_id` nằm trong dấu ngoặc tròn `(...)` ở danh sách thiết bị bên dưới (Ví dụ: `climate.150633094640317_climate`, `light.cong_tat_phong_khach_tret_den_1`). TUYỆT ĐỐI KHÔNG tự bịa hoặc tự dịch tên tiếng Việt thành entity_id giả!
+5. Nếu người dùng hỏi thông tin bình thường (thời tiết, kiến thức, chào hỏi...), hãy trả lời hóm hỉnh và súc tích.
 
 Danh sách các thiết bị hiện có trong nhà:
 {device_context}
@@ -306,40 +309,100 @@ class AIAgentRouter:
         if not entities:
             return "Chưa tải được danh sách thiết bị từ Home Assistant."
 
+        priority_domains = ["climate", "fan", "scene", "cover", "switch", "light"]
+
+        def sort_key(e):
+            dom = e.get("domain") or e.get("entity_id", "").split(".")[0]
+            try:
+                return priority_domains.index(dom)
+            except ValueError:
+                return 99
+
+        sorted_entities = sorted(entities, key=sort_key)
         lines = []
-        for e in entities:
-            domain = e.get("domain", "")
-            if domain in ["light", "switch", "climate", "fan", "cover", "scene"]:
+        for e in sorted_entities:
+            dom = e.get("domain") or e.get("entity_id", "").split(".")[0]
+            if dom in priority_domains:
                 eid = e.get("entity_id", "")
-                name = e.get("name", eid)
+                name = e.get("name") or e.get("attributes", {}).get("friendly_name") or eid
                 area = e.get("area_name", "Chung")
                 state = e.get("state", "off")
                 lines.append(f"- {name} ({eid}) | Phòng: {area} | Trạng thái: {state}")
 
-        return "\n".join(lines[:50])
+        # Tăng giới hạn lên 120 để bao phủ toàn bộ thiết bị trong nhà, đảm bảo máy lạnh không bị cắt xén
+        return "\n".join(lines[:120])
+
+    def _resolve_real_entity_id(self, raw_eid: str, target_domain: str = "") -> tuple:
+        """Tự động phân giải entity_id thật nếu LLM gọi nhầm mã ảo hoặc tên không dấu."""
+        if not self.ha_bridge:
+            return raw_eid, raw_eid
+
+        entities = self.ha_bridge.get_entities_list()
+        # 1. Khớp chính xác 100%
+        for e in entities:
+            if e.get("entity_id") == raw_eid:
+                fname = e.get("name") or e.get("attributes", {}).get("friendly_name") or raw_eid
+                return raw_eid, fname
+
+        # 2. Fuzzy match theo từ khóa
+        def remove_accents(s):
+            if not s:
+                return ""
+            s1 = unicodedata.normalize('NFD', s)
+            s2 = "".join(c for c in s1 if unicodedata.category(c) != 'Mn')
+            return s2.replace('đ', 'd').replace('Đ', 'D').lower()
+
+        clean_query = remove_accents(raw_eid.replace(".", " ").replace("_", " "))
+        tokens = [t for t in re.split(r'\s+', clean_query) if len(t) > 1 and t not in ["climate", "light", "switch", "fan", "cover", "scene"]]
+
+        best_match = None
+        best_score = 0
+
+        for e in entities:
+            dom = e.get("domain") or e.get("entity_id", "").split(".")[0]
+            if target_domain and dom != target_domain:
+                continue
+
+            name = e.get("name") or e.get("attributes", {}).get("friendly_name") or ""
+            area = e.get("area_name") or ""
+            target_str = remove_accents(f"{e.get('entity_id')} {name} {area}")
+
+            score = sum(1 for t in tokens if t in target_str)
+            if score > best_score:
+                best_score = score
+                best_match = e
+
+        if best_match and best_score >= 1:
+            fname = best_match.get("attributes", {}).get("friendly_name") or best_match.get("name") or best_match.get("entity_id")
+            logger.info("Fuzzy resolved entity [%s] -> Real [%s] (%s)", raw_eid, best_match.get("entity_id"), fname)
+            return best_match.get("entity_id"), fname
+
+        return raw_eid, raw_eid
 
     async def execute_tool(self, name: str, args: Dict[str, Any]) -> str:
         """Thực thi action gọi thiết bị vào Home Assistant."""
         logger.info("Executing HA Tool: %s with args %s", name, args)
         try:
             if name == "control_home_device":
-                eid = args.get("entity_id", "")
+                raw_eid = args.get("entity_id", "")
                 action = args.get("action", "turn_on")
-                domain = eid.split(".")[0] if "." in eid else "light"
+                domain = "climate" if action == "set_temperature" else (raw_eid.split(".")[0] if "." in raw_eid else "light")
+
+                eid, friendly_name = self._resolve_real_entity_id(raw_eid, domain)
 
                 if action == "set_temperature":
                     temp = args.get("temperature", 25)
                     await self.ha_bridge.call_service("climate", "set_temperature", eid, {"temperature": float(temp)})
-                    return f"Đã chỉnh nhiệt độ {eid} thành {temp}°C."
+                    return f"Đã chỉnh nhiệt độ {friendly_name} thành {temp}°C."
                 elif action == "turn_on":
                     await self.ha_bridge.call_service(domain, "turn_on", eid)
-                    return f"Đã bật {eid} thành công."
+                    return f"Đã bật {friendly_name} thành công."
                 elif action == "turn_off":
                     await self.ha_bridge.call_service(domain, "turn_off", eid)
-                    return f"Đã tắt {eid} thành công."
+                    return f"Đã tắt {friendly_name} thành công."
                 elif action == "toggle":
                     await self.ha_bridge.call_service(domain, "toggle", eid)
-                    return f"Đã đổi trạng thái {eid}."
+                    return f"Đã đổi trạng thái {friendly_name}."
 
             elif name == "master_turn_off_all":
                 res = await self.ha_bridge.master_turn_off_all()
