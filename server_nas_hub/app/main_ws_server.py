@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -1113,6 +1113,56 @@ async def ai_chat_endpoint(req: AIChatRequest):
     except Exception as e:
         logger.error("Error in ai_chat_endpoint: %s", e)
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/ai/chat/stream")
+async def ai_chat_stream_endpoint(req: AIChatRequest):
+    """
+    Stream token-by-token real-time SSE for typewriter effect & live audio (Xiaozhi / Gemini style).
+    SSE events:
+    - event: token, data: {"chunk": "...", "accumulated": "..."}
+    - event: audio, data: {"audio_wav_base64": "..."}
+    - event: done, data: {"full_text": "...", "voice": "..."}
+    """
+    async def event_generator():
+        accumulated = ""
+        voice = ai_router.config.get("tts_voice", "vi-VN-NamMinhNeural")
+        try:
+            async for token in ai_router.stream_intent(req.message, model_preference=req.provider):
+                accumulated += token
+                payload = json.dumps({"chunk": token, "accumulated": accumulated}, ensure_ascii=False)
+                yield f"event: token\ndata: {payload}\n\n"
+
+            # Sau khi sinh xong text, tổng hợp audio ngay lập tức
+            pcm = await audio_pipeline.text_to_pcm(accumulated, voice=voice)
+            wav_b64 = ""
+            if pcm:
+                import io, wave, base64
+                wav_buf = io.BytesIO()
+                with wave.open(wav_buf, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    wf.writeframes(pcm)
+                wav_b64 = base64.b64encode(wav_buf.getvalue()).decode('ascii')
+                yield f"event: audio\ndata: {json.dumps({'audio_wav_base64': wav_b64})}\n\n"
+
+            done_payload = json.dumps({"full_text": accumulated, "voice": voice}, ensure_ascii=False)
+            yield f"event: done\ndata: {done_payload}\n\n"
+
+        except Exception as e:
+            logger.error("Error in ai_chat_stream_endpoint: %s", e)
+            err_payload = json.dumps({"error": str(e)}, ensure_ascii=False)
+            yield f"event: error\ndata: {err_payload}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 # -----------------------------------------------------------------------------
 # ALL-HOUSE MASTER CONFIGURATION & CONTROL APIS

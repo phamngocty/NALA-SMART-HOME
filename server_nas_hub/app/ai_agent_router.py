@@ -10,8 +10,9 @@ Includes Home Assistant Tool Calling & Room-Context Awareness.
 import os
 import json
 import time
+import asyncio
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, AsyncGenerator
 import httpx
 
 logger = logging.getLogger("AIRouter")
@@ -646,3 +647,209 @@ class AIAgentRouter:
             logger.error("Error communicating with AI Provider %s: %s", prov, e)
 
         return "Xin lỗi, hiện tại tôi gặp sự cố khi kết nối tới trợ lý AI."
+
+    async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> AsyncGenerator[str, None]:
+        """Stream kết quả đối thoại thời gian thực từng token (SSE/WebSocket chunk) phong cách Xiaozhi / Gemini Live."""
+        if not user_text or not user_text.strip():
+            yield "Tôi không nghe thấy gì cả."
+            return
+
+        lower_text = user_text.lower().strip()
+
+        # 1. Fast-Path Rule Based (<20ms) cho các lệnh thường gặp
+        if any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "đi ngủ", "ra khỏi nhà"]):
+            res = await self.ha_bridge.master_turn_off_all()
+            cnt = res.get("turned_off_count", 0)
+            msg = f"Đã tắt toàn bộ {cnt} thiết bị trong nhà cho bạn."
+            for word in msg.split(" "):
+                yield word + " "
+                await asyncio.sleep(0.03)
+            return
+
+        # 2. Xác định AI Provider
+        prov = model_preference or self.config.get("active_provider", "deepseek")
+        if prov not in self.config or not self.config[prov].get("api_key"):
+            for alt in ["deepseek", "gemini", "openrouter", "custom"]:
+                if self.config.get(alt, {}).get("api_key"):
+                    prov = alt
+                    break
+
+        prov_cfg = self.config.get(prov, {})
+        api_key = prov_cfg.get("api_key", "")
+        model = prov_cfg.get("model", "")
+        base_url = prov_cfg.get("base_url", "")
+
+        if not api_key:
+            msg = f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa có API Key."
+            for word in msg.split(" "):
+                yield word + " "
+                await asyncio.sleep(0.03)
+            return
+
+        device_ctx = self._build_device_context()
+        system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
+            device_context=device_ctx,
+            current_room=context_room or "Không xác định"
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # -------------------------------------------------------------
+                # 1. DEEPSEEK & OPENROUTER & CUSTOM (OpenAI SSE Streaming)
+                # -------------------------------------------------------------
+                if prov != "gemini":
+                    if prov == "deepseek":
+                        endpoint = "https://api.deepseek.com/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                        use_model = model or "deepseek-flash"
+                    elif prov == "openrouter":
+                        endpoint = "https://openrouter.ai/api/v1/chat/completions"
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://nalasmarthome.local",
+                            "X-Title": "NALA Smart Home Hub"
+                        }
+                        use_model = model or "google/gemini-2.0-flash-exp:free"
+                    else:
+                        endpoint = f"{base_url.rstrip('/')}/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                        use_model = model
+
+                    payload = {
+                        "model": use_model,
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_text}
+                        ],
+                        "tools": self._get_ha_tools_schema_openai(),
+                        "tool_choice": "auto",
+                        "stream": True,
+                        "max_tokens": 200,
+                        "temperature": 0.3
+                    }
+                    if prov == "deepseek":
+                        payload["thinking"] = {"type": "disabled"}
+
+                    accumulated_tool_calls: Dict[int, Dict[str, Any]] = {}
+                    has_text = False
+
+                    async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
+                        if response.status_code != 200:
+                            err_body = await response.aread()
+                            logger.error("AI Stream %s error %d: %s", prov, response.status_code, err_body.decode('utf-8', errors='replace'))
+                            yield f"Lỗi từ {prov} ({response.status_code})."
+                            return
+
+                        async for line in response.aiter_lines():
+                            line = line.strip()
+                            if not line or not line.startswith("data: "):
+                                continue
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                break
+
+                            try:
+                                chunk_json = json.loads(data_str)
+                                choices = chunk_json.get("choices", [])
+                                if not choices:
+                                    continue
+                                delta = choices[0].get("delta", {})
+
+                                # Kiểm tra tool call stream
+                                if "tool_calls" in delta and delta["tool_calls"]:
+                                    for tc in delta["tool_calls"]:
+                                        idx = tc.get("index", 0)
+                                        if idx not in accumulated_tool_calls:
+                                            accumulated_tool_calls[idx] = {
+                                                "name": tc.get("function", {}).get("name", ""),
+                                                "args": ""
+                                            }
+                                        fn_data = tc.get("function", {})
+                                        if "name" in fn_data and fn_data["name"]:
+                                            accumulated_tool_calls[idx]["name"] = fn_data["name"]
+                                        if "arguments" in fn_data and fn_data["arguments"]:
+                                            accumulated_tool_calls[idx]["args"] += fn_data["arguments"]
+
+                                # Stream content text
+                                content_piece = delta.get("content", "")
+                                if content_piece:
+                                    has_text = True
+                                    yield content_piece
+
+                            except Exception:
+                                continue
+
+                    # Nếu có tool call được gọi
+                    if accumulated_tool_calls:
+                        confirmations = []
+                        for idx, call in accumulated_tool_calls.items():
+                            fn_name = call.get("name", "")
+                            raw_args = call.get("args", "{}")
+                            try:
+                                args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                            except Exception:
+                                args = {}
+                            res_msg = await self.execute_tool(fn_name, args)
+                            confirmations.append(res_msg)
+
+                        final_msg = " ".join(confirmations) if confirmations else "Đã thực hiện xong cho bạn."
+                        if has_text:
+                            yield " " + final_msg
+                        else:
+                            for word in final_msg.split(" "):
+                                yield word + " "
+                                await asyncio.sleep(0.03)
+
+                # -------------------------------------------------------------
+                # 2. GOOGLE GEMINI SSE STREAMING (streamGenerateContent)
+                # -------------------------------------------------------------
+                else:
+                    norm_mod = normalize_gemini_model(model)
+                    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:streamGenerateContent?alt=sse"
+                    headers = {
+                        "x-goog-api-key": api_key,
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "system_instruction": {"parts": [{"text": system_instruction}]},
+                        "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                        "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
+                        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 200}
+                    }
+
+                    async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
+                        if response.status_code != 200:
+                            err_body = await response.aread()
+                            logger.error("Gemini Stream error %d: %s", response.status_code, err_body.decode('utf-8', errors='replace'))
+                            if response.status_code == 503:
+                                yield "Gemini đang chịu tải cao tạm thời. Vui lòng thử lại sau ít giây."
+                            else:
+                                yield f"Lỗi Gemini ({response.status_code})."
+                            return
+
+                        async for line in response.aiter_lines():
+                            line = line.strip()
+                            if not line or not line.startswith("data: "):
+                                continue
+                            try:
+                                chunk_json = json.loads(line[6:])
+                                candidates = chunk_json.get("candidates", [])
+                                if not candidates:
+                                    continue
+                                parts = candidates[0].get("content", {}).get("parts", [])
+                                for p in parts:
+                                    if "text" in p and p["text"]:
+                                        yield p["text"]
+                                    elif "functionCall" in p:
+                                        fn = p["functionCall"]
+                                        res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
+                                        for word in res_msg.split(" "):
+                                            yield word + " "
+                                            await asyncio.sleep(0.03)
+                            except Exception:
+                                continue
+
+        except Exception as e:
+            logger.error("Error in stream_intent: %s", e)
+            yield f"Đã xảy ra lỗi kết nối: {str(e)}"

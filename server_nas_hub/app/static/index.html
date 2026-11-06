@@ -49,6 +49,9 @@
             align-items: center;
         }
 
+        @keyframes blink-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .typewriter-caret { display: inline-block; animation: blink-caret 0.8s infinite; color: #38bdf8; font-weight: bold; margin-left: 2px; }
+
         .container {
             width: 100%;
             max-width: 1200px;
@@ -1855,23 +1858,46 @@
                 </div>
             </div>
 
-            <!-- Live Chat & Voice Demo Playground -->
+            <!-- Live Streaming Real-time Dialogue (Xiaozhi & Gemini Live Style) -->
             <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
-                <div style="font-weight: 700; color: #f59e0b; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                    <span>🎙️</span> Thử Nghiệm Trực Tiếp AI & Nghe Giọng Đọc:
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: #38bdf8; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        <span>🎙️</span> Đối Thoại Trực Tiếp (Xiaozhi & Gemini Live Stream):
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="aiLiveStreamStatus" style="font-size: 11px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; display: inline-block;"></span> Sẵn sàng
+                        </span>
+                        <button type="button" onclick="clearAIChatLogs()" style="background: #1e293b; border: 1px solid #334155; color: #94a3b8; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">
+                            🗑️ Xoá
+                        </button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <input type="text" id="aiTestInput" placeholder="Ví dụ: 'Bật đèn phòng khách', 'Hôm nay thời tiết thế nào?'..." style="flex: 1; background: #1e293b; border: 1px solid #475569; color: white; padding: 9px 12px; border-radius: 8px; font-size: 13px;" onkeydown="if(event.key==='Enter') sendAIChatTest()">
-                    <button type="button" onclick="sendAIChatTest()" id="btnSendAIChat" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: black; font-weight: 700; padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;">
-                        Gửi Thử
+
+                <!-- Chat Messages Scroll Box -->
+                <div id="aiLiveChatLogs" style="height: 220px; overflow-y: auto; background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; scroll-behavior: smooth;">
+                    <div style="text-align: center; color: #64748b; font-size: 11px; margin: auto;">
+                        💬 Gõ lệnh hoặc trò chuyện bên dưới để xem Nala đánh máy từng chữ thời gian thực!
+                    </div>
+                </div>
+
+                <!-- Quick Suggestions -->
+                <div style="display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px;">
+                    <button type="button" onclick="quickSendAI('Bật đèn phòng khách')" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">💡 Bật đèn phòng khách</button>
+                    <button type="button" onclick="quickSendAI('Giới thiệu bản thân')" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">🤖 Giới thiệu bản thân</button>
+                    <button type="button" onclick="quickSendAI('Tắt hết toàn nhà')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">🛑 Tắt hết toàn nhà</button>
+                </div>
+
+                <!-- Input Box -->
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="aiTestInput" placeholder="Ví dụ: 'Nala ơi, bạn làm được gì?', 'Mở quạt phòng ngủ'..." style="flex: 1; background: #1e293b; border: 1px solid #475569; color: white; padding: 9px 12px; border-radius: 8px; font-size: 13px;" onkeydown="if(event.key==='Enter') sendAIChatTest()">
+                    <button type="button" onclick="sendAIChatTest()" id="btnSendAIChat" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none; color: white; font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <span>🚀</span> Gửi
                     </button>
                 </div>
 
-                <div id="aiTestResultBox" style="display: none; background: #182234; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Phản hồi từ Nala AI:</div>
-                    <div id="aiTestReplyText" style="font-size: 13px; color: #f8fafc; font-weight: 600; margin-bottom: 8px;"></div>
-                    <audio id="aiTestAudioPlayer" controls style="width: 100%; height: 36px;"></audio>
-                </div>
+                <!-- Hidden audio player for instant playback -->
+                <audio id="aiTestAudioPlayer" style="display: none;"></audio>
             </div>
         </div>
 
@@ -4685,44 +4711,152 @@ async function loadWakeConfig() {
     }
 }
 
+function clearAIChatLogs() {
+    const container = document.getElementById('aiLiveChatLogs');
+    if (container) {
+        container.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; margin: auto;">💬 Gõ lệnh hoặc trò chuyện bên dưới để xem Nala đánh máy từng chữ thời gian thực!</div>';
+    }
+}
+
+function quickSendAI(text) {
+    const input = document.getElementById('aiTestInput');
+    if (input) {
+        input.value = text;
+        sendAIChatTest();
+    }
+}
+
+function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return (text || '').replace(/[&<>"']/g, m => map[m]);
+}
+
 async function sendAIChatTest() {
     const input = document.getElementById('aiTestInput');
     const msg = input.value.trim();
     if (!msg) return;
 
     const btn = document.getElementById('btnSendAIChat');
-    const box = document.getElementById('aiTestResultBox');
-    const textEl = document.getElementById('aiTestReplyText');
+    const chatLogs = document.getElementById('aiLiveChatLogs');
+    const statusEl = document.getElementById('aiLiveStreamStatus');
     const player = document.getElementById('aiTestAudioPlayer');
 
-    btn.disabled = true;
-    btn.innerText = 'Đang xử lý...';
-    box.style.display = 'block';
-    textEl.innerText = 'Đang gửi tới AI và tổng hợp giọng nói...';
+    // Xoá placeholder ban đầu nếu có
+    if (chatLogs.querySelector('div[style*="margin: auto"]')) {
+        chatLogs.innerHTML = '';
+    }
 
-    const prov = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
+    // 1. Thêm User Message Bubble
+    const userBubble = document.createElement('div');
+    userBubble.style.cssText = 'display: flex; justify-content: flex-end; margin-bottom: 4px;';
+    userBubble.innerHTML = `
+        <div style="background: linear-gradient(135deg, #1e40af, #2563eb); color: white; padding: 8px 14px; border-radius: 14px 14px 2px 14px; max-width: 80%; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            <div style="font-size: 10px; color: #93c5fd; margin-bottom: 2px; font-weight: 700;">👤 Bạn</div>
+            <div>${escapeHtml(msg)}</div>
+        </div>
+    `;
+    chatLogs.appendChild(userBubble);
+
+    // 2. Thêm Assistant Placeholder Bubble với Typewriter Caret
+    const bubbleId = 'ai_bubble_' + Date.now();
+    const aiBubble = document.createElement('div');
+    aiBubble.style.cssText = 'display: flex; justify-content: flex-start; margin-bottom: 4px;';
+    aiBubble.innerHTML = `
+        <div style="background: #1e293b; border: 1px solid #4338ca; color: #f8fafc; padding: 10px 14px; border-radius: 14px 14px 14px 2px; max-width: 85%; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+            <div style="font-size: 10px; color: #818cf8; margin-bottom: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 12px;">🤖</span> Nala AI <span style="font-size: 9px; background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); padding: 1px 5px; border-radius: 4px; color: #a5b4fc;">Live Stream</span>
+            </div>
+            <div id="${bubbleId}" style="white-space: pre-wrap;"><span class="typewriter-caret">▌</span></div>
+        </div>
+    `;
+    chatLogs.appendChild(aiBubble);
+    chatLogs.scrollTop = chatLogs.scrollHeight;
+
+    input.value = '';
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> Đang stream...';
+    if (statusEl) statusEl.innerHTML = '<span style="color: #38bdf8;">⚡ Đang gõ...</span>';
+
+    const prov = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'deepseek';
+    const textTarget = document.getElementById(bubbleId);
 
     try {
-        const res = await fetch('/api/ai/chat', {
+        const response = await fetch('/api/ai/chat/stream', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ message: msg, provider: prov })
         });
-        const data = await res.json();
-        if (data.status === 'success') {
-            textEl.innerText = data.reply;
-            if (data.audio_wav_base64) {
-                player.src = 'data:audio/wav;base64,' + data.audio_wav_base64;
-                player.play().catch(e => console.log('Autoplay blocked:', e));
-            }
-        } else {
-            textEl.innerText = '❌ Lỗi: ' + (data.message || 'Không có phản hồi');
+
+        if (!response.ok) {
+            textTarget.innerHTML = `<span style="color: #ef4444;">❌ Lỗi kết nối HTTP ${response.status}</span>`;
+            return;
         }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let currentEvent = 'message';
+        let accumulatedText = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('event: ')) {
+                    currentEvent = trimmed.substring(7).trim();
+                } else if (trimmed.startsWith('data: ')) {
+                    const dataStr = trimmed.substring(6).trim();
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (currentEvent === 'token') {
+                            accumulatedText = data.accumulated || '';
+                            textTarget.innerHTML = escapeHtml(accumulatedText) + '<span class="typewriter-caret">▌</span>';
+                            chatLogs.scrollTop = chatLogs.scrollHeight;
+                        } else if (currentEvent === 'audio') {
+                            if (data.audio_wav_base64) {
+                                const audioContainerId = 'audio_' + bubbleId;
+                                let audioWrap = document.getElementById(audioContainerId);
+                                if (!audioWrap && textTarget && textTarget.parentElement) {
+                                    audioWrap = document.createElement('div');
+                                    audioWrap.id = audioContainerId;
+                                    audioWrap.style.cssText = 'margin-top: 8px; display: flex; align-items: center; gap: 8px;';
+                                    audioWrap.innerHTML = `
+                                        <audio controls autoplay style="height: 32px; width: 100%; max-width: 290px; border-radius: 6px; outline: none;">
+                                            <source src="data:audio/wav;base64,${data.audio_wav_base64}" type="audio/wav">
+                                        </audio>
+                                    `;
+                                    textTarget.parentElement.appendChild(audioWrap);
+                                    const inlineAudio = audioWrap.querySelector('audio');
+                                    if (inlineAudio) {
+                                        inlineAudio.play().catch(e => console.log('Autoplay policy caught:', e));
+                                    }
+                                    chatLogs.scrollTop = chatLogs.scrollHeight;
+                                }
+                            }
+                        } else if (currentEvent === 'done') {
+                            textTarget.innerHTML = escapeHtml(accumulatedText);
+                        } else if (currentEvent === 'error') {
+                            textTarget.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${escapeHtml(data.error || 'Lỗi không xác định')}</span>`;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+        if (textTarget) textTarget.innerHTML = escapeHtml(accumulatedText);
+
     } catch (err) {
-        textEl.innerText = '❌ Lỗi kết nối: ' + err.message;
+        if (textTarget) textTarget.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${escapeHtml(err.message)}</span>`;
     } finally {
         btn.disabled = false;
-        btn.innerText = 'Gửi Thử';
+        btn.innerHTML = '<span>🚀</span> Gửi';
+        if (statusEl) statusEl.innerHTML = '<span style="color: #10b981;">● Sẵn sàng</span>';
+        chatLogs.scrollTop = chatLogs.scrollHeight;
     }
 }
 </script>
