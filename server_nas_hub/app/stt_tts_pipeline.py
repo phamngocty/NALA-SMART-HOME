@@ -74,10 +74,12 @@ class AudioPipeline:
         if clean_text.startswith("{") or ('"error"' in clean_text and '"code"' in clean_text):
             clean_text = "Hệ thống AI phản hồi lỗi, vui lòng kiểm tra lại API key hoặc model."
         else:
-            clean_text = re.sub(r'[*`#_{}\[\]<>]', '', clean_text).strip()
+            # Loại bỏ ngoặc kép, dấu gạch chéo, backtick, markdown, SSML tags có thể phá vỡ parser
+            clean_text = re.sub(r'["\'*`#_{}\[\]<>/\\~^|]', ' ', clean_text)
+            clean_text = re.sub(r'\s+', ' ', clean_text).strip()
             # Rút ngắn nếu quá dài
-            if len(clean_text) > 300:
-                clean_text = clean_text[:300]
+            if len(clean_text) > 350:
+                clean_text = clean_text[:350]
 
         selected_voice = voice or self.default_voice
 
@@ -86,35 +88,38 @@ class AudioPipeline:
             logger.info("Using cached TTS PCM for '%s'", clean_text)
             return self._pcm_cache[cache_key]
 
-        # 1. Thử qua Edge-TTS Neural
-        try:
-            t0 = time.time()
-            comm = edge_tts.Communicate(clean_text, selected_voice)
-            mp3_buf = bytearray()
-            async for chunk in comm.stream():
-                if chunk["type"] == "audio":
-                    mp3_buf.extend(chunk["data"])
+        # 1. Thử qua Edge-TTS Neural (với cơ chế retry 2 lần)
+        for attempt in range(2):
+            try:
+                t0 = time.time()
+                comm = edge_tts.Communicate(clean_text, selected_voice)
+                mp3_buf = bytearray()
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        mp3_buf.extend(chunk["data"])
 
-            if mp3_buf:
-                # Chuyển đổi MP3 sang Raw PCM 16kHz 16-bit Mono qua FFmpeg
-                proc = await asyncio.create_subprocess_exec(
-                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0",
-                    "-f", "s16le", "-acodec", "pcm_s16le", "-ac", "1", "-ar", "16000", "pipe:1",
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                pcm_out, err = await proc.communicate(input=bytes(mp3_buf))
-                if proc.returncode == 0 and pcm_out:
-                    elapsed = time.time() - t0
-                    logger.info("Edge-TTS synthesized %d bytes PCM (in %.2fs)", len(pcm_out), elapsed)
-                    if len(self._pcm_cache) < 100:
-                        self._pcm_cache[cache_key] = pcm_out
-                    return pcm_out
-                else:
-                    logger.error("FFmpeg conversion failed: %s", err.decode('utf-8', errors='replace'))
-        except Exception as e:
-            logger.warning("Edge-TTS failed (%s), attempting fallback...", e)
+                if mp3_buf:
+                    # Chuyển đổi MP3 sang Raw PCM 16kHz 16-bit Mono qua FFmpeg
+                    proc = await asyncio.create_subprocess_exec(
+                        "ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0",
+                        "-f", "s16le", "-acodec", "pcm_s16le", "-ac", "1", "-ar", "16000", "pipe:1",
+                        stdin=asyncio.subprocess.PIPE,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    pcm_out, err = await proc.communicate(input=bytes(mp3_buf))
+                    if proc.returncode == 0 and pcm_out:
+                        elapsed = time.time() - t0
+                        logger.info("Edge-TTS synthesized %d bytes PCM (in %.2fs, attempt %d)", len(pcm_out), elapsed, attempt + 1)
+                        if len(self._pcm_cache) < 100:
+                            self._pcm_cache[cache_key] = pcm_out
+                        return pcm_out
+                    else:
+                        logger.error("FFmpeg conversion failed: %s", err.decode('utf-8', errors='replace'))
+            except Exception as e:
+                logger.warning("Edge-TTS attempt %d failed (%s)", attempt + 1, e)
+                if attempt == 0:
+                    await asyncio.sleep(0.3)
 
         # 2. Fallback sang Piper TTS nếu có cấu hình
         if self.tts_url:
