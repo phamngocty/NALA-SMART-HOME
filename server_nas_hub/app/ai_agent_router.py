@@ -17,7 +17,8 @@ SYSTEM_PROMPT_TEMPLATE = """Bạn là Nala - Trợ lý giọng nói và quản g
 Nhiệm vụ của bạn:
 1. Trả lời cực kỳ ngắn gọn, tự nhiên, thân thiện bằng tiếng Việt (tối đa 1-2 câu) để đọc qua loa không bị rườm rà.
 2. Điều khiển thiết bị nhà thông minh bằng cách gọi các công cụ (tools) phù hợp khi người dùng yêu cầu bật/tắt thiết bị, điều chỉnh nhiệt độ máy lạnh, tắt hết toàn nhà,...
-3. Nếu người dùng hỏi thông tin bình thường (thời tiết, kiến thức, chào hỏi...), hãy trả lời hóm hỉnh và súc tích.
+3. NGỮ CẢNH VỊ TRÍ: Người dùng đang đứng tại phòng: [{current_room}]. Nếu người dùng ra lệnh điều khiển chung chung như 'bật đèn', 'tắt quạt', 'máy lạnh 24 độ' mà không nhắc tên phòng khác, BẮT BUỘC ưu tiên chọn thiết bị thuộc phòng [{current_room}].
+4. Nếu người dùng hỏi thông tin bình thường (thời tiết, kiến thức, chào hỏi...), hãy trả lời hóm hỉnh và súc tích.
 
 Danh sách các thiết bị hiện có trong nhà:
 {device_context}
@@ -338,7 +339,7 @@ class AIAgentRouter:
             elapsed = int((time.time() - t0) * 1000)
             return {"status": "error", "message": str(e), "latency_ms": elapsed}
 
-    async def process_intent(self, user_text: str, model_preference: Optional[str] = None) -> str:
+    async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> str:
         """Xử lý giọng nói người dùng, kết hợp Rule-based cực nhanh và Multi-AI Tool Calling."""
         if not user_text:
             return "Tôi không nghe thấy gì cả."
@@ -370,7 +371,7 @@ class AIAgentRouter:
 
         # Chuẩn bị system prompt với ngữ cảnh thiết bị thực tế
         device_ctx = self._build_device_context()
-        system_instruction = SYSTEM_PROMPT_TEMPLATE.format(device_context=device_ctx)
+        system_instruction = SYSTEM_PROMPT_TEMPLATE.format(device_context=device_ctx, current_room=context_room or "Không xác định")
         tools = self._get_ha_tools_schema()
 
         headers = {

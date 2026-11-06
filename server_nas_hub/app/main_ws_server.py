@@ -46,6 +46,7 @@ from app.ha_bridge import HomeAssistantBridge
 from app.intercom_router import IntercomRouter
 from app.stt_tts_pipeline import AudioPipeline
 from app.ai_agent_router import AIAgentRouter
+from app.wake_word_manager import WakeWordManager
 from app.history_manager import HistoryManager
 
 for env_candidate in [
@@ -86,6 +87,47 @@ intercom = IntercomRouter()
 audio_pipeline = AudioPipeline(STT_URL, TTS_URL)
 ai_router = AIAgentRouter(GEMINI_API_KEY, DEEPSEEK_API_KEY, ha_bridge)
 history_mgr = HistoryManager()
+
+async def on_wake_winner(device_id: str, candidate_info: dict):
+    ws = active_sockets.get(device_id)
+    dev_info = devices_db.get(device_id, {})
+    room_name = dev_info.get("room_name", f"Panel {device_id}")
+    if ws:
+        try:
+            await ws.send_json({
+                "type": "wake_event",
+                "payload": {
+                    "status": "accepted",
+                    "wake_word": candidate_info.get("model", "hey_jarvis"),
+                    "score": candidate_info.get("score", 1.0),
+                    "room": room_name
+                }
+            })
+        except Exception as e:
+            logger.error("Error sending wake_accepted to %s: %s", device_id, e)
+
+    asyncio.create_task(broadcast_to_admins({
+        "type": "wake_notification",
+        "device_id": device_id,
+        "room_name": room_name,
+        "score": candidate_info.get("score", 1.0),
+        "rms": candidate_info.get("rms", 0.0)
+    }))
+
+async def on_wake_suppressed(device_id: str, candidate_info: dict):
+    ws = active_sockets.get(device_id)
+    if ws:
+        try:
+            await ws.send_json({
+                "type": "wake_event",
+                "payload": {
+                    "status": "suppressed"
+                }
+            })
+        except Exception:
+            pass
+
+wake_mgr = WakeWordManager(on_winner_callback=on_wake_winner, on_suppress_callback=on_wake_suppressed)
 
 def get_buttons_with_state(dev: dict, include_all_house_active: bool = False) -> list:
     """Đính kèm trạng thái thực tế từ HA vào các nút bấm của panel, kèm các thiết bị đang bật toàn nhà."""
@@ -1015,6 +1057,36 @@ class AIChatRequest(BaseModel):
     message: str
     provider: Optional[str] = None
 
+@app.get("/api/wake/config")
+async def get_wake_config():
+    """Lấy cấu hình Wake Word đa phòng hiện tại."""
+    cfg = dict(wake_mgr.config)
+    # Gộp danh sách devices để hiển thị từng phòng trên Web Admin
+    devices_summary = []
+    for code, dev in devices_db.items():
+        panel_cfg = cfg.get("panel_settings", {}).get(code, {})
+        devices_summary.append({
+            "device_code": code,
+            "room_name": dev.get("room_name", f"Panel {code}"),
+            "online": active_sockets.get(code) is not None,
+            "wake_enabled": panel_cfg.get("wake_enabled", True),
+            "sensitivity": panel_cfg.get("sensitivity", cfg.get("threshold", 0.5))
+        })
+    cfg["panels_list"] = devices_summary
+    return JSONResponse(cfg)
+
+@app.post("/api/wake/config")
+async def save_wake_config(req: Request):
+    """Lưu cấu hình Wake Word đa phòng và độ nhạy."""
+    try:
+        data = await req.json()
+        saved = wake_mgr.save_config(data)
+        if saved:
+            return JSONResponse({"status": "success", "message": "Đã lưu cấu hình Wake Word thành công!"})
+        return JSONResponse({"status": "error", "message": "Lưu cấu hình thất bại"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=400)
+
 @app.post("/api/ai/chat")
 async def ai_chat_endpoint(req: AIChatRequest):
     """Gửi tin nhắn test AI từ Web Admin và nhận câu trả lời cùng audio base64 để nghe thử trực tiếp trên trình duyệt."""
@@ -1773,8 +1845,12 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                 if len(packet) == 520:
                     sender_key = dev_code or device_id
                     target_id = packet[3]
+                    # Nếu là gói tin quét Wake Word (target_id == 0x05)
+                    if target_id == 0x05:
+                        pcm_chunk = packet[7:519]
+                        asyncio.create_task(wake_mgr.feed_audio_chunk(sender_key, pcm_chunk))
                     # Nếu là gói tin gửi cho AI (target_id == 0x00)
-                    if target_id == 0x00:
+                    elif target_id == 0x00:
                         stream_flag = packet[6]
                         pcm_chunk = packet[7:519]
                         if stream_flag == 0x01: # START
@@ -1853,7 +1929,9 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             return
 
         # 2. AI Intent & Home Assistant Action
-        response_text = await ai_router.process_intent(text)
+        dev = devices_db.get(device_id, {})
+        room_name = dev.get("room_name", "")
+        response_text = await ai_router.process_intent(text, context_room=room_name)
         await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": response_text}})
 
         # Lưu vào Lịch sử Giọng nói & Ghi âm Audio

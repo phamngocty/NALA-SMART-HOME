@@ -1796,6 +1796,57 @@
                 </div>
             </div>
 
+            <!-- Multi-Room Wake Word & Spatial Arbitration -->
+            <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 700; color: #10b981; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                            <span>🎯</span> Wake Word Rảnh Tay & Phân Xử Không Gian (Spatial Arbitration)
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8;">
+                            Hỗ trợ 6+ màn hình: Tự động chọn phòng gần nhất khi gọi từ khóa. Chống dội âm đa phòng (Echo Prevention).
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 12px; color: #f1f5f9; font-weight: 600;">Bật Toàn Nhà:</label>
+                        <input type="checkbox" id="cfgWakeGlobalEnabled" checked style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- Wake Word Model & Window -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-size: 11px; color: #94a3b8;">Từ Khóa Đánh Thức:</label>
+                        <select id="cfgWakeSelectedModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <option value="hey_jarvis">Hey Jarvis (Mặc định - Độ nhạy cao)</option>
+                            <option value="alexa">Alexa (Chuẩn quốc tế)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #94a3b8;">Cửa Sổ Phân Xử Không Gian:</label>
+                        <select id="cfgWakeWindowMs" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <option value="300">300 mili-giây (Tối ưu nhất cho gia đình)</option>
+                            <option value="500">500 mili-giây (Nhà rộng / thông tầng)</option>
+                            <option value="200">200 mili-giây (Phản xạ siêu tốc)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table of Panels & Per-Room Toggles -->
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+                        🏢 Danh Sách Màn Hình Các Phòng (Bật / Tắt Theo Từng Vị Trí):
+                    </div>
+                    <div id="wakeRoomsContainer" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; max-height: 180px; overflow-y: auto; padding: 8px;">
+                        <div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">Đang tải danh sách phòng...</div>
+                    </div>
+                </div>
+
+                <!-- Live Wake Word Event Alert -->
+                <div id="wakeLiveEventAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;">
+                </div>
+            </div>
+
             <!-- Live Chat & Voice Demo Playground -->
             <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
                 <div style="font-weight: 700; color: #f59e0b; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
@@ -2641,7 +2692,14 @@
                 }
                 if (data.house_status) updateAllHouseStrip(data.house_status);
                 if (data.floors_overview) updateFloorsOverview(data.floors_overview);
-            } else if (type === 'devices_update') {
+            } else if (type === 'wake_notification') {
+        const alertEl = document.getElementById('wakeLiveEventAlert');
+        if (alertEl) {
+            alertEl.style.display = 'block';
+            alertEl.innerHTML = `🎯 <strong>${data.room_name}</strong> vừa được đánh thức! (Âm lượng: ${Math.round(data.rms)}dB) - Các phòng khác đã tự động khóa tránh dội âm.`;
+            setTimeout(() => { alertEl.style.display = 'none'; }, 5000);
+        }
+    } else if (type === 'devices_update') {
                 currentDevices = data.devices || [];
                 renderDevices();
                 if (data.intercom_targets) {
@@ -4458,6 +4516,7 @@ async function openAIConfigModal() {
             document.getElementById('cfgOpenrouterModel').value = aiCurrentConfig.openrouter?.model || 'google/gemini-2.0-flash-exp:free';
 
             document.getElementById('cfgTtsVoice').value = aiCurrentConfig.tts_voice || 'vi-VN-HoaiMyNeural';
+            loadWakeConfig();
         }
     } catch (err) {
         console.error("Error loading AI config:", err);
@@ -4512,6 +4571,23 @@ async function testAIConn(provider) {
 }
 
 async function saveAIConfig() {
+    // Save Wake Word Config alongside AI Config
+    const panelSettings = {};
+    document.querySelectorAll('.wake-panel-chk').forEach(chk => {
+        const code = chk.getAttribute('data-code');
+        panelSettings[code] = { wake_enabled: chk.checked };
+    });
+    fetch('/api/wake/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            global_enabled: document.getElementById('cfgWakeGlobalEnabled').checked,
+            selected_model: document.getElementById('cfgWakeSelectedModel').value,
+            arbitration_window_ms: parseInt(document.getElementById('cfgWakeWindowMs').value) || 300,
+            panel_settings: panelSettings
+        })
+    }).catch(e => console.error("Error saving wake config:", e));
+
     const activeProvider = document.querySelector('input[name="aiProviderRadio"]:checked')?.value || 'gemini';
     const payload = {
         active_provider: activeProvider,
@@ -4545,6 +4621,39 @@ async function saveAIConfig() {
         }
     } catch (err) {
         alert("❌ Lỗi kết nối khi lưu: " + err.message);
+    }
+}
+
+
+async function loadWakeConfig() {
+    try {
+        const res = await fetch('/api/wake/config');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('cfgWakeGlobalEnabled').checked = data.global_enabled !== false;
+            document.getElementById('cfgWakeSelectedModel').value = data.selected_model || 'hey_jarvis';
+            document.getElementById('cfgWakeWindowMs').value = data.arbitration_window_ms || 300;
+
+            const container = document.getElementById('wakeRoomsContainer');
+            if (data.panels_list && data.panels_list.length > 0) {
+                container.innerHTML = data.panels_list.map(p => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #1e293b;">
+                        <div>
+                            <span style="font-weight: 700; color: #f8fafc; font-size: 13px;">${p.room_name}</span>
+                            <span style="font-size: 11px; color: ${p.online ? '#10b981' : '#64748b'};"> (${p.online ? '🟢 Online' : '⚪ Offline'})</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 11px; color: #94a3b8;">Wake Word:</span>
+                            <input type="checkbox" class="wake-panel-chk" data-code="${p.device_code}" ${p.wake_enabled ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">Chưa có màn hình nào kết nối.</div>';
+            }
+        }
+    } catch (e) {
+        console.error("Error loading wake config:", e);
     }
 }
 
