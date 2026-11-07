@@ -86,14 +86,38 @@ class WakeWordManager:
             import openwakeword
             from openwakeword.model import Model
             selected = self.config.get("selected_model", "hey_jarvis")
-            models_to_load = [selected]
-            if "alexa" not in models_to_load:
-                models_to_load.append("alexa")
+            models_to_load = []
+            
+            # 1. Kiểm tra xem có file mô hình custom .tflite trong thư mục data/models không
+            custom_models_dir = os.path.join(self.data_dir, "models")
+            os.makedirs(custom_models_dir, exist_ok=True)
+            for fname in os.listdir(custom_models_dir):
+                if fname.endswith(".tflite"):
+                    full_p = os.path.join(custom_models_dir, fname)
+                    models_to_load.append(full_p)
+                    logger.info("Found custom Wake Word model: %s", full_p)
+
+            # 2. Danh sách các model có sẵn (built-in) của OpenWakeWord
+            BUILTIN_MODELS = {"hey_jarvis", "alexa", "timer", "weather"}
+            if selected in BUILTIN_MODELS and selected not in models_to_load:
+                models_to_load.append(selected)
+
+            # 3. Luôn nạp ít nhất hey_jarvis và alexa làm mô hình nền
+            for m in ["hey_jarvis", "alexa"]:
+                if m not in models_to_load:
+                    models_to_load.append(m)
+
             self.oww_model = Model(wakeword_models=models_to_load)
-            logger.info("OpenWakeWord engine initialized with models: %s", models_to_load)
+            logger.info("OpenWakeWord engine initialized successfully with models: %s", list(self.oww_model.models.keys()))
         except Exception as e:
-            logger.warning("Failed to initialize OpenWakeWord model: %s", e)
-            self.oww_model = None
+            logger.warning("Failed to initialize OpenWakeWord model: %s. Using fallback ['hey_jarvis', 'alexa']...", e)
+            try:
+                from openwakeword.model import Model
+                self.oww_model = Model(wakeword_models=["hey_jarvis", "alexa"])
+                logger.info("Fallback OpenWakeWord model loaded successfully: %s", list(self.oww_model.models.keys()))
+            except Exception as fe:
+                logger.error("Critical: Could not initialize fallback OpenWakeWord model: %s", fe)
+                self.oww_model = None
 
     def calculate_rms(self, pcm_data: bytes) -> float:
         """Tính cường độ âm lượng RMS (0.0 đến 100.0) từ dữ liệu PCM 16-bit Mono."""
@@ -134,50 +158,67 @@ class WakeWordManager:
 
         # OpenWakeWord cần các khối 1280 mẫu (80ms = 2560 bytes)
         FRAME_BYTES = 2560
-        if len(self.device_buffers[device_id]) < FRAME_BYTES:
-            return None
+        detected_candidate = None
 
-        frame_data = bytes(self.device_buffers[device_id][:FRAME_BYTES])
-        self.device_buffers[device_id] = self.device_buffers[device_id][FRAME_BYTES:]
+        while len(self.device_buffers[device_id]) >= FRAME_BYTES:
+            frame_data = bytes(self.device_buffers[device_id][:FRAME_BYTES])
+            self.device_buffers[device_id] = self.device_buffers[device_id][FRAME_BYTES:]
 
-        if not self.oww_model:
-            return None
+            if not self.oww_model:
+                continue
 
-        try:
-            audio_array = np.frombuffer(frame_data, dtype=np.int16)
-            preds = self.oww_model.predict(audio_array)
+            try:
+                audio_array = np.frombuffer(frame_data, dtype=np.int16)
+                preds = self.oww_model.predict(audio_array)
 
-            target_model = self.config.get("selected_model", "hey_jarvis")
-            threshold = panel_cfg.get("sensitivity", self.config.get("threshold", 0.5))
+                target_model = self.config.get("selected_model", "hey_jarvis")
+                threshold = panel_cfg.get("sensitivity", self.config.get("threshold", 0.35))
 
-            score = 0.0
-            matched_key = None
-            for k, s in preds.items():
-                if target_model in k.lower() or k.lower() in target_model:
-                    if s > score:
+                score = 0.0
+                matched_key = None
+                for k, s in preds.items():
+                    is_match = False
+                    if target_model == "hey_nala":
+                        if any(alias in k.lower() for alias in ["hey_jarvis", "alexa", "nala"]):
+                            is_match = True
+                    elif target_model.lower() in k.lower() or k.lower() in target_model.lower():
+                        is_match = True
+                    elif "hey_jarvis" in k.lower() or "alexa" in k.lower():
+                        is_match = True
+
+                    if is_match and s > score:
                         score = float(s)
                         matched_key = k
 
-            if score >= threshold:
-                logger.info("Wake Word DETECTED from Panel [%s]! Model: %s, Score: %.3f, RMS: %.1fdB",
-                            device_id, matched_key, score, rms)
+                if score >= 0.15:
+                    logger.info("Panel [%s] OWW Score: %.3f (model: %s, threshold: %.2f, rms: %.1fdB)",
+                                device_id, score, matched_key, threshold, rms)
 
-                wake_candidate = {
-                    "device_id": device_id,
-                    "model": matched_key,
-                    "score": score,
-                    "rms": rms,
-                    "timestamp": time.time()
-                }
+                if score >= threshold:
+                    logger.info("Wake Word DETECTED from Panel [%s]! Model: %s, Score: %.3f, RMS: %.1fdB",
+                                device_id, matched_key, score, rms)
 
-                # Đưa vào cửa sổ Phân Xử Không Gian (Spatial Arbitration)
-                await self._submit_to_arbitration(wake_candidate)
-                return wake_candidate
+                    wake_candidate = {
+                        "device_id": device_id,
+                        "model": matched_key,
+                        "score": score,
+                        "rms": rms,
+                        "timestamp": time.time()
+                    }
 
-        except Exception as e:
-            logger.error("Error predicting wake word for %s: %s", device_id, e)
+                    # Đưa vào cửa sổ Phân Xử Không Gian (Spatial Arbitration)
+                    await self._submit_to_arbitration(wake_candidate)
+                    detected_candidate = wake_candidate
+                    break # Chỉ kích hoạt 1 lần khi vượt ngưỡng
 
-        return None
+            except Exception as e:
+                logger.error("Error predicting wake word for %s: %s", device_id, e)
+
+        # Giới hạn dung lượng bộ đệm tối đa tránh rò rỉ RAM (giữ lại tối đa 1 giây âm thanh)
+        if len(self.device_buffers[device_id]) > 32000:
+            self.device_buffers[device_id] = self.device_buffers[device_id][-16000:]
+
+        return detected_candidate
 
     async def _submit_to_arbitration(self, candidate: Dict[str, Any]):
         """Gộp các ứng viên cùng phát hiện Wake Word trong cửa sổ 300ms để chọn ra 1 phòng chiến thắng."""

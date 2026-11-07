@@ -39,6 +39,23 @@ typedef struct {
 // Kiểm tra kích thước struct tại compile-time
 static_assert(sizeof(AudioPacket_t) == 520, "AudioPacket_t must be exactly 520 bytes!");
 
+#define OPUS_MAGIC_WORD         0xA55B
+#define OPUS_FRAME_SAMPLES      320     // 320 samples @ 16kHz = 20ms âm thanh
+#define OPUS_MAX_PAYLOAD        128
+
+// Cấu trúc gói tin âm thanh nén Opus (Giảm tải WiFi từ 32KB/s xuống còn ~3.5KB/s)
+#pragma pack(push, 1)
+typedef struct {
+    uint16_t magic;         // 0..1: 0xA55B
+    uint8_t  sender_id;     // 2: ID thiết bị gửi
+    uint8_t  target_id;     // 3: ID phòng nhận (0x00=AI Server, 0xFF=All)
+    uint16_t seq_num;       // 4..5: Số thứ tự gói
+    uint8_t  stream_flag;   // 6: 0x01=START, 0x02=DATA, 0x03=END
+    uint16_t opus_len;      // 7..8: Số bytes nén Opus thực tế
+    uint8_t  payload[OPUS_MAX_PAYLOAD]; // 9..136
+} OpusPacket_t;
+#pragma pack(pop)
+
 /**
  * @brief Tính toán Checksum CRC-8 (Đa thức 0x07, Initial 0x00)
  */

@@ -11,6 +11,7 @@ import os
 import re
 import json
 import time
+import uuid
 import asyncio
 import logging
 import unicodedata
@@ -26,10 +27,25 @@ Nhiệm vụ của bạn:
 3. NGỮ CẢNH VỊ TRÍ: Người dùng đang đứng tại phòng: [{current_room}]. Nếu người dùng ra lệnh điều khiển chung chung như 'bật đèn', 'tắt quạt', 'máy lạnh 24 độ' mà không nhắc tên phòng khác, BẮT BUỘC ưu tiên chọn thiết bị thuộc phòng [{current_room}].
 4. QUY TẮC CHỌN ENTITY ID: BẮT BUỘC chỉ sử dụng chính xác mã `entity_id` nằm trong dấu ngoặc tròn `(...)` ở danh sách thiết bị bên dưới (Ví dụ: `climate.150633094640317_climate`, `light.cong_tat_phong_khach_tret_den_1`). TUYỆT ĐỐI KHÔNG tự bịa hoặc tự dịch tên tiếng Việt thành entity_id giả!
 5. Nếu người dùng hỏi thông tin bình thường (thời tiết, kiến thức, chào hỏi...), hãy trả lời hóm hỉnh và súc tích.
+6. NGỮ CẢNH HỘI THOẠI ĐA LƯỢT: Nếu người dùng ra lệnh tiếp nối (như 'giảm xuống 2 độ', 'đổi màu xanh', 'tắt nó đi', 'còn phòng nào nữa không'), hãy dựa vào lịch sử đối thoại trước đó để thực hiện đúng thiết bị đang được đề cập.
 
 Danh sách các thiết bị hiện có trong nhà:
 {device_context}
 """
+
+def _normalize_vn(s: str) -> str:
+    if not s:
+        return ""
+    s = s.replace("đ", "d").replace("Đ", "d")
+    nfd = unicodedata.normalize('NFD', s)
+    no_marks = "".join(c for c in nfd if unicodedata.category(c) != 'Mn').lower()
+    # Chuẩn hoá các từ STT hay nghe nhầm: trầm / chăn -> trần, hắc -> hắt
+    no_marks = re.sub(r'\b(tram|chan)\b', 'tran', no_marks)
+    no_marks = re.sub(r'\b(hac)\b', 'hat', no_marks)
+    # Chuẩn hoá ty <-> ti, tỷ <-> ti
+    no_marks = re.sub(r'([ptkmlnsghd])y\b', r'\1i', no_marks)
+    cleaned = re.sub(r'[^a-z0-9\s]', ' ', no_marks)
+    return ' '.join(cleaned.split())
 
 def mask_key(k: Optional[str]) -> str:
     if not k:
@@ -45,6 +61,83 @@ def normalize_gemini_model(model: Optional[str]) -> str:
     if m.startswith("models/"):
         return m.replace("models/", "")
     return m
+
+class ConversationSessionManager:
+    """Quản lý phiên hội thoại liên tục (Continuous Dialogue) và bộ nhớ ngữ cảnh theo phong cách Xiaozhi."""
+    def __init__(self, session_timeout: float = 120.0, max_history_turns: int = 8):
+        self.session_timeout = session_timeout
+        self.max_history_turns = max_history_turns
+        self.sessions: Dict[str, Dict[str, Any]] = {}
+
+    def get_or_create_session(self, device_id: str) -> Dict[str, Any]:
+        if not device_id:
+            return {}
+        now = time.time()
+        session = self.sessions.get(device_id)
+        if session and (now - session.get("last_active", 0) > self.session_timeout):
+            logger.info("Session context for [%s] expired (>%ss), starting fresh session.", device_id, self.session_timeout)
+            session = None
+        if not session:
+            sess_id = f"sess_{int(now)}_{uuid.uuid4().hex[:6]}"
+            session = {
+                "session_id": sess_id,
+                "history": [],
+                "created_at": now,
+                "last_active": now,
+                "turn_count": 0
+            }
+            self.sessions[device_id] = session
+        return session
+
+    def get_session_id(self, device_id: str) -> str:
+        sess = self.get_or_create_session(device_id)
+        return sess.get("session_id", f"sess_{int(time.time())}")
+
+    def get_history(self, device_id: str) -> List[Dict[str, str]]:
+        if not device_id:
+            return []
+        session = self.sessions.get(device_id)
+        if not session:
+            return []
+        if time.time() - session.get("last_active", 0) > self.session_timeout:
+            logger.info("Session context for [%s] expired (>%ss), resetting context.", device_id, self.session_timeout)
+            self.sessions.pop(device_id, None)
+            return []
+        return list(session.get("history", []))
+
+    def add_turn(self, device_id: str, user_text: str, assistant_text: str) -> int:
+        if not device_id or not user_text or not assistant_text:
+            return 0
+        now = time.time()
+        sess = self.get_or_create_session(device_id)
+        sess["last_active"] = now
+        sess["turn_count"] += 1
+        sess["history"].append({"role": "user", "content": user_text})
+        sess["history"].append({"role": "assistant", "content": assistant_text})
+        if len(sess["history"]) > self.max_history_turns:
+            sess["history"] = sess["history"][-self.max_history_turns:]
+        return sess["turn_count"]
+
+    def clear_session(self, device_id: str):
+        if device_id in self.sessions:
+            logger.info("Cleared conversation session for [%s]", device_id)
+            self.sessions.pop(device_id, None)
+
+    @staticmethod
+    def is_farewell(text: str) -> bool:
+        """Phát hiện các câu chào tạm biệt hoặc kết thúc phiên trò chuyện."""
+        if not text:
+            return False
+        normalized = _normalize_vn(text).strip()
+        farewell_keywords = [
+            "tam biet", "bye", "goodbye", "cam on", "cam on nhe", "cam on ban",
+            "thoi", "thoi duoc roi", "nghi di", "im di", "im lang", "het roi",
+            "khong co gi", "dung lai", "khong can nua", "ok roi", "duoc roi"
+        ]
+        for kw in farewell_keywords:
+            if normalized == kw or normalized.startswith(kw + " ") or normalized.endswith(" " + kw) or (f" {kw} " in normalized):
+                return True
+        return False
 
 class AIAgentRouter:
     def __init__(self, gemini_api_key: str, deepseek_api_key: str, ha_bridge, data_dir: Optional[str] = None):
@@ -63,6 +156,7 @@ class AIAgentRouter:
         os.makedirs(self.data_dir, exist_ok=True)
         self.config_file = os.path.join(self.data_dir, "ai_config.json")
         self.config = self._load_initial_config(gemini_api_key, deepseek_api_key)
+        self.session_mgr = ConversationSessionManager(session_timeout=self.config.get("session_timeout_seconds", 120.0))
 
     def _load_initial_config(self, default_gemini: str, default_deepseek: str) -> Dict[str, Any]:
         default_cfg = {
@@ -96,7 +190,10 @@ class AIAgentRouter:
             "stt_service_url": os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions"),
             "stt_provider": "auto",
             "stt_groq_model": "whisper-large-v3-turbo",
-            "auto_fallback": True
+            "auto_fallback": True,
+            "continuous_conversation": True,
+            "continuous_timeout_ms": 8000,
+            "session_timeout_seconds": 120
         }
 
         if os.path.exists(self.config_file):
@@ -125,6 +222,9 @@ class AIAgentRouter:
             "stt_provider": self.config.get("stt_provider", "auto"),
             "stt_groq_model": self.config.get("stt_groq_model", "whisper-large-v3-turbo"),
             "auto_fallback": self.config.get("auto_fallback", True),
+            "continuous_conversation": self.config.get("continuous_conversation", True),
+            "continuous_timeout_ms": self.config.get("continuous_timeout_ms", 8000),
+            "session_timeout_seconds": self.config.get("session_timeout_seconds", 120),
             "gemini": {
                 "api_key_masked": mask_key(self.config["gemini"].get("api_key")),
                 "has_key": bool(self.config["gemini"].get("api_key")),
@@ -173,6 +273,13 @@ class AIAgentRouter:
                 self.config["stt_groq_model"] = new_data["stt_groq_model"]
             if "auto_fallback" in new_data:
                 self.config["auto_fallback"] = bool(new_data["auto_fallback"])
+            if "continuous_conversation" in new_data:
+                self.config["continuous_conversation"] = bool(new_data["continuous_conversation"])
+            if "continuous_timeout_ms" in new_data:
+                self.config["continuous_timeout_ms"] = int(new_data["continuous_timeout_ms"])
+            if "session_timeout_seconds" in new_data:
+                self.config["session_timeout_seconds"] = int(new_data["session_timeout_seconds"])
+                self.session_mgr.session_timeout = self.config["session_timeout_seconds"]
 
             for prov in ["gemini", "deepseek", "groq", "openrouter", "custom"]:
                 if prov in new_data and isinstance(new_data[prov], dict):
@@ -766,74 +873,169 @@ class AIAgentRouter:
 
 
     async def _try_local_rule_fallback(self, user_text: str, context_room: str = "") -> Optional[str]:
-        """Dự phòng offline nội bộ qua Home Assistant khi toàn bộ Cloud AI bị đứt mạng hoặc quá tải."""
+        """Dự phòng offline thông minh qua Home Assistant: Chuẩn hóa ngữ âm tiếng Việt & Area Matching chính xác 100%."""
         if not user_text or not self.ha_bridge:
             return None
-        t = user_text.lower().strip()
+        norm_user = _normalize_vn(user_text)
 
-        is_turn_on = any(w in t for w in ["bật", "mở", "khởi động", "set", "chỉnh"])
-        is_turn_off = any(w in t for w in ["tắt", "đóng", "ngắt", "dừng"])
+        is_turn_on = any(w in norm_user for w in ["bat", "mo", "khoi dong", "set", "chinh"])
+        is_turn_off = any(w in norm_user for w in ["tat", "dong", "ngat", "dung"])
         if not is_turn_on and not is_turn_off:
             return None
 
         action = "turn_on" if is_turn_on else "turn_off"
         action_name = "bật" if is_turn_on else "tắt"
 
+        # 1. Xác định domain mục tiêu
         target_domain = ""
-        if any(w in t for w in ["máy lạnh", "điều hòa", "ac"]):
+        if any(w in norm_user for w in ["may lanh", "dieu hoa", "ac", "nhiet do"]):
             target_domain = "climate"
-        elif any(w in t for w in ["đèn", "ánh sáng", "led"]):
+        elif any(w in norm_user for w in ["den", "anh sang", "led", "chieu sang"]):
             target_domain = "light"
-        elif any(w in t for w in ["quạt", "fan"]):
+        elif any(w in norm_user for w in ["quat", "fan"]):
             target_domain = "fan"
-        elif any(w in t for w in ["công tắc", "ổ cắm"]):
+        elif any(w in norm_user for w in ["cong tac", "o cam"]):
             target_domain = "switch"
 
-        matched_eid = None
-        matched_name = None
-        room_lower = (context_room or "").lower()
+        # 2. Lấy danh sách entities đầy đủ có kèm Area/Phòng
+        all_entities = self.ha_bridge.get_entities_list()
+        if not all_entities:
+            return None
 
-        for eid, state_obj in self.ha_bridge.states.items():
-            domain = eid.split(".")[0]
-            if target_domain and domain != target_domain:
+        candidates = []
+        for e in all_entities:
+            dom = e.get("domain", "")
+            if target_domain:
+                if target_domain == "light":
+                    if dom == "light" or (dom == "switch" and "den" in _normalize_vn(e.get("name", ""))):
+                        candidates.append(e)
+                elif target_domain == "fan":
+                    if dom == "fan" or "quat" in _normalize_vn(e.get("name", "")):
+                        candidates.append(e)
+                elif dom == target_domain:
+                    candidates.append(e)
+            else:
+                candidates.append(e)
+
+        # 3. Phát hiện phòng đích trong câu nói
+        norm_context = _normalize_vn(context_room)
+        detected_room = ""
+        # Duyệt qua các area đã biết trong HA
+        for a_id, a_data in self.ha_bridge.areas.items():
+            a_norm_name = _normalize_vn(a_data.get("name", ""))
+            a_norm_id = _normalize_vn(a_id)
+            if a_norm_name and len(a_norm_name) >= 4 and a_norm_name in norm_user:
+                detected_room = a_norm_name
+                break
+            if a_norm_id and len(a_norm_id) >= 4 and a_norm_id in norm_user:
+                detected_room = a_norm_id
+                break
+
+        # Khớp các cụm từ phòng thông dụng
+        if not detected_room:
+            for common_room in ["phong khach", "phong bep", "phong chieu", "phong ngu ti", "phong ngu me", "phong ngu tret", "ban cong", "nha xe"]:
+                if common_room in norm_user:
+                    detected_room = common_room
+                    break
+
+        effective_room = detected_room or norm_context
+
+        best_entity = None
+        best_score = -1
+
+        for e in candidates:
+            eid = e.get("entity_id", "")
+            norm_name = _normalize_vn(e.get("name", ""))
+            norm_eid = _normalize_vn(eid)
+            norm_area = _normalize_vn(e.get("area_name", ""))
+            norm_area_id = _normalize_vn(e.get("area_id", ""))
+
+            score = 0
+            is_room_match = False
+            if effective_room:
+                if effective_room in norm_area or norm_area in effective_room:
+                    is_room_match = True
+                    score += 50
+                elif effective_room in norm_area_id or norm_area_id in effective_room:
+                    is_room_match = True
+                    score += 50
+                elif effective_room in norm_eid:
+                    is_room_match = True
+                    score += 40
+
+            # Nếu người dùng đích danh gọi tên phòng khác, loại bỏ ngay các thiết bị phòng khác
+            if detected_room and not is_room_match:
                 continue
-            attrs = state_obj.get("attributes", {})
-            friendly_name = attrs.get("friendly_name", "").lower()
 
-            if room_lower and room_lower in t:
-                if room_lower in friendly_name or room_lower in eid.lower():
-                    matched_eid = eid
-                    matched_name = attrs.get("friendly_name", eid)
-                    break
-            elif target_domain:
-                if room_lower and (room_lower in friendly_name or room_lower in eid.lower()):
-                    matched_eid = eid
-                    matched_name = attrs.get("friendly_name", eid)
-                    break
-                elif not matched_eid:
-                    matched_eid = eid
-                    matched_name = attrs.get("friendly_name", eid)
+            # Điểm khớp loại thiết bị con (Đèn trần / Đèn ngủ / Quạt...)
+            if "tran" in norm_user and "tran" in norm_name:
+                score += 30
+            if "ngu" in norm_user and "ngu" in norm_name:
+                score += 20
+            if "chinh" in norm_user and "chinh" in norm_name:
+                score += 20
+            if "hat" in norm_user and "hat" in norm_name:
+                score += 20
+            if "ban cong" in norm_user and "ban cong" in norm_name:
+                score += 25
+            if "quat" in norm_user and "quat" in norm_name:
+                score += 30
 
-        if matched_eid:
-            domain = matched_eid.split(".")[0]
-            try:
-                if domain == "climate":
-                    if is_turn_off:
-                        await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "off"})
-                    else:
-                        await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "cool"})
+            for word in norm_name.split():
+                if len(word) >= 3 and word in norm_user:
+                    score += 5
+
+            if is_room_match and target_domain == "light":
+                if "tran" in norm_name or "1" in eid:
+                    score += 10
+
+            if score > best_score and score > 0:
+                best_score = score
+                best_entity = e
+
+        if not best_entity:
+            room_label = detected_room or context_room
+            if room_label:
+                return f"Không tìm thấy thiết bị phù hợp tại {room_label}."
+            return "Không tìm thấy thiết bị nào phù hợp với yêu cầu của bạn."
+
+        matched_eid = best_entity.get("entity_id")
+        matched_name = best_entity.get("name", matched_eid)
+        domain = matched_eid.split(".")[0]
+
+        try:
+            if domain == "climate":
+                # Kiểm tra xem có lệnh chỉnh nhiệt độ không (ví dụ "25 độ")
+                temp_match = re.search(r'\b(\d{2})\s*(do|deg|c)?\b', norm_user)
+                if temp_match and is_turn_on:
+                    target_temp = int(temp_match.group(1))
+                    if 16 <= target_temp <= 30:
+                        await self.ha_bridge.call_service("climate", "set_temperature", entity_id=matched_eid, service_data={"temperature": target_temp})
+                        return f"Đã chỉnh nhiệt độ {matched_name} thành {target_temp}°C."
+                if is_turn_off:
+                    await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "off"})
                 else:
-                    await self.ha_bridge.call_service(domain, action, entity_id=matched_eid)
-                return f"Đã {action_name} {matched_name or matched_eid} theo lệnh dự phòng nội bộ."
-            except Exception as ex:
-                logger.error("Local rule execution error for %s: %s", matched_eid, ex)
+                    await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=matched_eid, service_data={"hvac_mode": "cool"})
+            else:
+                await self.ha_bridge.call_service(domain, action, entity_id=matched_eid)
 
-        return None
+            return f"Đã {action_name} {matched_name} thành công."
+        except Exception as ex:
+            logger.error("Local rule execution error for %s: %s", matched_eid, ex)
+            return f"Lỗi điều khiển {matched_name}: {ex}"
 
-    async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> str:
+    async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None) -> str:
         """Xử lý giọng nói người dùng, kết hợp Fast-Rule, Multi-AI Function Calling và Cơ chế Tự Động Dự Phòng (Failover/Fallback)."""
         if not user_text:
             return "Tôi không nghe thấy gì cả."
+
+        # 0. Kiểm tra câu chào tạm biệt / kết thúc hội thoại
+        if self.session_mgr.is_farewell(user_text):
+            if device_id:
+                self.session_mgr.clear_session(device_id)
+            return "Dạ, rất hân hạnh được hỗ trợ bạn. Khi nào cần bạn cứ gọi Nala nhé!"
+
+        history = self.session_mgr.get_history(device_id) if device_id else []
 
         lower_text = user_text.lower().strip()
 
@@ -888,9 +1090,14 @@ class AIAgentRouter:
                             "x-goog-api-key": api_key,
                             "Content-Type": "application/json"
                         }
+                        gemini_contents = []
+                        for h in history:
+                            g_role = "model" if h["role"] == "assistant" else "user"
+                            gemini_contents.append({"role": g_role, "parts": [{"text": h["content"]}]})
+                        gemini_contents.append({"role": "user", "parts": [{"text": user_text}]})
                         payload = {
                             "system_instruction": {"parts": [{"text": system_instruction}]},
-                            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                            "contents": gemini_contents,
                             "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
                             "generationConfig": {"temperature": 0.4, "maxOutputTokens": 150}
                         }
@@ -910,10 +1117,15 @@ class AIAgentRouter:
                                 elif "text" in part:
                                     text_replies.append(part["text"].strip())
 
+                            ret = ""
                             if confirmations:
-                                return " ".join(confirmations)
-                            if text_replies:
-                                return " ".join(text_replies)
+                                ret = " ".join(confirmations)
+                            elif text_replies:
+                                ret = " ".join(text_replies)
+                            if ret:
+                                if device_id:
+                                    self.session_mgr.add_turn(device_id, user_text, ret)
+                                return ret
                         else:
                             last_error_desc = f"Gemini HTTP {res.status_code}"
                             logger.warning("Gemini API error %d: %s. Auto-falling back to next provider...",
@@ -943,12 +1155,14 @@ class AIAgentRouter:
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                             use_model = model
 
+                        openai_messages = [{"role": "system", "content": system_instruction}]
+                        for h in history:
+                            openai_messages.append({"role": h["role"], "content": h["content"]})
+                        openai_messages.append({"role": "user", "content": user_text})
+
                         payload = {
                             "model": use_model,
-                            "messages": [
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": user_text}
-                            ],
+                            "messages": openai_messages,
                             "tools": self._get_ha_tools_schema_openai(),
                             "tool_choice": "auto",
                             "max_tokens": 150,
@@ -974,12 +1188,15 @@ class AIAgentRouter:
                                         args = {}
                                     res_msg = await self.execute_tool(fn_name, args)
                                     confirmations.append(res_msg)
-                                if confirmations:
-                                    return " ".join(confirmations)
-                                return "Đã thực hiện yêu cầu cho bạn."
+                                ret = " ".join(confirmations) if confirmations else "Đã thực hiện yêu cầu cho bạn."
+                                if device_id:
+                                    self.session_mgr.add_turn(device_id, user_text, ret)
+                                return ret
 
                             content = msg.get("content", "").strip()
                             if content:
+                                if device_id:
+                                    self.session_mgr.add_turn(device_id, user_text, content)
                                 return content
                         else:
                             last_error_desc = f"{prov} HTTP {res.status_code}"
@@ -999,11 +1216,23 @@ class AIAgentRouter:
 
         return f"Xin lỗi, các máy chủ AI đều đang bận ({last_error_desc}). Vui lòng thử lại sau ít giây."
 
-    async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None) -> AsyncGenerator[str, None]:
+    async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None) -> AsyncGenerator[str, None]:
         """Stream kết quả đối thoại thời gian thực từng token với cơ chế Tự Động Dự Phòng (Failover / Fallback)."""
         if not user_text or not user_text.strip():
             yield "Tôi không nghe thấy gì cả."
             return
+
+        # 0. Kiểm tra câu chào tạm biệt / kết thúc hội thoại
+        if self.session_mgr.is_farewell(user_text):
+            if device_id:
+                self.session_mgr.clear_session(device_id)
+            farewell_msg = "Dạ, rất hân hạnh được hỗ trợ bạn. Khi nào cần bạn cứ gọi Nala nhé!"
+            for word in farewell_msg.split(" "):
+                yield word + " "
+                await asyncio.sleep(0.02)
+            return
+
+        history = self.session_mgr.get_history(device_id) if device_id else []
 
         lower_text = user_text.lower().strip()
 
@@ -1086,12 +1315,14 @@ class AIAgentRouter:
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                             use_model = model
 
+                        openai_messages = [{"role": "system", "content": system_instruction}]
+                        for h in history:
+                            openai_messages.append({"role": h["role"], "content": h["content"]})
+                        openai_messages.append({"role": "user", "content": user_text})
+
                         payload = {
                             "model": use_model,
-                            "messages": [
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": user_text}
-                            ],
+                            "messages": openai_messages,
                             "tools": self._get_ha_tools_schema_openai(),
                             "tool_choice": "auto",
                             "stream": True,
@@ -1179,9 +1410,15 @@ class AIAgentRouter:
                             "x-goog-api-key": api_key,
                             "Content-Type": "application/json"
                         }
+                        gemini_contents = []
+                        for h in history:
+                            g_role = "model" if h["role"] == "assistant" else "user"
+                            gemini_contents.append({"role": g_role, "parts": [{"text": h["content"]}]})
+                        gemini_contents.append({"role": "user", "parts": [{"text": user_text}]})
+
                         payload = {
                             "system_instruction": {"parts": [{"text": system_instruction}]},
-                            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                            "contents": gemini_contents,
                             "tools": [{"function_declarations": self._get_ha_tools_schema_gemini()}],
                             "generationConfig": {"temperature": 0.4, "maxOutputTokens": 200}
                         }

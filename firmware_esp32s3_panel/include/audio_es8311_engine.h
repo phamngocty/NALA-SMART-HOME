@@ -171,6 +171,12 @@ public:
         write_reg(0x31, 0x00); // Luôn giữ DAC unmute, việc ngắt tiếng do PA_EN đảm nhiệm
     }
 
+    // Dừng phát âm thanh tức thì & xả sạch DMA buffer (Barge-in / Abort < 1ms)
+    void stop_playback() {
+        mute_speaker(true);
+        i2s_zero_dma_buffer(I2S_NUM_0);
+    }
+
     // Phát âm thanh kiểm tra (Tone Beep) trực tiếp qua I2S DMA Stereo
     void play_beep(uint16_t freq_hz = 1000, uint16_t duration_ms = 700) {
         write_reg(0x31, 0x00); // Unmute DAC
@@ -229,11 +235,11 @@ public:
         write_reg(0x31, 0x00); // Unmute DAC
         write_reg(0x32, 0xC4); // +3dB
         mute_speaker(false);   // Mo PA
-        delay(20);
-        play_tone(1046, 70, 0.85f); // C6
         delay(15);
-        play_tone(1318, 110, 0.90f); // E6
-        delay(25);
+        play_tone(1046, 60, 0.85f);  // C6 (1046Hz) - nốt Đô thanh thoát
+        delay(10);
+        play_tone(1568, 120, 0.90f); // G6 (1568Hz) - nốt Sol cao ngân vang
+        delay(20);
         mute_speaker(true);
     }
 

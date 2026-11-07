@@ -643,6 +643,110 @@
             border-color: #f59e0b;
         }
 
+        /* Xiaozhi Chat Sessions View */
+        .chat-session-card {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            margin-bottom: 18px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            transition: all 0.2s ease;
+        }
+        .chat-session-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+        }
+        .chat-session-header {
+            background: linear-gradient(90deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chat-session-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: #090d16;
+        }
+        .chat-bubble-row {
+            display: flex;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+        .chat-bubble-row.user {
+            justify-content: flex-end;
+        }
+        .chat-bubble-row.assistant {
+            justify-content: flex-start;
+        }
+        .chat-bubble {
+            max-width: 82%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            color: #ffffff;
+            border-bottom-right-radius: 3px;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+        }
+        .chat-bubble.assistant {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-bottom-left-radius: 3px;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        }
+        .chat-bubble-meta {
+            font-size: 11px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .chat-bubble.user .chat-bubble-meta {
+            color: #c7d2fe;
+        }
+        .chat-bubble.assistant .chat-bubble-meta {
+            color: #94a3b8;
+        }
+        .chat-play-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: inherit;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+        .chat-play-btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .chat-context-box {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px dashed rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #94a3b8;
+            display: none;
+        }
+
         .btn-intercom-card {
             background: rgba(16, 185, 129, 0.12);
             border: 1px solid rgba(16, 185, 129, 0.35);
@@ -1123,8 +1227,8 @@
                 <button class="btn-ai-header" onclick="openAIConfigModal()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.35);">
                     🤖 Cấu Hình Voice AI & STT/TTS
                 </button>
-                <button class="btn-history-header" onclick="openHistoryModal()">
-                    📜 Lịch Sử & Tự Động Xóa
+                <button class="btn-history-header" onclick="openHistoryModal()" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    💬 Lịch Sử Giọng Nói & Chat Xiaozhi
                 </button>
             </div>
         </header>
@@ -1389,6 +1493,22 @@
                         <span class="hint" style="color: #94a3b8; font-size: 11px; margin-top: 4px; display: block;">Sau khi bấm nút Toàn Nhà để xem hoặc điều khiển phòng khác, màn hình sẽ tự động khôi phục về các nút của phòng này sau khoảng thời gian này.</span>
                     </div>
 
+                    <div class="form-group" style="background: rgba(15, 23, 42, 0.6); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.25); margin-bottom: 16px;">
+                        <label style="color: #c084fc; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span>🌙 Thời Gian Chờ Ra Màn Hình Chờ (Screensaver):</span>
+                            <span id="standbyTimeoutValLabel" style="color: #fbbf24; font-weight: 800;">30 giây</span>
+                        </label>
+                        <select id="wizStandbyTimeout" onchange="onWizardStandbyTimeoutChanged(this.value)" style="width: 100%; padding: 9px 12px; background: #0f172a; border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600;">
+                            <option value="15">15 giây (Nhanh)</option>
+                            <option value="30" selected>30 giây (Mặc định - Khuyên dùng)</option>
+                            <option value="60">1 phút (60 giây)</option>
+                            <option value="120">2 phút</option>
+                            <option value="300">5 phút</option>
+                            <option value="0">Tắt (Luôn sáng màn hình chính, không vào màn hình chờ)</option>
+                        </select>
+                        <span class="hint" style="color: #94a3b8; font-size: 11px; margin-top: 4px; display: block;">Sau khoảng thời gian không có thao tác chạm, màn hình sẽ tự động chuyển sang giao diện Đồng Hồ Chờ OLED sang trọng và tiết kiệm điện.</span>
+                    </div>
+
                     <div class="form-group">
                         <label>Trợ Lý AI Ưu Tiên Xử Lý Giọng Nói</label>
                         <select id="wizAiModel">
@@ -1630,16 +1750,27 @@
                     </div>
                 </div>
 
-                <!-- Bộ lọc & Tìm kiếm -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <!-- Bộ lọc & Chế độ xem -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; gap: 8px;">
                         <button class="hist-filter-btn active" id="filterAll" onclick="setHistoryFilter('')">Tất Cả</button>
                         <button class="hist-filter-btn" id="filterAI" onclick="setHistoryFilter('voice_ai')">🤖 AI Giọng Nói</button>
                         <button class="hist-filter-btn" id="filterIntercom" onclick="setHistoryFilter('intercom')">🎙️ Đàm Thoại</button>
                     </div>
-                    <button onclick="loadHistoryData()" style="background: transparent; border: 1px solid var(--border-color); color: #94a3b8; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;">
-                        🔄 Làm mới
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <!-- Nút chuyển đổi giao diện Xiaozhi Chat vs Bảng -->
+                        <div style="display: inline-flex; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 2px;">
+                            <button id="btnViewChat" class="hist-filter-btn active" onclick="setHistoryViewMode('chat')" style="border: none; padding: 5px 12px; font-size: 12px; border-radius: 6px;">
+                                💬 Đoạn Chat (Xiaozhi)
+                            </button>
+                            <button id="btnViewTable" class="hist-filter-btn" onclick="setHistoryViewMode('table')" style="border: none; padding: 5px 12px; font-size: 12px; background: transparent; color: #94a3b8; border-radius: 6px;">
+                                📋 Dạng Bảng
+                            </button>
+                        </div>
+                        <button onclick="loadHistoryData()" style="background: transparent; border: 1px solid var(--border-color); color: #94a3b8; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer;">
+                            🔄 Làm mới
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Bảng Danh Sách Lịch Sử -->
@@ -2092,6 +2223,60 @@
                         <option value="vi-VN-NamMinhNeural">Nam Minh (Nam - Rõ ràng, ấm áp)</option>
                     </select>
                 </div>
+
+                <!-- Xiaozhi-style Continuous Conversation & Context Memory Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-weight: 700; color: #a855f7; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                                <span>💬</span> Trò Chuyện Liên Tục & Nhớ Ngữ Cảnh (Xiaozhi Continuous Dialogue)
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8;">
+                                Tự động mở lại mic sau khi AI nói xong, nhớ câu hỏi trước đó và tự ngắt khi hết thời gian chờ (Timeout).
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 12px; color: #f1f5f9; font-weight: 600;">Kích hoạt:</label>
+                            <input type="checkbox" id="cfgContinuousEnabled" checked style="width: 20px; height: 20px; accent-color: #a855f7; cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                            <label style="font-size: 11px; font-weight: 600; color: #c084fc; display: block; margin-bottom: 6px;">
+                                ⏱️ Thời Gian Chờ Câu Tiếp (Inactivity Timeout):
+                            </label>
+                            <select id="cfgContinuousTimeoutMs" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="5000">5 giây (Nhanh gọn, tiết kiệm)</option>
+                                <option value="8000" selected>8 giây (Chuẩn Xiaozhi - Khuyên dùng)</option>
+                                <option value="12000">12 giây (Thoải mái suy nghĩ)</option>
+                                <option value="15000">15 giây (Nhà có người lớn tuổi)</option>
+                            </select>
+                            <div style="font-size: 10px; color: #94a3b8; margin-top: 6px;">
+                                Sau khi AI nói xong, nếu không ai nói gì trong thời gian này, mic sẽ tự động tắt và về IDLE.
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="font-size: 11px; font-weight: 600; color: #c084fc;">
+                                    🧠 Thời Gian Lưu Ngữ Cảnh:
+                                </label>
+                                <button type="button" onclick="clearAIContextMemory()" style="background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;">
+                                    🧹 Xóa ngữ cảnh
+                                </button>
+                            </div>
+                            <select id="cfgSessionTimeoutSeconds" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="60">60 giây (1 phút)</option>
+                                <option value="120" selected>120 giây (2 phút - Khuyên dùng)</option>
+                                <option value="300">300 giây (5 phút)</option>
+                            </select>
+                            <div id="clearContextStatus" style="font-size: 10px; color: #10b981; margin-top: 6px;">
+                                AI tự động liên kết các câu: 'bật máy lạnh' ➔ 'hạ xuống 24 độ' ➔ 'thôi tắt đi'.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Multi-Room Wake Word & Spatial Arbitration -->
@@ -2112,21 +2297,36 @@
                 </div>
 
                 <!-- Wake Word Model & Window -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                    <div>
-                        <label style="font-size: 11px; color: #94a3b8;">Từ Khóa Đánh Thức:</label>
-                        <select id="cfgWakeSelectedModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
-                            <option value="hey_jarvis">Hey Jarvis (Mặc định - Độ nhạy cao)</option>
-                            <option value="alexa">Alexa (Chuẩn quốc tế)</option>
+                <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 16px;">
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="font-size: 11px; font-weight: 600; color: #38bdf8;">🎙️ Từ Khóa Đánh Thức:</label>
+                            <span style="font-size: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);">OpenWakeWord</span>
+                        </div>
+                        <select id="cfgWakeSelectedModel" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: #f8fafc; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            <option value="hey_nala" selected>🌟 Hey Nala (Trợ Lý NALA Smart Home)</option>
+                            <option value="hey_jarvis">⚡ Hey Jarvis (Độ nhạy cao)</option>
+                            <option value="alexa">🌐 Alexa (Chuẩn quốc tế)</option>
                         </select>
+                        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px dashed #475569;">
+                            <span style="font-size: 11px; color: #cbd5e1;">Mô hình riêng:</span>
+                            <label for="wakeModelUploadInput" style="display: inline-flex; align-items: center; gap: 5px; background: #0284c7; color: white; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                                📤 Tải lên file (.tflite)
+                            </label>
+                            <input type="file" id="wakeModelUploadInput" accept=".tflite" style="display: none;" onchange="uploadCustomWakeModel(this)">
+                        </div>
+                        <div id="wakeModelUploadStatus" style="font-size: 10px; margin-top: 4px; color: #94a3b8; text-align: right;"></div>
                     </div>
-                    <div>
-                        <label style="font-size: 11px; color: #94a3b8;">Cửa Sổ Phân Xử Không Gian:</label>
-                        <select id="cfgWakeWindowMs" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
-                            <option value="300">300 mili-giây (Tối ưu nhất cho gia đình)</option>
-                            <option value="500">500 mili-giây (Nhà rộng / thông tầng)</option>
-                            <option value="200">200 mili-giây (Phản xạ siêu tốc)</option>
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                        <label style="font-size: 11px; font-weight: 600; color: #38bdf8; display: block; margin-bottom: 6px;">⏱️ Cửa Sổ Phân Xử Không Gian:</label>
+                        <select id="cfgWakeWindowMs" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <option value="300">300ms (Tối ưu nhất cho gia đình)</option>
+                            <option value="500">500ms (Nhà rộng / thông tầng)</option>
+                            <option value="200">200ms (Phản xạ siêu tốc)</option>
                         </select>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.4;">
+                            Hệ thống tự động so sánh âm lượng RMS trong cửa sổ thời gian này và chỉ kích hoạt màn hình gần bạn nhất!
+                        </div>
                     </div>
                 </div>
 
@@ -3804,6 +4004,9 @@
             const rmTimeout = (settings.room_view_timeout !== undefined) ? settings.room_view_timeout : 15;
             document.getElementById('wizRoomTimeout').value = rmTimeout;
             onWizardTimeoutChanged(rmTimeout);
+            const stbTimeout = (settings.standby_timeout !== undefined) ? settings.standby_timeout : 30;
+            document.getElementById('wizStandbyTimeout').value = stbTimeout;
+            onWizardStandbyTimeoutChanged(stbTimeout);
 
             renderWizardButtonsList();
             updateScreenPreview();
@@ -3909,6 +4112,15 @@
             else lbl.textContent = v + " giây";
         }
 
+        function onWizardStandbyTimeoutChanged(val) {
+            const v = parseInt(val);
+            const lbl = document.getElementById('standbyTimeoutValLabel');
+            if (!lbl) return;
+            if (v === 0) lbl.textContent = "Không vào màn hình chờ";
+            else if (v >= 60) lbl.textContent = (v / 60) + " phút";
+            else lbl.textContent = v + " giây";
+        }
+
         async function saveInstallerConfig() {
             const code = document.getElementById('wizPairingCode').value;
             const room = document.getElementById('wizRoomName').value.trim() || "Phòng Khách";
@@ -3920,6 +4132,7 @@
             const ring_on_call = document.getElementById('wizRingOnCall').checked;
             const ai_model = document.getElementById('wizAiModel').value;
             const room_view_timeout = parseInt(document.getElementById('wizRoomTimeout').value);
+            const standby_timeout = parseInt(document.getElementById('wizStandbyTimeout').value);
 
             const payload = {
                 pairing_code: code,
@@ -3933,7 +4146,8 @@
                     mic_gain: mic_gain,
                     ring_on_call: ring_on_call,
                     ai_model: ai_model,
-                    room_view_timeout: isNaN(room_view_timeout) ? 15 : room_view_timeout
+                    room_view_timeout: isNaN(room_view_timeout) ? 15 : room_view_timeout,
+                    standby_timeout: isNaN(standby_timeout) ? 30 : standby_timeout
                 }
             };
 
@@ -4560,6 +4774,31 @@
         let isHistoryModalOpen = false;
         let currentHistoryFilter = '';
         let currentHistoryRecords = [];
+        let historyViewMode = 'chat'; // 'chat' (Xiaozhi mode) or 'table'
+
+        function setHistoryViewMode(mode) {
+            historyViewMode = mode;
+            const btnChat = document.getElementById('btnViewChat');
+            const btnTable = document.getElementById('btnViewTable');
+            if (btnChat && btnTable) {
+                if (mode === 'chat') {
+                    btnChat.classList.add('active');
+                    btnChat.style.background = '#f59e0b';
+                    btnChat.style.color = '#000';
+                    btnTable.classList.remove('active');
+                    btnTable.style.background = 'transparent';
+                    btnTable.style.color = '#94a3b8';
+                } else {
+                    btnTable.classList.add('active');
+                    btnTable.style.background = '#f59e0b';
+                    btnTable.style.color = '#000';
+                    btnChat.classList.remove('active');
+                    btnChat.style.background = 'transparent';
+                    btnChat.style.color = '#94a3b8';
+                }
+            }
+            renderHistoryList();
+        }
 
         async function openHistoryModal() {
             isHistoryModalOpen = true;
@@ -4663,6 +4902,11 @@
                 return;
             }
 
+            if (historyViewMode === 'chat') {
+                listEl.innerHTML = `<div style="padding: 12px;">${renderChatView(filtered)}</div>`;
+                return;
+            }
+
             let html = `
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
                     <thead>
@@ -4722,6 +4966,143 @@
 
             html += `</tbody></table>`;
             listEl.innerHTML = html;
+        }
+
+        function renderChatView(filtered) {
+            const sessionMap = new Map();
+            // Sắp xếp thứ tự thời gian tăng dần để câu thoại diễn ra từ trên xuống dưới
+            const sorted = [...filtered].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+            sorted.forEach(r => {
+                const sId = r.session_id || (`sess_${Math.floor((r.timestamp || 0) / 120)}_${r.device_code || 'dev'}`);
+                if (!sessionMap.has(sId)) {
+                    sessionMap.set(sId, {
+                        session_id: sId,
+                        device_code: r.device_code,
+                        room_name: r.room_name,
+                        type: r.type,
+                        start_time: r.datetime,
+                        start_ts: r.timestamp || 0,
+                        turns: []
+                    });
+                }
+                sessionMap.get(sId).turns.push(r);
+            });
+
+            // Sắp xếp các phiên theo phiên mới nhất lên đầu
+            const sessions = Array.from(sessionMap.values()).sort((a, b) => b.start_ts - a.start_ts);
+
+            return sessions.map((sess, sIdx) => {
+                const turnCount = sess.turns.length;
+                const isIntercom = sess.type === 'intercom';
+                const sessionTitle = isIntercom ? 
+                    `🎙️ Đàm Thoại Nội Bộ • ${escapeHtml(sess.room_name || 'Phòng')}` : 
+                    `🤖 Phiên Trò Chuyện AI • ${escapeHtml(sess.room_name || 'Phòng')}`;
+
+                let turnsHtml = sess.turns.map((t, idx) => {
+                    let userAudio = '';
+                    if (t.audio_file) {
+                        userAudio = `
+                            <div style="margin-top: 6px;">
+                                <audio controls preload="none" style="height: 28px; width: 175px; border-radius: 14px;">
+                                    <source src="/api/history/audio/${escapeHtml(t.audio_file)}" type="audio/wav">
+                                </audio>
+                            </div>
+                        `;
+                    }
+
+                    let modelBadge = '';
+                    if (t.ai_model) {
+                        const isFast = t.ai_model.includes('Fast');
+                        const bg = isFast ? 'rgba(234, 179, 8, 0.2)' : 'rgba(56, 189, 248, 0.2)';
+                        const color = isFast ? '#facc15' : '#38bdf8';
+                        modelBadge = `<span style="background: ${bg}; color: ${color}; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${escapeHtml(t.ai_model)}</span>`;
+                    }
+
+                    const timeStr = t.datetime ? t.datetime.split(' ')[1] : '';
+
+                    return `
+                        <!-- Lượt thoại #${idx + 1} -->
+                        <div class="chat-bubble-row user">
+                            <div class="chat-bubble user">
+                                <div style="font-weight: 500; font-size: 13px;">${escapeHtml(t.text || '')}</div>
+                                ${userAudio}
+                                <div class="chat-bubble-meta">
+                                    <span>${escapeHtml(timeStr)}</span>
+                                    <span style="font-weight: 600;">Lượt #${t.turn_index || (idx + 1)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${t.response ? `
+                        <div class="chat-bubble-row assistant">
+                            <div style="font-size: 18px; margin-right: 8px; margin-top: 4px;" title="NALA AI Assistant">🤖</div>
+                            <div class="chat-bubble assistant">
+                                <div style="color: #f1f5f9; font-size: 13px;">${escapeHtml(t.response)}</div>
+                                <div class="chat-bubble-meta">
+                                    <div>${modelBadge}</div>
+                                    <span>${escapeHtml(timeStr)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    `;
+                }).join('');
+
+                const contextBoxId = `contextBox_${sIdx}`;
+
+                return `
+                    <div class="chat-session-card">
+                        <div class="chat-session-header">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span style="font-weight: 700; font-size: 13px; color: #f8fafc;">${sessionTitle}</span>
+                                <span style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;">[${escapeHtml(sess.device_code || '')}]</span>
+                                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;">${turnCount} câu đối thoại</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #94a3b8; font-size: 11px;">⏰ ${escapeHtml(sess.start_time || '')}</span>
+                                <button onclick="toggleSessionContext('${contextBoxId}')" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; border-radius: 6px; padding: 3px 8px; font-size: 11px; cursor: pointer;">
+                                    🧠 Ngữ Cảnh
+                                </button>
+                                <button onclick="deleteHistorySession('${escapeHtml(sess.session_id)}')" style="background: transparent; border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; padding: 3px 8px; font-size: 11px; cursor: pointer;" title="Xóa toàn bộ đoạn chat trong phiên này">
+                                    🗑️ Xóa phiên
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chat-session-body">
+                            ${turnsHtml}
+                            <div id="${contextBoxId}" class="chat-context-box">
+                                <strong style="color: #38bdf8;">🧠 Bộ Nhớ Ngữ Cảnh Phiên Này:</strong>
+                                <ul style="margin: 6px 0 0 16px; padding: 0; line-height: 1.6;">
+                                    ${sess.turns.map((t, i) => `<li><strong>Lượt ${i+1}:</strong> "${escapeHtml(t.text)}" ➔ <em>${escapeHtml(t.response || 'Đang kết nối')}</em></li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSessionContext(boxId) {
+            const el = document.getElementById(boxId);
+            if (!el) return;
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+
+        async function deleteHistorySession(sessionId) {
+            if (!confirm(`Bạn có chắc chắn muốn xóa toàn bộ đoạn chat trong phiên này?`)) return;
+            try {
+                const res = await fetch(`/api/history/session/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+                if (res.ok) {
+                    currentHistoryRecords = currentHistoryRecords.filter(r => (r.session_id || '') !== sessionId);
+                    renderHistoryList();
+                    loadHistorySettings();
+                    showToast("✓ Đã xóa đoạn chat phiên hội thoại");
+                } else {
+                    showToast("Lỗi khi xóa phiên", true);
+                }
+            } catch (e) {
+                showToast("Lỗi kết nối máy chủ!", true);
+            }
         }
 
         async function deleteHistoryItem(id) {
@@ -5243,6 +5624,15 @@ async function openAIConfigModal() {
             if (autoFallbackChk) {
                 autoFallbackChk.checked = (aiCurrentConfig.auto_fallback !== false);
             }
+            if (document.getElementById('cfgContinuousEnabled')) {
+                document.getElementById('cfgContinuousEnabled').checked = (aiCurrentConfig.continuous_conversation !== false);
+            }
+            if (document.getElementById('cfgContinuousTimeoutMs')) {
+                document.getElementById('cfgContinuousTimeoutMs').value = aiCurrentConfig.continuous_timeout_ms || 8000;
+            }
+            if (document.getElementById('cfgSessionTimeoutSeconds')) {
+                document.getElementById('cfgSessionTimeoutSeconds').value = aiCurrentConfig.session_timeout_seconds || 120;
+            }
             updateSTTBadge();
             updateAIProviderUI();
             loadWakeConfig();
@@ -5458,7 +5848,10 @@ async function saveAIConfig() {
         openrouter: {
             api_key: document.getElementById('cfgOpenrouterKey').value.trim(),
             model: document.getElementById('cfgOpenrouterModel').value
-        }
+        },
+        continuous_conversation: document.getElementById('cfgContinuousEnabled') ? document.getElementById('cfgContinuousEnabled').checked : true,
+        continuous_timeout_ms: parseInt(document.getElementById('cfgContinuousTimeoutMs')?.value) || 8000,
+        session_timeout_seconds: parseInt(document.getElementById('cfgSessionTimeoutSeconds')?.value) || 120
     };
 
     try {
@@ -5476,6 +5869,25 @@ async function saveAIConfig() {
         }
     } catch (err) {
         alert("❌ Lỗi kết nối khi lưu: " + err.message);
+    }
+}
+
+async function clearAIContextMemory() {
+    const statusEl = document.getElementById('clearContextStatus');
+    if (statusEl) statusEl.innerHTML = '<span style="color: #38bdf8;">⏳ Đang xóa ngữ cảnh...</span>';
+    try {
+        const res = await fetch('/api/ai/context/clear', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({device_id: 'web_admin'})
+        });
+        const data = await res.json();
+        if (statusEl) statusEl.innerHTML = `<span style="color: #10b981;">✅ ${data.message || 'Đã xóa bộ nhớ ngữ cảnh!'}</span>`;
+        setTimeout(() => {
+            if (statusEl) statusEl.innerHTML = 'AI tự động liên kết các câu: "bật máy lạnh" ➔ "hạ xuống 24 độ" ➔ "thôi tắt đi".';
+        }, 3000);
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${e.message}</span>`;
     }
 }
 
@@ -5551,7 +5963,7 @@ async function loadWakeConfig() {
         if (res.ok) {
             const data = await res.json();
             document.getElementById('cfgWakeGlobalEnabled').checked = data.global_enabled !== false;
-            document.getElementById('cfgWakeSelectedModel').value = data.selected_model || 'hey_jarvis';
+            document.getElementById('cfgWakeSelectedModel').value = data.selected_model || 'hey_nala';
             document.getElementById('cfgWakeWindowMs').value = data.arbitration_window_ms || 300;
 
             const container = document.getElementById('wakeRoomsContainer');

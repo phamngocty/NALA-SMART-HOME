@@ -22,6 +22,8 @@ struct SystemConfig_t {
     char ai_model[16];    // "gemini" or "deepseek"
     bool ring_on_call;    // Đổ chuông trước khi nhận cuộc gọi (true = Đổ chuông, false = Nhận trực tiếp)
     uint8_t room_view_timeout; // Thời gian tự động trở về phòng chính (giây, mặc định 15, 0 = tắt)
+    uint16_t standby_timeout;  // Thời gian chờ ra màn hình chờ (giây, mặc định 30, 0 = tắt)
+    bool wake_word_enabled;    // Bật/Tắt tính năng đánh thức rảnh tay Wake Word (Hey Nala)
 };
 
 class NVSConfigStore {
@@ -91,6 +93,8 @@ public:
 
         config.ring_on_call = prefs.getBool("ring_call", true); // Mặc định BẬT đổ chuông
         config.room_view_timeout = prefs.getUChar("rm_timeout", 15); // Mặc định 15 giây
+        config.standby_timeout = prefs.getUShort("stb_timeout", 30); // Mặc định 30 giây
+        config.wake_word_enabled = prefs.getBool("wake_en", true);   // Mặc định BẬT Wake Word rảnh tay
     }
 
     bool is_wifi_configured() const {
@@ -112,6 +116,8 @@ public:
         prefs.putString("ai_model", config.ai_model);
         prefs.putBool("ring_call", config.ring_on_call);
         prefs.putUChar("rm_timeout", config.room_view_timeout);
+        prefs.putUShort("stb_timeout", config.standby_timeout);
+        prefs.putBool("wake_en", config.wake_word_enabled);
         dirty = false;
         Serial.println("[NVS] Configuration saved to Flash!");
     }

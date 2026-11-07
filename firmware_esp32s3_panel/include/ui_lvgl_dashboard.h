@@ -129,12 +129,51 @@ private:
     uint32_t cached_house_alert_color;
     bool cached_has_active_devices;
 
-    // Tab 1 Elements: Nala AI
+    // Dasai Mochi Engine (Animated JDM Helmet & Expressive Visor)
+    enum MochiFaceState {
+        MOCHI_STATE_IDLE = 0,
+        MOCHI_STATE_LISTENING,
+        MOCHI_STATE_THINKING,
+        MOCHI_STATE_SPEAKING,
+        MOCHI_STATE_GOODBYE,
+        MOCHI_STATE_SLEEP
+    };
+
+    // Tab 1 Elements: Nala AI & Dasai Mochi Helmet
     lv_obj_t* lbl_ai_state;
     lv_obj_t* ai_pulse_circle;
+    lv_obj_t* lbl_ai_avatar;
     lv_obj_t* ta_ai_response;
     lv_obj_t* btn_ai_ptt;
     lv_obj_t* lbl_ai_ptt_text;
+
+    // Dasai Mochi Widget (Tab 1)
+    lv_obj_t* mochi_helmet;
+    lv_obj_t* mochi_visor;
+    lv_obj_t* mochi_eye_l_pill;
+    lv_obj_t* mochi_eye_r_pill;
+    lv_obj_t* mochi_eye_l_arc;
+    lv_obj_t* mochi_eye_r_arc;
+    lv_obj_t* mochi_blush_l;
+    lv_obj_t* mochi_blush_r;
+    lv_obj_t* mochi_mouth;
+
+    // Mini Mochi Standby Companion (Screensaver)
+    lv_obj_t* stb_mochi_helmet;
+    lv_obj_t* stb_mochi_visor;
+    lv_obj_t* stb_mochi_eye_l;
+    lv_obj_t* stb_mochi_eye_r;
+
+    // Mochi Animation Variables
+    MochiFaceState current_mochi_state;
+    uint32_t mochi_state_start_ms;
+    uint32_t mochi_last_blink_ms;
+    uint32_t mochi_blink_interval_ms;
+    bool mochi_is_blinking;
+    uint32_t mochi_blink_start_ms;
+    uint32_t mochi_last_anim_step_ms;
+    uint8_t mochi_mouth_step;
+    int8_t mochi_look_offset_x;
 
     // Tab 2 Elements: Đàm Thoại
     struct IntercomTarget {
@@ -235,7 +274,17 @@ public:
           home_devices_count(0), cached_rooms_count(0), active_remote_room_idx(0),
           btn_home_return(nullptr), lbl_home_return(nullptr),
           cached_house_alert_color(0x10B981), cached_has_active_devices(false),
-          lbl_ai_state(nullptr), ai_pulse_circle(nullptr), ta_ai_response(nullptr), btn_ai_ptt(nullptr), lbl_ai_ptt_text(nullptr),
+          lbl_ai_state(nullptr), ai_pulse_circle(nullptr), lbl_ai_avatar(nullptr), ta_ai_response(nullptr), btn_ai_ptt(nullptr), lbl_ai_ptt_text(nullptr),
+          mochi_helmet(nullptr), mochi_visor(nullptr),
+          mochi_eye_l_pill(nullptr), mochi_eye_r_pill(nullptr),
+          mochi_eye_l_arc(nullptr), mochi_eye_r_arc(nullptr),
+          mochi_blush_l(nullptr), mochi_blush_r(nullptr), mochi_mouth(nullptr),
+          stb_mochi_helmet(nullptr), stb_mochi_visor(nullptr),
+          stb_mochi_eye_l(nullptr), stb_mochi_eye_r(nullptr),
+          current_mochi_state(MOCHI_STATE_IDLE), mochi_state_start_ms(0),
+          mochi_last_blink_ms(0), mochi_blink_interval_ms(3500),
+          mochi_is_blinking(false), mochi_blink_start_ms(0),
+          mochi_last_anim_step_ms(0), mochi_mouth_step(0), mochi_look_offset_x(0),
           active_intercom_targets_count(0),
           btn_broadcast(nullptr), btn_intercom_ptt(nullptr), lbl_intercom_ptt(nullptr),
           lbl_intercom_status(nullptr), selected_room_idx(0xFF),
@@ -594,6 +643,8 @@ public:
     }
 
     void tick_countdown(uint32_t now_ms) {
+        tick_mochi_animation(now_ms);
+
         if (current_view_mode != VIEW_REMOTE_ROOM) return;
         if (room_view_timeout_sec == 0) return;
 
@@ -854,28 +905,346 @@ public:
         Serial.printf("[UI-ZERO-RAM] Room view timeout: %u sec\n", (unsigned int)sec);
     }
 
+    void switch_to_ai_tab() {
+        if (tabview) {
+            lv_tabview_set_act(tabview, 1, LV_ANIM_OFF);
+        }
+    }
+
+    void set_mochi_state(MochiFaceState st) {
+        current_mochi_state = st;
+        mochi_state_start_ms = millis();
+        mochi_is_blinking = false;
+
+        if (!mochi_visor) return;
+
+        switch (st) {
+            case MOCHI_STATE_IDLE: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0x1E293B), 0);
+                
+                lv_obj_clear_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_size(mochi_eye_l_pill, 16, 26);
+                lv_obj_set_size(mochi_eye_r_pill, 16, 26);
+                lv_obj_set_style_radius(mochi_eye_l_pill, 8, 0);
+                lv_obj_set_style_radius(mochi_eye_r_pill, 8, 0);
+                lv_obj_set_style_bg_color(mochi_eye_l_pill, lv_color_hex(0x38BDF8), 0);
+                lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0x38BDF8), 0);
+                lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22, -2);
+                lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22, -2);
+
+                if (mochi_eye_l_arc) lv_obj_add_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_eye_r_arc) lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_l) lv_obj_add_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_add_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_mouth) {
+                    lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_size(mochi_mouth, 10, 3);
+                    lv_obj_set_style_radius(mochi_mouth, 2, 0);
+                    lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0x38BDF8), 0);
+                    lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_LISTENING: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0x38BDF8), 0);
+
+                lv_obj_clear_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_size(mochi_eye_l_pill, 18, 28);
+                lv_obj_set_size(mochi_eye_r_pill, 18, 28);
+                lv_obj_set_style_radius(mochi_eye_l_pill, 9, 0);
+                lv_obj_set_style_radius(mochi_eye_r_pill, 9, 0);
+                lv_obj_set_style_bg_color(mochi_eye_l_pill, lv_color_hex(0x38BDF8), 0);
+                lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0x38BDF8), 0);
+                lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22, -2);
+                lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22, -2);
+
+                if (mochi_eye_l_arc) lv_obj_add_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_eye_r_arc) lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_l) lv_obj_add_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_add_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_mouth) {
+                    lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_size(mochi_mouth, 8, 3);
+                    lv_obj_set_style_radius(mochi_mouth, 2, 0);
+                    lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0x38BDF8), 0);
+                    lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_THINKING: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0xF59E0B), 0);
+
+                lv_obj_clear_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_size(mochi_eye_l_pill, 16, 26);
+                lv_obj_set_size(mochi_eye_r_pill, 16, 26);
+                lv_obj_set_style_radius(mochi_eye_l_pill, 8, 0);
+                lv_obj_set_style_radius(mochi_eye_r_pill, 8, 0);
+                lv_obj_set_style_bg_color(mochi_eye_l_pill, lv_color_hex(0xF59E0B), 0);
+                lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0xF59E0B), 0);
+
+                if (mochi_eye_l_arc) lv_obj_add_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_eye_r_arc) lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_l) lv_obj_add_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_add_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_mouth) {
+                    lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_size(mochi_mouth, 10, 3);
+                    lv_obj_set_style_radius(mochi_mouth, 2, 0);
+                    lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0xF59E0B), 0);
+                    lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_SPEAKING: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0x10B981), 0);
+
+                lv_obj_add_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_eye_l_arc) {
+                    lv_obj_clear_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_style_arc_color(mochi_eye_l_arc, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+                }
+                if (mochi_eye_r_arc) {
+                    lv_obj_clear_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_style_arc_color(mochi_eye_r_arc, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+                }
+
+                if (mochi_blush_l) lv_obj_clear_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_clear_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_mouth) {
+                    lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_size(mochi_mouth, 10, 6);
+                    lv_obj_set_style_radius(mochi_mouth, 3, 0);
+                    lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0x10B981), 0);
+                    lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_GOODBYE: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0xC084FC), 0);
+
+                if (mochi_eye_l_arc) {
+                    lv_obj_clear_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_style_arc_color(mochi_eye_l_arc, lv_color_hex(0xC084FC), LV_PART_INDICATOR);
+                }
+                lv_obj_add_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_eye_r_arc) lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_size(mochi_eye_r_pill, 16, 3);
+                lv_obj_set_style_radius(mochi_eye_r_pill, 2, 0);
+                lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0xC084FC), 0);
+                lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22, -2);
+
+                if (mochi_blush_l) lv_obj_clear_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_clear_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+                if (mochi_mouth) {
+                    lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_set_size(mochi_mouth, 10, 4);
+                    lv_obj_set_style_radius(mochi_mouth, 2, 0);
+                    lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0xC084FC), 0);
+                    lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_SLEEP: {
+                lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0x1E293B), 0);
+                lv_obj_clear_flag(mochi_eye_l_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_size(mochi_eye_l_pill, 16, 3);
+                lv_obj_set_size(mochi_eye_r_pill, 16, 3);
+                lv_obj_set_style_radius(mochi_eye_l_pill, 2, 0);
+                lv_obj_set_style_radius(mochi_eye_r_pill, 2, 0);
+                lv_obj_set_style_bg_color(mochi_eye_l_pill, lv_color_hex(0x475569), 0);
+                lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0x475569), 0);
+
+                if (mochi_eye_l_arc) lv_obj_add_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_eye_r_arc) lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_l) lv_obj_add_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_blush_r) lv_obj_add_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+                if (mochi_mouth) lv_obj_add_flag(mochi_mouth, LV_OBJ_FLAG_HIDDEN);
+                break;
+            }
+        }
+    }
+
+    void tick_mochi_animation(uint32_t now_ms) {
+        if (!mochi_helmet || !mochi_visor) return;
+
+        // Animate mini Mochi trên Screensaver nếu đang Standby
+        if (screensaver_active) {
+            if (stb_mochi_eye_l && stb_mochi_eye_r) {
+                static uint32_t last_stb_blink = 0;
+                static bool stb_blinking = false;
+                if (!stb_blinking && (now_ms - last_stb_blink >= 5000)) {
+                    stb_blinking = true;
+                    last_stb_blink = now_ms;
+                    lv_obj_set_size(stb_mochi_eye_l, 10, 2);
+                    lv_obj_set_size(stb_mochi_eye_r, 10, 2);
+                } else if (stb_blinking && (now_ms - last_stb_blink >= 180)) {
+                    stb_blinking = false;
+                    lv_obj_set_size(stb_mochi_eye_l, 10, 3);
+                    lv_obj_set_size(stb_mochi_eye_r, 10, 3);
+                }
+            }
+            return;
+        }
+
+        // Animate Dasai Mochi chính trên Tab Nala AI
+        switch (current_mochi_state) {
+            case MOCHI_STATE_IDLE: {
+                if (mochi_is_blinking) {
+                    uint32_t b_elapsed = now_ms - mochi_blink_start_ms;
+                    if (b_elapsed < 60) {
+                        int h = 26 - (int)(23 * b_elapsed / 60);
+                        if (h < 3) h = 3;
+                        lv_obj_set_height(mochi_eye_l_pill, h);
+                        lv_obj_set_height(mochi_eye_r_pill, h);
+                        lv_obj_set_style_radius(mochi_eye_l_pill, (h > 16) ? 8 : (h / 2), 0);
+                        lv_obj_set_style_radius(mochi_eye_r_pill, (h > 16) ? 8 : (h / 2), 0);
+                    } else if (b_elapsed < 120) {
+                        lv_obj_set_height(mochi_eye_l_pill, 3);
+                        lv_obj_set_height(mochi_eye_r_pill, 3);
+                        lv_obj_set_style_radius(mochi_eye_l_pill, 2, 0);
+                        lv_obj_set_style_radius(mochi_eye_r_pill, 2, 0);
+                    } else if (b_elapsed < 180) {
+                        int h = 3 + (int)(23 * (b_elapsed - 120) / 60);
+                        if (h > 26) h = 26;
+                        lv_obj_set_height(mochi_eye_l_pill, h);
+                        lv_obj_set_height(mochi_eye_r_pill, h);
+                        lv_obj_set_style_radius(mochi_eye_l_pill, (h > 16) ? 8 : (h / 2), 0);
+                        lv_obj_set_style_radius(mochi_eye_r_pill, (h > 16) ? 8 : (h / 2), 0);
+                    } else {
+                        mochi_is_blinking = false;
+                        lv_obj_set_height(mochi_eye_l_pill, 26);
+                        lv_obj_set_height(mochi_eye_r_pill, 26);
+                        lv_obj_set_style_radius(mochi_eye_l_pill, 8, 0);
+                        lv_obj_set_style_radius(mochi_eye_r_pill, 8, 0);
+                        mochi_last_blink_ms = now_ms;
+                        mochi_blink_interval_ms = 3000 + (now_ms % 1500);
+                    }
+                } else if (now_ms - mochi_last_blink_ms >= mochi_blink_interval_ms) {
+                    mochi_is_blinking = true;
+                    mochi_blink_start_ms = now_ms;
+                }
+
+                // Liếc mắt nhàn rỗi
+                static uint32_t last_glance_ms = 0;
+                static int8_t glance_dir = 0;
+                if (glance_dir == 0 && (now_ms - last_glance_ms >= 9000)) {
+                    last_glance_ms = now_ms;
+                    glance_dir = (now_ms % 2 == 0) ? -5 : 5;
+                    lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22 + glance_dir, -2);
+                    lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22 + glance_dir, -2);
+                } else if (glance_dir != 0 && (now_ms - last_glance_ms >= 1400)) {
+                    glance_dir = 0;
+                    lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22, -2);
+                    lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22, -2);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_LISTENING: {
+                static uint32_t last_pulse_ms = 0;
+                static bool pulse_state = false;
+                if (now_ms - last_pulse_ms >= 450) {
+                    last_pulse_ms = now_ms;
+                    pulse_state = !pulse_state;
+                    lv_obj_set_style_border_color(mochi_visor, pulse_state ? lv_color_hex(0x38BDF8) : lv_color_hex(0x0284C7), 0);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_THINKING: {
+                static uint32_t last_sway_ms = 0;
+                static uint8_t sway_idx = 0;
+                if (now_ms - last_sway_ms >= 350) {
+                    last_sway_ms = now_ms;
+                    sway_idx = (sway_idx + 1) % 4;
+                    const int8_t sways[4] = {-5, 0, 5, 0};
+                    int8_t ox = sways[sway_idx];
+                    lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22 + ox, -2);
+                    lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22 + ox, -2);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_SPEAKING: {
+                if (now_ms - mochi_last_anim_step_ms >= 140) {
+                    mochi_last_anim_step_ms = now_ms;
+                    mochi_mouth_step = (mochi_mouth_step + 1) % 4;
+                    const uint8_t m_heights[4] = {3, 7, 9, 5};
+                    uint8_t mh = m_heights[mochi_mouth_step];
+                    lv_obj_set_height(mochi_mouth, mh);
+                    lv_obj_set_style_radius(mochi_mouth, (mh > 6) ? 3 : 2, 0);
+                }
+                break;
+            }
+
+            case MOCHI_STATE_GOODBYE:
+            case MOCHI_STATE_SLEEP:
+            default:
+                break;
+        }
+    }
+
     void set_ai_state(const char* state_str, const char* text = nullptr) {
         if (lbl_ai_state && state_str) {
             if (strcasecmp(state_str, "listening") == 0) {
                 lv_label_set_text(lbl_ai_state, "AI: Đang nghe...");
                 lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x38BDF8), 0);
-                if (ai_pulse_circle) lv_obj_set_style_bg_color(ai_pulse_circle, lv_color_hex(0x0284C7), 0);
-            } else if (strcasecmp(state_str, "processing") == 0) {
+                set_mochi_state(MOCHI_STATE_LISTENING);
+                if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "🟢 ĐANG NGHE (NÓI TỰ NHIÊN)");
+            } else if (strcasecmp(state_str, "processing") == 0 || strcasecmp(state_str, "thinking") == 0) {
                 lv_label_set_text(lbl_ai_state, "AI: Đang suy nghĩ...");
                 lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0xF59E0B), 0);
-                if (ai_pulse_circle) lv_obj_set_style_bg_color(ai_pulse_circle, lv_color_hex(0xD97706), 0);
+                set_mochi_state(MOCHI_STATE_THINKING);
+                if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "⏳ ĐANG SUY NGHĨ...");
             } else if (strcasecmp(state_str, "speaking") == 0) {
                 lv_label_set_text(lbl_ai_state, "AI: Đang trả lời...");
                 lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x10B981), 0);
-                if (ai_pulse_circle) lv_obj_set_style_bg_color(ai_pulse_circle, lv_color_hex(0x059669), 0);
+                set_mochi_state(MOCHI_STATE_SPEAKING);
+                if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "🔊 CHẠM ĐỂ NGẮT LỜI");
+            } else if (strcasecmp(state_str, "goodbye") == 0) {
+                lv_label_set_text(lbl_ai_state, "AI: Tạm biệt bạn!");
+                lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0xC084FC), 0);
+                set_mochi_state(MOCHI_STATE_GOODBYE);
+                if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "👋 HẸN GẶP LẠI!");
             } else {
-                lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Chờ lệnh)");
-                lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x38BDF8), 0);
-                if (ai_pulse_circle) lv_obj_set_style_bg_color(ai_pulse_circle, lv_color_hex(0x1E293B), 0);
+                lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Hey Nala)");
+                lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x94A3B8), 0);
+                set_mochi_state(MOCHI_STATE_IDLE);
+                if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "GIỮ ĐỂ NÓI VỚI NALA AI");
             }
         }
         if (text && strlen(text) > 0) {
             set_ai_text(text);
+        }
+    }
+
+    // Hiển thị từng câu âm thanh đang nói & biểu cảm Dasai Mochi hạnh phúc
+    void set_ai_sentence(const char* sentence) {
+        if (lbl_ai_state) {
+            lv_label_set_text(lbl_ai_state, "AI: Đang nói...");
+            lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x10B981), 0);
+        }
+        set_mochi_state(MOCHI_STATE_SPEAKING);
+        if (sentence && strlen(sentence) > 0) {
+            set_ai_text(sentence);
         }
     }
 
@@ -1000,6 +1369,45 @@ public:
         lv_obj_set_style_text_font(lbl_stb_room, &font_vietnamese_14, 0);
         lv_obj_align(lbl_stb_room, LV_ALIGN_LEFT_MID, 12, 0);
 
+        // 1.5. Mini Dasai Mochi Standby Companion (Vị trí Y: 50, giữa Room Badge và Đồng Hồ)
+        stb_mochi_helmet = lv_obj_create(modal_screensaver);
+        lv_obj_set_size(stb_mochi_helmet, 84, 38);
+        lv_obj_align(stb_mochi_helmet, LV_ALIGN_TOP_MID, 0, 50);
+        lv_obj_set_style_radius(stb_mochi_helmet, 14, 0);
+        lv_obj_set_style_bg_color(stb_mochi_helmet, lv_color_hex(0x0F172A), 0);
+        lv_obj_set_style_border_color(stb_mochi_helmet, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(stb_mochi_helmet, 1, 0);
+        lv_obj_set_style_pad_all(stb_mochi_helmet, 0, 0);
+        lv_obj_clear_flag(stb_mochi_helmet, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        stb_mochi_visor = lv_obj_create(stb_mochi_helmet);
+        lv_obj_set_size(stb_mochi_visor, 72, 28);
+        lv_obj_align(stb_mochi_visor, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_radius(stb_mochi_visor, 10, 0);
+        lv_obj_set_style_bg_color(stb_mochi_visor, lv_color_hex(0x020408), 0);
+        lv_obj_set_style_border_color(stb_mochi_visor, lv_color_hex(0x334155), 0);
+        lv_obj_set_style_border_width(stb_mochi_visor, 1, 0);
+        lv_obj_set_style_pad_all(stb_mochi_visor, 0, 0);
+        lv_obj_clear_flag(stb_mochi_visor, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        stb_mochi_eye_l = lv_obj_create(stb_mochi_visor);
+        lv_obj_set_size(stb_mochi_eye_l, 10, 3);
+        lv_obj_align(stb_mochi_eye_l, LV_ALIGN_CENTER, -13, 0);
+        lv_obj_set_style_radius(stb_mochi_eye_l, 2, 0);
+        lv_obj_set_style_bg_color(stb_mochi_eye_l, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_border_width(stb_mochi_eye_l, 0, 0);
+        lv_obj_set_style_pad_all(stb_mochi_eye_l, 0, 0);
+        lv_obj_clear_flag(stb_mochi_eye_l, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        stb_mochi_eye_r = lv_obj_create(stb_mochi_visor);
+        lv_obj_set_size(stb_mochi_eye_r, 10, 3);
+        lv_obj_align(stb_mochi_eye_r, LV_ALIGN_CENTER, 13, 0);
+        lv_obj_set_style_radius(stb_mochi_eye_r, 2, 0);
+        lv_obj_set_style_bg_color(stb_mochi_eye_r, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_border_width(stb_mochi_eye_r, 0, 0);
+        lv_obj_set_style_pad_all(stb_mochi_eye_r, 0, 0);
+        lv_obj_clear_flag(stb_mochi_eye_r, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
         // 2. Giờ số to (Font Montserrat 40px - Chuẩn Smart Watch Standby)
         lbl_stb_time = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_time, "00:00");
@@ -1073,6 +1481,7 @@ public:
     void show_screensaver() {
         if (!modal_screensaver) return;
         screensaver_active = true;
+        set_mochi_state(MOCHI_STATE_SLEEP);
         lv_obj_clear_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_foreground(modal_screensaver);
     }
@@ -1080,7 +1489,9 @@ public:
     void hide_screensaver() {
         if (!modal_screensaver) return;
         screensaver_active = false;
+        set_mochi_state(MOCHI_STATE_IDLE);
         lv_obj_add_flag(modal_screensaver, LV_OBJ_FLAG_HIDDEN);
+        lv_disp_trig_activity(NULL); // Reset bộ đếm không thao tác của LVGL về 0ms để không bị re-trigger ngay lập tức
     }
 
     bool is_screensaver_active() const {
@@ -1338,10 +1749,12 @@ private:
             if (code == LV_EVENT_PRESSED) {
                 lv_obj_set_style_bg_color(btn_ai_ptt, lv_color_hex(0xEF4444), 0);
                 if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "ĐANG THU ÂM (NHẢ ĐỂ GỬI)");
+                set_mochi_state(MOCHI_STATE_LISTENING);
                 if (action_cb) action_cb("ptt_ai", "start", 1);
             } else if (code == LV_EVENT_RELEASED) {
                 lv_obj_set_style_bg_color(btn_ai_ptt, lv_color_hex(0x0284C7), 0);
                 if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "GIỮ ĐỂ NÓI VỚI NALA AI");
+                set_mochi_state(MOCHI_STATE_THINKING);
                 if (action_cb) action_cb("ptt_ai", "stop", 0);
             }
             return;
@@ -1646,45 +2059,132 @@ private:
         lv_obj_set_style_bg_color(tab_ai, lv_color_hex(0x080C14), 0);
         lv_obj_set_style_pad_all(tab_ai, 6, 0);
 
-        // Header: AI Status & Pulse Indicator
+        // 1. Header: AI Status
         lbl_ai_state = lv_label_create(tab_ai);
-        lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Chờ lệnh)");
+        lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Hey Nala)");
         lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_text_font(lbl_ai_state, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_ai_state, LV_ALIGN_TOP_MID, 0, 4);
+        lv_obj_align(lbl_ai_state, LV_ALIGN_TOP_MID, 0, 2);
 
-        // Visual AI Orb / Waveform container
-        ai_pulse_circle = lv_obj_create(tab_ai);
-        lv_obj_set_size(ai_pulse_circle, 44, 44);
-        lv_obj_align(ai_pulse_circle, LV_ALIGN_TOP_MID, 0, 24);
-        lv_obj_set_style_radius(ai_pulse_circle, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(ai_pulse_circle, lv_color_hex(0x0369A1), 0);
-        lv_obj_set_style_border_color(ai_pulse_circle, lv_color_hex(0x38BDF8), 0);
-        lv_obj_set_style_border_width(ai_pulse_circle, 2, 0);
+        // 2. DASAI MOCHI HELMET & ANIMATED VISOR WIDGET (144x68px)
+        mochi_helmet = lv_obj_create(tab_ai);
+        ai_pulse_circle = mochi_helmet; // Giữ con trỏ tương thích
+        lv_obj_set_size(mochi_helmet, 144, 68);
+        lv_obj_align(mochi_helmet, LV_ALIGN_TOP_MID, 0, 22);
+        lv_obj_set_style_radius(mochi_helmet, 24, 0);
+        lv_obj_set_style_bg_color(mochi_helmet, lv_color_hex(0x0F172A), 0); // Vỏ mũ bảo hiểm kim loại xám đậm
+        lv_obj_set_style_border_color(mochi_helmet, lv_color_hex(0x334155), 0);
+        lv_obj_set_style_border_width(mochi_helmet, 2, 0);
+        lv_obj_set_style_pad_all(mochi_helmet, 0, 0);
+        lv_obj_clear_flag(mochi_helmet, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* lbl_orb = lv_label_create(ai_pulse_circle);
-        lv_label_set_text(lbl_orb, "NALA");
-        lv_obj_set_style_text_font(lbl_orb, &font_vietnamese_14, 0);
-        lv_obj_set_style_text_color(lbl_orb, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_center(lbl_orb);
+        // Kính chắn gió Mochi Visor (OLED Deep Obsidian Screen)
+        mochi_visor = lv_obj_create(mochi_helmet);
+        lv_obj_set_size(mochi_visor, 126, 52);
+        lv_obj_align(mochi_visor, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_radius(mochi_visor, 18, 0);
+        lv_obj_set_style_bg_color(mochi_visor, lv_color_hex(0x020408), 0);
+        lv_obj_set_style_border_color(mochi_visor, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(mochi_visor, 2, 0);
+        lv_obj_set_style_pad_all(mochi_visor, 0, 0);
+        lv_obj_clear_flag(mochi_visor, LV_OBJ_FLAG_SCROLLABLE);
 
-        // Large Text Area for AI Responses
+        // Má hồng Mochi (Blush Cheeks)
+        mochi_blush_l = lv_obj_create(mochi_visor);
+        lv_obj_set_size(mochi_blush_l, 10, 4);
+        lv_obj_align(mochi_blush_l, LV_ALIGN_CENTER, -36, 11);
+        lv_obj_set_style_radius(mochi_blush_l, 2, 0);
+        lv_obj_set_style_bg_color(mochi_blush_l, lv_color_hex(0xFB7185), 0);
+        lv_obj_set_style_border_width(mochi_blush_l, 0, 0);
+        lv_obj_set_style_pad_all(mochi_blush_l, 0, 0);
+        lv_obj_clear_flag(mochi_blush_l, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(mochi_blush_l, LV_OBJ_FLAG_HIDDEN);
+
+        mochi_blush_r = lv_obj_create(mochi_visor);
+        lv_obj_set_size(mochi_blush_r, 10, 4);
+        lv_obj_align(mochi_blush_r, LV_ALIGN_CENTER, 36, 11);
+        lv_obj_set_style_radius(mochi_blush_r, 2, 0);
+        lv_obj_set_style_bg_color(mochi_blush_r, lv_color_hex(0xFB7185), 0);
+        lv_obj_set_style_border_width(mochi_blush_r, 0, 0);
+        lv_obj_set_style_pad_all(mochi_blush_r, 0, 0);
+        lv_obj_clear_flag(mochi_blush_r, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(mochi_blush_r, LV_OBJ_FLAG_HIDDEN);
+
+        // Mắt Normal Pill (Trái & Phải)
+        mochi_eye_l_pill = lv_obj_create(mochi_visor);
+        lv_obj_set_size(mochi_eye_l_pill, 16, 26);
+        lv_obj_align(mochi_eye_l_pill, LV_ALIGN_CENTER, -22, -2);
+        lv_obj_set_style_radius(mochi_eye_l_pill, 8, 0);
+        lv_obj_set_style_bg_color(mochi_eye_l_pill, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_border_width(mochi_eye_l_pill, 0, 0);
+        lv_obj_set_style_pad_all(mochi_eye_l_pill, 0, 0);
+        lv_obj_clear_flag(mochi_eye_l_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        mochi_eye_r_pill = lv_obj_create(mochi_visor);
+        lv_obj_set_size(mochi_eye_r_pill, 16, 26);
+        lv_obj_align(mochi_eye_r_pill, LV_ALIGN_CENTER, 22, -2);
+        lv_obj_set_style_radius(mochi_eye_r_pill, 8, 0);
+        lv_obj_set_style_bg_color(mochi_eye_r_pill, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_border_width(mochi_eye_r_pill, 0, 0);
+        lv_obj_set_style_pad_all(mochi_eye_r_pill, 0, 0);
+        lv_obj_clear_flag(mochi_eye_r_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        // Mắt cười Anime Arc ^ ^ (Trái & Phải)
+        mochi_eye_l_arc = lv_arc_create(mochi_visor);
+        lv_obj_set_size(mochi_eye_l_arc, 22, 18);
+        lv_obj_align(mochi_eye_l_arc, LV_ALIGN_CENTER, -22, 0);
+        lv_arc_set_rotation(mochi_eye_l_arc, 0);
+        lv_arc_set_bg_angles(mochi_eye_l_arc, 0, 0);
+        lv_arc_set_angles(mochi_eye_l_arc, 205, 335);
+        lv_obj_set_style_arc_width(mochi_eye_l_arc, 3, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(mochi_eye_l_arc, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+        lv_obj_set_style_arc_rounded(mochi_eye_l_arc, true, LV_PART_INDICATOR);
+        lv_obj_remove_style(mochi_eye_l_arc, NULL, LV_PART_KNOB);
+        lv_obj_clear_flag(mochi_eye_l_arc, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(mochi_eye_l_arc, LV_OBJ_FLAG_HIDDEN);
+
+        mochi_eye_r_arc = lv_arc_create(mochi_visor);
+        lv_obj_set_size(mochi_eye_r_arc, 22, 18);
+        lv_obj_align(mochi_eye_r_arc, LV_ALIGN_CENTER, 22, 0);
+        lv_arc_set_rotation(mochi_eye_r_arc, 0);
+        lv_arc_set_bg_angles(mochi_eye_r_arc, 0, 0);
+        lv_arc_set_angles(mochi_eye_r_arc, 205, 335);
+        lv_obj_set_style_arc_width(mochi_eye_r_arc, 3, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(mochi_eye_r_arc, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+        lv_obj_set_style_arc_rounded(mochi_eye_r_arc, true, LV_PART_INDICATOR);
+        lv_obj_remove_style(mochi_eye_r_arc, NULL, LV_PART_KNOB);
+        lv_obj_clear_flag(mochi_eye_r_arc, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(mochi_eye_r_arc, LV_OBJ_FLAG_HIDDEN);
+
+        // Miệng Mochi
+        mochi_mouth = lv_obj_create(mochi_visor);
+        lv_obj_set_size(mochi_mouth, 10, 3);
+        lv_obj_align(mochi_mouth, LV_ALIGN_CENTER, 0, 14);
+        lv_obj_set_style_radius(mochi_mouth, 2, 0);
+        lv_obj_set_style_bg_color(mochi_mouth, lv_color_hex(0x38BDF8), 0);
+        lv_obj_set_style_border_width(mochi_mouth, 0, 0);
+        lv_obj_set_style_pad_all(mochi_mouth, 0, 0);
+        lv_obj_clear_flag(mochi_mouth, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+        lbl_ai_avatar = nullptr;
+
+        // 3. Khung hiển thị cuộc đàm thoại (Y: 94..188)
         ta_ai_response = lv_textarea_create(tab_ai);
-        lv_obj_set_size(ta_ai_response, 228, 112);
-        lv_obj_align(ta_ai_response, LV_ALIGN_TOP_MID, 0, 74);
+        lv_obj_set_size(ta_ai_response, 228, 94);
+        lv_obj_align(ta_ai_response, LV_ALIGN_TOP_MID, 0, 94);
         lv_obj_set_style_bg_color(ta_ai_response, lv_color_hex(0x0E1726), 0);
         lv_obj_set_style_text_color(ta_ai_response, lv_color_hex(0xE2E8F0), 0);
         lv_obj_set_style_border_color(ta_ai_response, lv_color_hex(0x1E293B), 0);
         lv_obj_set_style_radius(ta_ai_response, 10, 0);
         lv_obj_set_style_text_font(ta_ai_response, &font_vietnamese_14, 0);
-        lv_textarea_set_text(ta_ai_response, "Xin chào! Tôi là Trợ Lý NALA AI.\nNhấn giữ nút bên dưới để nói chuyện với tôi...");
+        lv_textarea_set_text(ta_ai_response, "Xin chào! Tôi là Trợ Lý NALA AI.\nNói 'Hey Nala' hoặc nhấn giữ nút bên dưới để trò chuyện...");
 
-        // Large PTT Button
+        // 4. Large PTT Button (Y: 192..230)
         btn_ai_ptt = lv_btn_create(tab_ai);
-        lv_obj_set_size(btn_ai_ptt, 228, 44);
-        lv_obj_align(btn_ai_ptt, LV_ALIGN_BOTTOM_MID, 0, -4);
+        lv_obj_set_size(btn_ai_ptt, 228, 38);
+        lv_obj_align(btn_ai_ptt, LV_ALIGN_BOTTOM_MID, 0, -2);
         lv_obj_set_style_bg_color(btn_ai_ptt, lv_color_hex(0x0284C7), 0);
-        lv_obj_set_style_radius(btn_ai_ptt, 22, 0);
+        lv_obj_set_style_radius(btn_ai_ptt, 19, 0);
         lv_obj_add_event_cb(btn_ai_ptt, event_handler_trampoline, LV_EVENT_ALL, this);
 
         lbl_ai_ptt_text = lv_label_create(btn_ai_ptt);
@@ -1692,6 +2192,8 @@ private:
         lv_label_set_text(lbl_ai_ptt_text, "GIỮ ĐỂ NÓI VỚI NALA AI");
         lv_obj_set_style_text_font(lbl_ai_ptt_text, &font_vietnamese_14, 0);
         lv_obj_center(lbl_ai_ptt_text);
+
+        set_mochi_state(MOCHI_STATE_IDLE);
     }
 
     void build_tab_intercom() {
@@ -1915,7 +2417,7 @@ private:
 
         // 7. Thông tin Firmware & Hướng dẫn (Y: 202..230)
         lbl_firmware_ver = lv_label_create(tab_settings);
-        lv_label_set_text(lbl_firmware_ver, "Bản: v2.9.2 | PSRAM: 0.0MB");
+        lv_label_set_text(lbl_firmware_ver, "Bản: v3.4.4 | PSRAM: 8.0MB");
         lv_obj_set_style_text_color(lbl_firmware_ver, lv_color_hex(0x34D399), 0);
         lv_obj_set_style_text_font(lbl_firmware_ver, &font_vietnamese_14, 0);
         lv_obj_set_pos(lbl_firmware_ver, 4, 202);

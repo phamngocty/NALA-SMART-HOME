@@ -57,8 +57,10 @@ class IntercomRouter:
     def unregister_admin(self, websocket: WebSocket):
         self.admin_sockets.discard(websocket)
 
-    def unregister(self, device_key: str):
+    def unregister(self, device_key: str, websocket: Optional[WebSocket] = None):
         if device_key in self.connections:
+            if websocket is not None and self.connections[device_key] != websocket:
+                return  # Socket moi da thay the socket cu, khong huy dang ky!
             del self.connections[device_key]
             logger.info("Unregistered Intercom device [%s]", device_key)
 
@@ -87,17 +89,15 @@ class IntercomRouter:
 
     async def route_binary_packet(self, sender_key: str, packet: bytes):
         """
-        Định tuyến gói tin 520-Byte Raw PCM 16kHz:
+        Định tuyến gói tin Audio (Raw PCM 520B hoặc Nén Opus 0xA55B):
         - 0x00: AI Voice processing (bỏ qua ở router này)
         - 0xFF: Broadcast toàn bộ các màn hình
         - 0xFE: Riêng cho Web Admin Hub
         - 1..250: Unicast tới màn hình có intercom_id tương ứng
         """
-        if len(packet) != 520:
-            return
-
-        # Magic Word: 0xA55A (0x5A, 0xA5 trong Little-Endian)
-        if packet[0] != 0x5A or packet[1] != 0xA5:
+        is_pcm = (len(packet) == 520 and packet[0] == 0x5A and packet[1] == 0xA5)
+        is_opus = (len(packet) >= 9 and packet[0] == 0x5B and packet[1] == 0xA5)
+        if not (is_pcm or is_opus):
             return
 
         sender_id = packet[2]

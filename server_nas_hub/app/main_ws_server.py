@@ -19,6 +19,13 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, Streamin
 from pydantic import BaseModel
 import uvicorn
 
+try:
+    import opuslib
+    OPUS_AVAILABLE = True
+except Exception as _opus_err:
+    opuslib = None
+    OPUS_AVAILABLE = False
+
 # Monkey-patch uvicorn WebSocketsSansIOProtocol to decode UTF-8 with errors='replace'
 # Prevents disconnects when ESP32 sends truncated UTF-8 in room names
 try:
@@ -88,25 +95,107 @@ audio_pipeline = AudioPipeline(STT_URL, TTS_URL)
 ai_router = AIAgentRouter(GEMINI_API_KEY, DEEPSEEK_API_KEY, ha_bridge)
 history_mgr = HistoryManager()
 
+async def send_audio_chunks(ws: WebSocket, pcm_data: bytes, is_opus: bool, start_seq: int = 0, encoder: Any = None) -> int:
+    """Helper gửi các chunk âm thanh (Opus hoặc PCM) qua WebSocket."""
+    seq = start_seq
+    tot = len(pcm_data)
+    if is_opus and OPUS_AVAILABLE:
+        enc = encoder or opuslib.Encoder(16000, 1, 'voip')
+        for i in range(0, tot, 640):
+            c = pcm_data[i:i+640]
+            if len(c) < 640:
+                c = c + b'\x00' * (640 - len(c))
+            try:
+                enc_payload = enc.encode(c, 320)
+                enc_len = len(enc_payload)
+                flag = 0x01 if seq == 0 else 0x02
+                hdr = bytearray(9)
+                hdr[0:2] = (0xA55B).to_bytes(2, 'little')
+                hdr[2] = 0x00 # Server Hub
+                hdr[3] = 0x01 # ESP32 Panel
+                hdr[4:6] = seq.to_bytes(2, 'little')
+                hdr[6] = flag
+                hdr[7:9] = enc_len.to_bytes(2, 'little')
+                await ws.send_bytes(bytes(hdr + enc_payload))
+                seq += 1
+                await asyncio.sleep(0.016)
+            except Exception as e:
+                logger.error("Lỗi encode frame Opus: %s", e)
+    else:
+        for i in range(0, tot, 512):
+            c = pcm_data[i:i+512]
+            if len(c) < 512:
+                c = c + b'\x00' * (512 - len(c))
+            flag = 0x01 if seq == 0 else 0x02
+            hdr = bytearray(7)
+            hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+            hdr[2] = 0x00 # Server Hub
+            hdr[3] = 0x01 # ESP32
+            hdr[4:6] = seq.to_bytes(2, 'little')
+            hdr[6] = flag
+            await ws.send_bytes(bytes(hdr + c + b'\x00'))
+            seq += 1
+            await asyncio.sleep(0.012)
+    return seq
+
+async def send_audio_end(ws: WebSocket, is_opus: bool, seq: int):
+    """Gửi frame kết thúc phát âm thanh (STREAM_FLAG_END = 0x03)."""
+    if is_opus and OPUS_AVAILABLE:
+        end_hdr = bytearray(9)
+        end_hdr[0:2] = (0xA55B).to_bytes(2, 'little')
+        end_hdr[2] = 0x00
+        end_hdr[3] = 0x01
+        end_hdr[4:6] = seq.to_bytes(2, 'little')
+        end_hdr[6] = 0x03
+        end_hdr[7:9] = (0).to_bytes(2, 'little')
+        await ws.send_bytes(bytes(end_hdr))
+    else:
+        end_hdr = bytearray(7)
+        end_hdr[0:2] = (0xA55A).to_bytes(2, 'little')
+        end_hdr[2] = 0x00
+        end_hdr[3] = 0x01
+        end_hdr[4:6] = seq.to_bytes(2, 'little')
+        end_hdr[6] = 0x03
+        await ws.send_bytes(bytes(end_hdr + b'\x00' * 513))
+
+# Quản lý task AI thoại thời gian thực cho tính năng Cắt Lời Tức Thì (Barge-in / Abort Speaking)
+active_ai_tasks: Dict[str, asyncio.Task] = {}
+opus_decoders: Dict[str, Any] = {}
+client_audio_formats: Dict[str, str] = {}
+
+async def abort_ai_flow(device_id: str, ws: Optional[WebSocket] = None):
+    """Hủy tức thì tác vụ AI đang sinh câu trả lời hoặc stream audio xuống thiết bị (Barge-in)."""
+    task = active_ai_tasks.get(device_id)
+    if task and not task.done():
+        logger.info("[BARGE-IN] Cắt lời AI tức thì cho thiết bị [%s]!", device_id)
+        task.cancel()
+    active_ai_tasks.pop(device_id, None)
+    target_ws = ws or active_sockets.get(device_id)
+    if target_ws:
+        try:
+            await target_ws.send_json({"type": "tts_stop"})
+            await target_ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+        except Exception:
+            pass
+
 async def on_wake_winner(device_id: str, candidate_info: dict):
     ws = active_sockets.get(device_id)
+    # Cắt lời AI nếu đang phát âm thanh cũ khi người dùng gọi từ khóa Wake Word mới
+    await abort_ai_flow(device_id, ws)
     dev_info = devices_db.get(device_id, {})
     room_name = dev_info.get("room_name", f"Panel {device_id}")
     if ws:
         try:
-            # Gửi lệnh phát âm thanh thức tỉnh Wake Word Ding! (Xiaozhi Style)
-            await ws.send_json({"type": "wake_chime"})
+            # Gửi duy nhất lệnh wake_trigger đến ESP32 chiến thắng (ESP32 sẽ tự bật LED Cyan, chuyển Tab AI, đổi Mochi listening, phát chuông Ding và bắt đầu nghe rảnh tay)
             await ws.send_json({
-                "type": "wake_event",
-                "payload": {
-                    "status": "accepted",
-                    "wake_word": candidate_info.get("model", "hey_jarvis"),
-                    "score": candidate_info.get("score", 1.0),
-                    "room": room_name
-                }
+                "type": "wake_trigger",
+                "source": "wake_word",
+                "model": candidate_info.get("model", "hey_nala"),
+                "score": candidate_info.get("score", 1.0),
+                "room": room_name
             })
         except Exception as e:
-            logger.error("Error sending wake_accepted to %s: %s", device_id, e)
+            logger.error("Error sending wake_trigger to %s: %s", device_id, e)
 
     asyncio.create_task(broadcast_to_admins({
         "type": "wake_notification",
@@ -120,6 +209,10 @@ async def on_wake_suppressed(device_id: str, candidate_info: dict):
     ws = active_sockets.get(device_id)
     if ws:
         try:
+            await ws.send_json({
+                "type": "wake_suppress",
+                "duration_ms": 2000
+            })
             await ws.send_json({
                 "type": "wake_event",
                 "payload": {
@@ -328,22 +421,13 @@ def get_all_rooms_summary(local_room: str = "") -> list:
             dname = dname.replace("Công tắc", "CT").replace("công tắc", "CT")
             if len(room_buttons) >= 6:
                 continue
-            raw_s = ha_bridge.states.get(eid, {})
-            raw_attrs = raw_s.get("attributes", {})
-            slim_attrs = {}
-            if "temperature" in raw_attrs:
-                slim_attrs["temperature"] = raw_attrs["temperature"]
-            if "current_temperature" in raw_attrs:
-                slim_attrs["current_temperature"] = raw_attrs["current_temperature"]
             room_buttons.append({
                 "id": f"ha_{eid.replace('.', '_')}",
                 "name": dname[:14],
                 "entity_id": eid,
                 "icon": item["domain"],
-                "room": aname,
                 "is_on": item["is_on"],
-                "state": item["state"],
-                "attributes": slim_attrs
+                "state": item["state"]
             })
 
         rooms.append({
@@ -599,27 +683,29 @@ async def on_ha_state_change(entity_id: str, new_state: str, raw_obj: dict):
         }
     }
 
+    # Attributes tinh gọn cho màn hình ESP32 (chỉ lấy các trường cần hiển thị trên UI)
+    safe_attrs = {}
+    for k in ["temperature", "current_temperature", "hvac_mode", "fan_mode", "swing_mode", "friendly_name"]:
+        if k in attrs:
+            safe_attrs[k] = attrs[k]
+
+    panel_msg = {
+        "type": "ha_state_change",
+        "payload": {
+            "entity_id": entity_id,
+            "state": new_state,
+            "is_on": is_on,
+            "attributes": safe_attrs,
+            "house_status": house_status
+        }
+    }
+
     for dev_id, ws in list(active_sockets.items()):
         try:
             if dev_id.startswith("web_admin"):
                 await ws.send_json(base_msg)
             else:
-                # Gửi cho màn hình ESP32: kèm buttons và all_rooms ưu tiên phòng hiện tại
-                dev = devices_db.get(dev_id)
-                if dev:
-                    panel_msg = {
-                        "type": "ha_state_change",
-                        "payload": {
-                            "entity_id": entity_id,
-                            "state": new_state,
-                            "is_on": is_on,
-                            "attributes": attrs,
-                            "house_status": house_status
-                        }
-                    }
-                    await ws.send_json(panel_msg)
-                else:
-                    await ws.send_json(base_msg)
+                await ws.send_json(panel_msg)
         except Exception:
             pass
 
@@ -647,7 +733,7 @@ async def device_heartbeat_task():
                 for code, ws in dead_panels:
                     if active_sockets.get(code) == ws:
                         del active_sockets[code]
-                    intercom.unregister(code, ws)
+                    intercom.unregister(code)
                     if code in devices_db:
                         devices_db[code]["online"] = False
                     try:
@@ -875,6 +961,11 @@ async def handle_device_action(req: DeviceActionRequest):
     if not target_socket:
         return JSONResponse({"status": "error", "message": "Device offline"}, status_code=400)
 
+    if req.action == "wake":
+        await on_wake_winner(code, {"model": "hey_nala", "score": 1.0})
+        logger.info("Manual wake action triggered for [%s]", code)
+        return JSONResponse({"status": "success", "message": f"Triggered wake for [{code}]"})
+
     if req.action == "sync":
         rname = dev.get("room_name", "Phong Khach")
         assigned_id = dev.get("intercom_id") or intercom.get_id(code) or 1
@@ -1089,6 +1180,34 @@ async def get_wake_config():
     cfg["panels_list"] = devices_summary
     return JSONResponse(cfg)
 
+@app.post("/api/wake/upload")
+async def upload_wake_model(request: Request):
+    """Tải lên mô hình Wake Word tùy biến (.tflite) dạng Base64 JSON."""
+    try:
+        data = await request.json()
+        filename = data.get("filename", "hey_nala.tflite")
+        b64_content = data.get("content_base64", "")
+        if not filename.endswith(".tflite"):
+            return JSONResponse({"status": "error", "message": "Chỉ chấp nhận file định dạng .tflite"}, status_code=400)
+        import base64
+        file_bytes = base64.b64decode(b64_content)
+        custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
+        os.makedirs(custom_models_dir, exist_ok=True)
+        dest_path = os.path.join(custom_models_dir, filename)
+        with open(dest_path, "wb") as f:
+            f.write(file_bytes)
+        wake_mgr._init_model()
+        model_name = os.path.splitext(filename)[0]
+        wake_mgr.save_config({"selected_model": model_name})
+        return JSONResponse({
+            "status": "success",
+            "message": f"Đã nạp thành công mô hình Wake Word '{model_name}'!",
+            "model_name": model_name
+        })
+    except Exception as e:
+        logger.error("Lỗi upload mô hình wake word: %s", e)
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 @app.post("/api/wake/config")
 async def save_wake_config(req: Request):
     """Lưu cấu hình Wake Word đa phòng và độ nhạy."""
@@ -1105,7 +1224,7 @@ async def save_wake_config(req: Request):
 async def ai_chat_endpoint(req: AIChatRequest):
     """Gửi tin nhắn test AI từ Web Admin và nhận câu trả lời cùng audio base64 để nghe thử trực tiếp trên trình duyệt."""
     try:
-        reply = await ai_router.process_intent(req.message, model_preference=req.provider)
+        reply = await ai_router.process_intent(req.message, model_preference=req.provider, device_id="web_admin")
         voice = ai_router.config.get("tts_voice", "vi-VN-HoaiMyNeural")
         pcm = await audio_pipeline.text_to_pcm(reply, voice=voice)
         wav_b64 = ""
@@ -1127,6 +1246,17 @@ async def ai_chat_endpoint(req: AIChatRequest):
     except Exception as e:
         logger.error("Error in ai_chat_endpoint: %s", e)
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/ai/context/clear")
+async def clear_ai_context(req: Request):
+    """Xóa bộ nhớ ngữ cảnh hội thoại đa lượt của thiết bị hoặc Web Admin."""
+    try:
+        data = await req.json()
+        dev_id = data.get("device_id", "web_admin")
+    except Exception:
+        dev_id = "web_admin"
+    ai_router.session_mgr.clear_session(dev_id)
+    return JSONResponse({"status": "success", "message": f"Đã xóa ngữ cảnh trò chuyện của [{dev_id}]"})
 
 @app.post("/api/ai/chat/stream")
 async def ai_chat_stream_endpoint(req: AIChatRequest):
@@ -1173,7 +1303,7 @@ async def ai_chat_stream_endpoint(req: AIChatRequest):
             return ""
 
         try:
-            async for token in ai_router.stream_intent(req.message, model_preference=req.provider):
+            async for token in ai_router.stream_intent(req.message, model_preference=req.provider, device_id="web_admin"):
                 accumulated += token
                 sentence_buffer += token
 
@@ -1477,6 +1607,11 @@ async def upload_firmware(request: Request, filename: Optional[str] = None, vers
     with open(latest_path, "wb") as f:
         f.write(content)
 
+    # Lưu bản theo đúng tên gốc upload (vd: firmware_v3.4.2.bin)
+    orig_path = os.path.join(FIRMWARE_DIR, fname)
+    with open(orig_path, "wb") as f:
+        f.write(content)
+
     # Lưu bản backup có timestamp
     ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     version_str = ver.strip() if ver else f"v_{ts_str}"
@@ -1543,7 +1678,13 @@ async def download_firmware(filename: str, request: Request, code: Optional[str]
     safe_name = os.path.basename(filename)
     file_path = os.path.join(FIRMWARE_DIR, safe_name)
     if not os.path.exists(file_path):
-        return JSONResponse({"status": "error", "message": "Firmware file not found"}, status_code=404)
+        latest_fallback = os.path.join(FIRMWARE_DIR, "firmware_latest.bin")
+        if os.path.exists(latest_fallback):
+            logger.info("File [%s] không tồn tại, tự động chuyển về [firmware_latest.bin]", safe_name)
+            file_path = latest_fallback
+            safe_name = "firmware_latest.bin"
+        else:
+            return JSONResponse({"status": "error", "message": "Firmware file not found"}, status_code=404)
 
     file_size = os.path.getsize(file_path)
 
@@ -1630,6 +1771,7 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
     filename = req.firmware_filename or "firmware_latest.bin"
     target_code = req.target.strip()
     sent_count = 0
+    firmware_url = f"http://{host}/api/ota/firmware/{filename}"
 
     if target_code.lower() == "all":
         for code, ws in list(active_sockets.items()):
@@ -1637,7 +1779,7 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
                 try:
                     ota_msg = {
                         "type": "ota_start",
-                        "url": f"http://{host}/api/ota/firmware/{filename}?code={code}",
+                        "url": f"{firmware_url}?code={code}",
                         "size": meta.get("size_bytes", 0),
                         "md5": meta.get("md5", ""),
                         "version": meta.get("version", "v2.5.0")
@@ -1655,10 +1797,10 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
                 target_ws = active_sockets.get(dev.get("device_id")) or active_sockets.get(dev.get("mac"))
         if target_ws:
             try:
-                firmware_url = f"http://{host}/api/ota/firmware/{filename}?code={target_code.upper()}"
+                device_firmware_url = f"{firmware_url}?code={target_code.upper()}"
                 ota_msg = {
                     "type": "ota_start",
-                    "url": firmware_url,
+                    "url": device_firmware_url,
                     "size": meta.get("size_bytes", 0),
                     "md5": meta.get("md5", ""),
                     "version": meta.get("version", "v2.5.0")
@@ -1676,7 +1818,7 @@ async def start_ota_update(req: OTAStartRequest, request: Request):
         "target": target_code,
         "sent_count": sent_count,
         "version": meta.get("version"),
-        "url": f"http://{host}/api/ota/firmware/{filename}"
+        "url": firmware_url
     })
 
     return JSONResponse({
@@ -1733,6 +1875,14 @@ async def delete_history_item(record_id: str):
         return JSONResponse({"status": "success", "message": "Đã xóa bản ghi"})
     return JSONResponse({"status": "error", "message": "Bản ghi không tồn tại"}, status_code=404)
 
+@app.delete("/api/history/session/{session_id}")
+async def delete_history_session(session_id: str):
+    count = history_mgr.delete_session(session_id)
+    if count > 0:
+        await broadcast_to_admins({"type": "history_session_deleted", "session_id": session_id})
+        return JSONResponse({"status": "success", "message": f"Đã xóa {count} câu thoại trong phiên."})
+    return JSONResponse({"status": "error", "message": "Phiên không tồn tại"}, status_code=404)
+
 # -----------------------------------------------------------------------------
 # WEBSOCKET ENDPOINTS FOR ESP32 PANELS, NODES & WEB ADMIN
 # -----------------------------------------------------------------------------
@@ -1741,9 +1891,16 @@ async def delete_history_item(record_id: str):
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_panel"):
     await websocket.accept()
-    logger.info("New WebSocket connection: %s (Client: %s)", device_id, getattr(websocket.client, 'host', 'unknown') if hasattr(websocket, 'client') else 'unknown')
+    client_ip = getattr(websocket.client, 'host', 'unknown') if hasattr(websocket, 'client') else 'unknown'
+    logger.info("New WebSocket connection: %s (Client: %s)", device_id, client_ip)
 
     dev_code: Optional[str] = None
+    if client_ip and client_ip != "unknown":
+        for c, dev in devices_db.items():
+            if dev.get("ip") == client_ip:
+                dev_code = c
+                active_sockets[dev_code] = websocket
+                break
 
     # Nếu kết nối là Web Admin Dashboard -> Gửi ngay toàn bộ dữ liệu khởi tạo
     if device_id.startswith("web_admin"):
@@ -1803,7 +1960,25 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
 
                         active_sockets[code] = websocket
                         audio_record_buffers[code] = bytearray()
-                        if code not in devices_db:
+                        if code.startswith("TEST") or code.startswith("MOCK"):
+                            logger.info("Ignoring persistent discovery for test client [%s]", code)
+                            dev = {
+                                "device_id": f"panel_{code.lower()}",
+                                "mac": mac,
+                                "pairing_code": code,
+                                "ip": ip,
+                                "model": model,
+                                "firmware_version": fw_ver,
+                                "room_name": "Phòng Thử Nghiệm",
+                                "floor": "Tầng Trệt",
+                                "is_paired": True,
+                                "online": True,
+                                "intercom_id": 99,
+                                "buttons": [],
+                                "entities": [],
+                                "settings": {}
+                            }
+                        elif code not in devices_db:
                             assigned_intercom_id = intercom.assign_id(code)
                             devices_db[code] = {
                                 "device_id": f"panel_{code.lower()}",
@@ -1826,6 +2001,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                             }
                             save_devices()
                             logger.info("New Panel Discovered! Code: [%s], MAC: %s, IP: %s", code, mac, ip)
+                            dev = devices_db[code]
                         else:
                             # Cập nhật IP mới và trạng thái online
                             devices_db[code]["ip"] = ip
@@ -1837,8 +2013,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                             if "intercom_id" not in devices_db[code]:
                                 devices_db[code]["intercom_id"] = intercom.assign_id(code)
                             save_devices()
-
-                        dev = devices_db[code]
+                            dev = devices_db[code]
                         payload_st = payload.get("settings")
                         if payload_st and isinstance(payload_st, dict):
                             cur_st = dev.get("settings", {})
@@ -2023,10 +2198,19 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                 elif msg_type == "session_control":
                     payload = data.get("payload", {})
                     action = payload.get("action")
-                    if action == "stop_ptt" and len(audio_record_buffers[device_id]) > 0:
+                    sender_key = dev_code or device_id
+                    if action in ["abort", "stop", "barge_in"]:
+                        await abort_ai_flow(sender_key, websocket)
+                    elif action == "stop_ptt" and len(audio_record_buffers[device_id]) > 0:
                         pcm_audio = bytes(audio_record_buffers[device_id])
                         audio_record_buffers[device_id].clear()
-                        asyncio.create_task(handle_ai_voice_flow(device_id, websocket, pcm_audio))
+                        task = asyncio.create_task(handle_ai_voice_flow(device_id, websocket, pcm_audio))
+                        active_ai_tasks[device_id] = task
+
+                # Lệnh cắt lời tức thì từ Web Client hoặc ESP32 (Xiaozhi Barge-in)
+                elif msg_type in ["abort", "tts_stop"]:
+                    sender_key = dev_code or device_id
+                    await abort_ai_flow(sender_key, websocket)
 
                 # Phản hồi tiến độ cập nhật OTA từ màn hình Panel
                 elif msg_type == "ota_progress":
@@ -2043,27 +2227,118 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                         "message": msg
                     })
 
-            # 2. BINARY FRAME (Raw PCM 16kHz 520 Bytes)
+                # Khi Panel báo timeout chế độ hội thoại liên tục (không phát hiện tiếng nói sau timeout)
+                elif msg_type == "listen_timeout":
+                    code = dev_code or device_id
+                    logger.info("Panel [%s] continuous listen timed out -> Saying farewell & closing session.", code)
+                    # 1. Xóa session lịch sử hội thoại
+                    ai_router.session_mgr.clear_session(code)
+
+                    # 2. Phát TTS câu chào tạm biệt qua loa
+                    farewell_text = "Tạm biệt bạn."
+                    try:
+                        await websocket.send_json({"type": "tts", "state": "sentence_start", "text": farewell_text})
+                        await websocket.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": farewell_text}})
+
+                        tts_voice = ai_router.config.get("voice", "vi-VN-HoaiMyNeural")
+                        fw_pcm = await audio_pipeline.text_to_pcm(farewell_text, voice=tts_voice)
+                        if fw_pcm:
+                            is_opus = (client_audio_formats.get(code) == "opus") and OPUS_AVAILABLE and not str(code).startswith("web_admin")
+                            last_seq = await send_audio_chunks(websocket, fw_pcm, is_opus=is_opus, start_seq=0)
+                            await send_audio_end(websocket, is_opus=is_opus, seq=last_seq)
+                    except Exception as e:
+                        logger.error("Error sending farewell TTS to %s: %s", code, e)
+                    finally:
+                        try:
+                            await websocket.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+                        except Exception:
+                            pass
+
+            # 2. BINARY FRAME (Nén Opus 0xA55B HOẶC Raw PCM 520B 0xA55A)
             elif "bytes" in message:
                 packet = message["bytes"]
-                if len(packet) == 520:
-                    sender_key = dev_code or device_id
+                sender_key = dev_code or device_id
+
+                # 2.1 KIỂM TRA GÓI TIN OPUS NÉN (0xA55B, >= 9 bytes)
+                if len(packet) >= 9 and packet[0] == 0x5B and packet[1] == 0xA5:
+                    client_audio_formats[sender_key] = "opus"
+                    target_id = packet[3]
+                    stream_flag = packet[6]
+                    opus_len = int.from_bytes(packet[7:9], "little")
+                    payload = packet[9:9+opus_len]
+
+                    # Nếu là gói tin quét Wake Word (target_id == 0x05) qua nén Opus
+                    if target_id == 0x05:
+                        if opus_len > 0 and len(payload) >= opus_len and OPUS_AVAILABLE:
+                            try:
+                                if sender_key not in opus_decoders:
+                                    opus_decoders[sender_key] = opuslib.Decoder(16000, 1)
+                                pcm_chunk = opus_decoders[sender_key].decode(payload, 320)
+                                asyncio.create_task(wake_mgr.feed_audio_chunk(sender_key, pcm_chunk))
+                            except Exception as dec_err:
+                                logger.warning(f"Lỗi giải mã Opus Wake chunk từ {sender_key}: {dec_err}")
+
+                    # Gửi cho AI Voice Assistant (target_id == 0x00)
+                    elif target_id == 0x00:
+                        if sender_key not in audio_record_buffers:
+                            audio_record_buffers[sender_key] = bytearray()
+
+                        if stream_flag == 0x01: # START
+                            if sender_key in active_ai_tasks:
+                                await abort_ai_flow(sender_key, websocket)
+                            audio_record_buffers[sender_key].clear()
+                            if OPUS_AVAILABLE:
+                                try:
+                                    opus_decoders[sender_key] = opuslib.Decoder(16000, 1)
+                                except Exception as e:
+                                    logger.warning("Lỗi khởi tạo Opus Decoder cho %s: %s", sender_key, e)
+
+                        # Giải mã frame nén Opus sang PCM 16kHz
+                        if opus_len > 0 and len(payload) >= opus_len:
+                            if OPUS_AVAILABLE and sender_key in opus_decoders:
+                                try:
+                                    pcm_chunk = opus_decoders[sender_key].decode(payload, 320)
+                                    audio_record_buffers[sender_key].extend(pcm_chunk)
+                                except Exception as dec_err:
+                                    logger.warning("Lỗi giải mã Opus chunk từ %s: %s", sender_key, dec_err)
+
+                        if stream_flag == 0x03: # END
+                            pcm_audio = bytes(audio_record_buffers[sender_key])
+                            audio_record_buffers[sender_key].clear()
+                            task = asyncio.create_task(handle_ai_voice_flow(sender_key, websocket, pcm_audio, client_format="opus"))
+                            active_ai_tasks[sender_key] = task
+                    else:
+                        # Gói Opus Intercom nội bộ
+                        await intercom.route_binary_packet(sender_key, packet)
+
+                # 2.2 GÓI TIN RAW PCM CŨ (0xA55A, 520 bytes)
+                elif len(packet) == 520:
+                    client_audio_formats[sender_key] = "pcm"
                     target_id = packet[3]
                     # Nếu là gói tin quét Wake Word (target_id == 0x05)
                     if target_id == 0x05:
                         pcm_chunk = packet[7:519]
+                        stream_flag = packet[6]
+                        if stream_flag == 0x01:
+                            logger.info("[WAKE-STREAM] Bắt đầu nhận luồng Wake Word từ Panel [%s]", sender_key)
                         asyncio.create_task(wake_mgr.feed_audio_chunk(sender_key, pcm_chunk))
                     # Nếu là gói tin gửi cho AI (target_id == 0x00)
                     elif target_id == 0x00:
+                        if sender_key not in audio_record_buffers:
+                            audio_record_buffers[sender_key] = bytearray()
                         stream_flag = packet[6]
                         pcm_chunk = packet[7:519]
                         if stream_flag == 0x01: # START
+                            # Ngắt lời tức thì nếu AI đang phát âm thanh câu trả lời trước đó (Barge-in)
+                            if sender_key in active_ai_tasks:
+                                await abort_ai_flow(sender_key, websocket)
                             audio_record_buffers[sender_key].clear()
                         audio_record_buffers[sender_key].extend(pcm_chunk)
                         if stream_flag == 0x03: # END
                             pcm_audio = bytes(audio_record_buffers[sender_key])
                             audio_record_buffers[sender_key].clear()
-                            asyncio.create_task(handle_ai_voice_flow(sender_key, websocket, pcm_audio))
+                            task = asyncio.create_task(handle_ai_voice_flow(sender_key, websocket, pcm_audio, client_format="pcm"))
+                            active_ai_tasks[sender_key] = task
                     else:
                         # Gói tin đàm thoại nội bộ Intercom -> Lưu buffer âm thanh và định tuyến
                         stream_flag = packet[6]
@@ -2083,7 +2358,9 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                                 session_type="intercom",
                                 text="Đàm thoại nội bộ",
                                 response="",
-                                pcm_data=ic_pcm
+                                pcm_data=ic_pcm,
+                                session_id=f"intercom_{int(time.time())}_{sender_key}",
+                                ai_model="Intercom"
                             )
                             asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
 
@@ -2095,18 +2372,20 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
         logger.error("Error in websocket session for %s: %s", dev_code or device_id, e)
     finally:
         current_key = dev_code or device_id
-        intercom.unregister(current_key, websocket)
         if device_id.startswith("web_admin"):
             intercom.unregister_admin(websocket)
             if active_sockets.get(device_id) == websocket:
                 del active_sockets[device_id]
-        if dev_code:
+        if dev_code and active_sockets.get(dev_code) == websocket:
             intercom.unregister(dev_code, websocket)
-            if active_sockets.get(dev_code) == websocket:
-                del active_sockets[dev_code]
+            del active_sockets[dev_code]
             if dev_code in audio_record_buffers:
                 del audio_record_buffers[dev_code]
-            if dev_code in devices_db and active_sockets.get(dev_code) is None:
+            if dev_code in opus_decoders:
+                del opus_decoders[dev_code]
+            if dev_code in client_audio_formats:
+                del client_audio_formats[dev_code]
+            if dev_code in devices_db:
                 devices_db[dev_code]["online"] = False
                 logger.info("Device [%s] disconnected -> marked OFFLINE", dev_code)
 
@@ -2121,8 +2400,10 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                 "intercom_targets": intercom.get_targets()
             })
 
-async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
+async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, client_format: str = "auto"):
     """Luồng xử lý giọng nói hoàn chỉnh: STT -> AI Intent / HA Action -> Sentence Chunking TTS -> Gửi Binary Audio về ESP32."""
+    curr_task = asyncio.current_task()
+    active_ai_tasks[device_id] = curr_task
     try:
         # Phát âm thanh đã nhận trọn vẹn câu lệnh ("Poong!" - Xiaozhi Ack Style)
         await ws.send_json({"type": "ack_chime"})
@@ -2185,23 +2466,14 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             # 3. Phát âm thanh xác nhận ngắn từ RAM Cache (< 10ms)
             confirm_pcm = await audio_pipeline.text_to_pcm(fast_reply, voice=tts_voice)
             if confirm_pcm:
-                seq = 0
-                tot = len(confirm_pcm)
-                for i in range(0, tot, 512):
-                    c = confirm_pcm[i:i+512]
-                    if len(c) < 512:
-                        c = c + b'\x00' * (512 - len(c))
-                    is_end = (i + 512 >= tot)
-                    flag = 0x01 if seq == 0 else (0x03 if is_end else 0x02)
-                    hdr = bytearray(7)
-                    hdr[0:2] = (0xA55A).to_bytes(2, 'little')
-                    hdr[2] = 0x00 # Server Hub
-                    hdr[3] = 0x01 # ESP32
-                    hdr[4:6] = seq.to_bytes(2, 'little')
-                    hdr[6] = flag
-                    await ws.send_bytes(bytes(hdr + c + b'\x00'))
-                    seq += 1
-                    await asyncio.sleep(0.012)
+                is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                last_seq = await send_audio_chunks(ws, confirm_pcm, is_opus=is_opus, start_seq=0)
+                await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+
+            sess_id = ai_router.session_mgr.get_session_id(device_id)
+            turn_idx = 1
+            if fast_reply:
+                turn_idx = ai_router.session_mgr.add_turn(device_id, text, fast_reply) or 1
 
             rec = history_mgr.add_record(
                 device_code=device_id,
@@ -2209,16 +2481,44 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
                 session_type="voice_ai",
                 text=text,
                 response=fast_reply,
-                pcm_data=pcm_audio
+                pcm_data=pcm_audio,
+                session_id=sess_id,
+                turn_index=turn_idx,
+                ai_model="⚡ Fast Rule (0ms)"
             )
             asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
-            await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
+
+            continuous_enabled = ai_router.config.get("continuous_conversation", True)
+            is_farewell = ai_router.session_mgr.is_farewell(text)
+
+            if continuous_enabled and not is_farewell:
+                timeout_ms = int(ai_router.config.get("continuous_timeout_ms", 8000))
+                logger.info("[CONTINUOUS] Bắt đầu phiên lắng nghe tiếp nối sau fast-rule cho [%s] (timeout: %dms)...", device_id, timeout_ms)
+                await ws.send_json({
+                    "type": "start_listen",
+                    "payload": {
+                        "timeout_ms": timeout_ms,
+                        "mode": "continuous",
+                        "text": "Đang nghe tiếp..."
+                    }
+                })
+                await ws.send_json({
+                    "type": "ai_state",
+                    "payload": {
+                        "state": "listening",
+                        "text": "Đang nghe tiếp...",
+                        "continuous": True
+                    }
+                })
+            else:
+                await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
             return
 
         # -------------------------------------------------------------
         # 🧠 CẤP ĐỘ 2: HỎI ĐÁP / HỘI THOẠI AI: PIPELINED GAPLESS STREAMING (0ms KHOẢNG LẶNG)
         # -------------------------------------------------------------
-        audio_queue = asyncio.Queue()     # Chứa (pcm_bytes: Optional[bytes], is_final: bool)
+        # audio_queue: Chứa tuple (sent_idx: int, sent_text: str, pcm_bytes: Optional[bytes], is_final: bool)
+        audio_queue = asyncio.Queue()
         sentence_queue = asyncio.Queue()  # Chứa str (nội dung câu) hoặc None (kết thúc)
         accumulated_text = ""
 
@@ -2226,20 +2526,36 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
         # Giúp loa ESP32 bật tiếng ngay sau 50ms khi người dùng vừa dứt lời!
         filler_pcm = await audio_pipeline.text_to_pcm("Dạ,", voice=tts_voice)
         if filler_pcm:
-            await audio_queue.put((filler_pcm, False))
+            await audio_queue.put((0, "Dạ,", filler_pcm, False))
 
         def is_boundary(buf: str) -> bool:
             buf = buf.strip()
             words = buf.split()
-            if len(words) < 2:
+            if len(words) < 5:
                 return False
+            # Chỉ ngắt ở dấu kết thúc câu thật sự: . ! ? \n …
             if any(buf.endswith(p) for p in [".", "!", "?", "\n", "…"]):
                 return True
-            if any(buf.endswith(p) for p in [",", ":"]) and len(words) >= 5:
-                return True
-            if len(words) >= 10:
+            # Nếu câu quá dài (> 20 từ) và có dấu phẩy hoặc chấm phẩy mới ngắt nhịp thở
+            if any(buf.endswith(p) for p in [",", ";"]) and len(words) >= 20:
                 return True
             return False
+
+        def trim_pcm_silence(pcm_data: bytes, threshold: int = 250) -> bytes:
+            """Cắt bỏ khoảng lặng (silence padding) ở đầu và cuối để nối mượt mà 0ms khoảng trống."""
+            if not pcm_data or len(pcm_data) < 4:
+                return pcm_data
+            try:
+                import numpy as np
+                samples = np.frombuffer(pcm_data, dtype=np.int16)
+                non_silent = np.where(np.abs(samples) > threshold)[0]
+                if len(non_silent) == 0:
+                    return pcm_data
+                start_idx = max(0, non_silent[0] - 160) # Giữ 10ms đệm êm
+                end_idx = min(len(samples), non_silent[-1] + 160)
+                return samples[start_idx:end_idx].tobytes()
+            except Exception:
+                return pcm_data
 
         async def llm_producer():
             nonlocal accumulated_text
@@ -2247,7 +2563,7 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             last_ws_send_time = 0.0
             try:
                 loop = asyncio.get_event_loop()
-                async for token in ai_router.stream_intent(text, context_room=room_name):
+                async for token in ai_router.stream_intent(text, context_room=room_name, device_id=device_id):
                     accumulated_text += token
                     sentence_buffer += token
 
@@ -2269,6 +2585,8 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
                 rem = sentence_buffer.strip()
                 if rem:
                     await sentence_queue.put(rem)
+            except asyncio.CancelledError:
+                raise
             except Exception as ex:
                 logger.error("Error in LLM stream producer: %s", ex)
             finally:
@@ -2276,52 +2594,67 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
 
         async def tts_worker():
             """Tổng hợp câu tiếp theo song song trong RAM trong lúc câu trước đang phát ra loa."""
+            sent_idx = 1 if filler_pcm else 0
             while True:
                 sent = await sentence_queue.get()
                 if sent is None:
-                    await audio_queue.put((None, True))  # Hết toàn bộ bài nói
+                    await audio_queue.put((0, "", None, True))  # Hết toàn bộ bài nói
                     break
                 try:
                     chunk_pcm = await audio_pipeline.text_to_pcm(sent, voice=tts_voice)
                     if chunk_pcm:
-                        await audio_queue.put((chunk_pcm, False))
+                        trimmed = trim_pcm_silence(chunk_pcm)
+                        await audio_queue.put((sent_idx, sent, trimmed, False))
+                        sent_idx += 1
+                except asyncio.CancelledError:
+                    raise
                 except Exception as ex:
                     logger.warning("TTS error for chunk '%s': %s", sent, ex)
 
         async def audio_streamer():
             """Đẩy liên tục audio xuống ESP32, câu 2 nối tiếp câu 1 với 0ms khoảng lặng."""
             seq = 0
+            is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+            opus_enc = None
+            if is_opus:
+                try:
+                    opus_enc = opuslib.Encoder(16000, 1, 'voip')
+                except Exception as e:
+                    logger.warning("Không thể tạo Opus Encoder cho stream: %s", e)
+                    is_opus = False
+
             while True:
-                item, is_final = await audio_queue.get()
+                sent_idx, sent_text, item, is_final = await audio_queue.get()
                 if is_final:
                     break
                 if not item:
                     continue
 
-                tot = len(item)
-                for i in range(0, tot, 512):
-                    c = item[i:i+512]
-                    if len(c) < 512:
-                        c = c + b'\x00' * (512 - len(c))
-                    flag = 0x01 if seq == 0 else 0x02
-                    hdr = bytearray(7)
-                    hdr[0:2] = (0xA55A).to_bytes(2, 'little')
-                    hdr[2] = 0x00 # Server Hub
-                    hdr[3] = 0x01 # ESP32
-                    hdr[4:6] = seq.to_bytes(2, 'little')
-                    hdr[6] = flag
-                    await ws.send_bytes(bytes(hdr + c + b'\x00'))
-                    seq += 1
-                    await asyncio.sleep(0.012)
+                # Chuẩn hóa sự kiện sentence_start đồng bộ chữ và tiếng (Xiaozhi Style)
+                if sent_text:
+                    try:
+                        # Chuẩn Xiaozhi: {"type": "tts", "state": "sentence_start", "text": "..."}
+                        await ws.send_json({
+                            "type": "tts",
+                            "state": "sentence_start",
+                            "text": sent_text,
+                            "index": sent_idx
+                        })
+                        # Gửi thêm dạng payload để tương thích ngược hoàn hảo
+                        await ws.send_json({
+                            "type": "sentence_start",
+                            "payload": {
+                                "index": sent_idx,
+                                "text": sent_text
+                            }
+                        })
+                    except Exception:
+                        pass
+
+                seq = await send_audio_chunks(ws, item, is_opus=is_opus, start_seq=seq, encoder=opus_enc)
 
             # Gửi gói kết thúc STREAM_FLAG_END (0x03) duy nhất một lần khi nói xong toàn bộ
-            end_hdr = bytearray(7)
-            end_hdr[0:2] = (0xA55A).to_bytes(2, 'little')
-            end_hdr[2] = 0x00
-            end_hdr[3] = 0x01
-            end_hdr[4:6] = seq.to_bytes(2, 'little')
-            end_hdr[6] = 0x03
-            await ws.send_bytes(bytes(end_hdr + b'\x00' * 513))
+            await send_audio_end(ws, is_opus=is_opus, seq=seq)
 
         # Chạy song song cả 3 worker qua asyncio.gather
         await asyncio.gather(
@@ -2330,6 +2663,12 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             audio_streamer()
         )
 
+        # Ghi nhận lượt nói vào bộ nhớ ngữ cảnh và lấy session ID
+        sess_id = ai_router.session_mgr.get_session_id(device_id)
+        turn_idx = 1
+        if accumulated_text and not accumulated_text.startswith("Xin lỗi") and not accumulated_text.startswith("Tôi không nghe"):
+            turn_idx = ai_router.session_mgr.add_turn(device_id, text, accumulated_text) or 1
+
         # Lưu vào Lịch sử Giọng nói & Ghi âm Audio
         rec = history_mgr.add_record(
             device_code=device_id,
@@ -2337,15 +2676,56 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes):
             session_type="voice_ai",
             text=text,
             response=accumulated_text,
-            pcm_data=pcm_audio
+            pcm_data=pcm_audio,
+            session_id=sess_id,
+            turn_index=turn_idx,
+            ai_model=target_ai_model
         )
         asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
 
-        await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
+        # Kiểm tra cơ chế Trò Chuyện Liên Tục (Xiaozhi Style)
+        continuous_enabled = ai_router.config.get("continuous_conversation", True)
+        is_farewell = ai_router.session_mgr.is_farewell(text)
 
+        if continuous_enabled and not is_farewell:
+            timeout_ms = int(ai_router.config.get("continuous_timeout_ms", 8000))
+            logger.info("[CONTINUOUS] Bắt đầu phiên lắng nghe tiếp nối cho [%s] (timeout: %dms)...", device_id, timeout_ms)
+            # 1. Gửi lệnh start_listen kích hoạt mic ESP32 với đếm ngược timeout
+            await ws.send_json({
+                "type": "start_listen",
+                "payload": {
+                    "timeout_ms": timeout_ms,
+                    "mode": "continuous",
+                    "text": "Đang nghe tiếp..."
+                }
+            })
+            # 2. Cập nhật trạng thái listening cho màn hình
+            await ws.send_json({
+                "type": "ai_state",
+                "payload": {
+                    "state": "listening",
+                    "text": "Đang nghe tiếp...",
+                    "continuous": True
+                }
+            })
+        else:
+            logger.info("[SESSION] Kết thúc phiên trò chuyện cho [%s], đưa về IDLE.", device_id)
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle"}})
+
+    except asyncio.CancelledError:
+        logger.info("[BARGE-IN] AI flow của [%s] đã bị hủy tức thì bởi người dùng (Cắt lời thành công).", device_id)
+        try:
+            await ws.send_json({"type": "tts_stop"})
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+        except Exception:
+            pass
+        raise
     except Exception as e:
         logger.error("Error in AI voice flow for %s: %s", device_id, e)
         await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Lỗi xử lý âm thanh."}})
+    finally:
+        if active_ai_tasks.get(device_id) is curr_task:
+            active_ai_tasks.pop(device_id, None)
 
 if __name__ == "__main__":
     uvicorn.run("app.main_ws_server:app", host="0.0.0.0", port=PORT, reload=False)

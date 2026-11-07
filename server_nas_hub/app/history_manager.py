@@ -90,8 +90,11 @@ class HistoryManager:
                    session_type: str, # "voice_ai" | "intercom"
                    text: str,
                    response: str = "",
-                   pcm_data: Optional[bytes] = None) -> Dict:
-        """Thêm một bản ghi lịch sử đàm thoại / giọng nói mới."""
+                   pcm_data: Optional[bytes] = None,
+                   session_id: Optional[str] = None,
+                   turn_index: int = 1,
+                   ai_model: Optional[str] = None) -> Dict:
+        """Thêm một bản ghi lịch sử đàm thoại / giọng nói mới (hỗ trợ nhóm theo phiên đối thoại Xiaozhi)."""
         now_ts = time.time()
         record_id = f"hist_{int(now_ts)}_{uuid.uuid4().hex[:6]}"
         dt_str = datetime.fromtimestamp(now_ts).strftime("%d/%m/%Y %H:%M:%S")
@@ -104,6 +107,9 @@ class HistoryManager:
 
         item = {
             "id": record_id,
+            "session_id": session_id or f"sess_{int(now_ts)}_{device_code}",
+            "turn_index": turn_index,
+            "ai_model": ai_model or "",
             "timestamp": now_ts,
             "datetime": dt_str,
             "device_code": device_code,
@@ -168,6 +174,18 @@ class HistoryManager:
             self.save_history()
             return True
         return False
+
+    def delete_session(self, session_id: str) -> int:
+        """Xóa toàn bộ các câu thoại thuộc cùng một phiên hội thoại session_id."""
+        to_remove = [r for r in self.records if r.get("session_id") == session_id]
+        if not to_remove:
+            return 0
+        for r in to_remove:
+            if r.get("audio_file"):
+                self._delete_audio_file(r["audio_file"])
+            self.records.remove(r)
+        self.save_history()
+        return len(to_remove)
 
     def clear_all(self) -> int:
         """Xóa toàn bộ lịch sử và dọn sạch file trong thư mục recordings."""
