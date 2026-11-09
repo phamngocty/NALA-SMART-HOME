@@ -2219,8 +2219,9 @@
                         <div style="font-size: 11px; color: #94a3b8;">Giọng đọc Microsoft Neural tự nhiên truyền cảm</div>
                     </div>
                     <select id="cfgTtsVoice" style="background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;">
-                        <option value="vi-VN-HoaiMyNeural">Hoài My (Nữ - Truyền cảm, dịu dàng)</option>
-                        <option value="vi-VN-NamMinhNeural">Nam Minh (Nam - Rõ ràng, ấm áp)</option>
+                        <option value="google_fast">⚡ Google TTS Siêu Tốc (~0.3s - Khuyên dùng)</option>
+                        <option value="vi-VN-HoaiMyNeural">👩 Hoài My (Nữ - Truyền cảm, ~1.8s)</option>
+                        <option value="vi-VN-NamMinhNeural">👨 Nam Minh (Nam - Rõ ràng, ~1.8s)</option>
                     </select>
                 </div>
 
@@ -2300,20 +2301,21 @@
                 <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 16px;">
                     <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <label style="font-size: 11px; font-weight: 600; color: #38bdf8;">🎙️ Từ Khóa Đánh Thức:</label>
-                            <span style="font-size: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);">OpenWakeWord</span>
+                            <label style="font-size: 11px; font-weight: 600; color: #38bdf8;">🎙️ Từ Khóa Đánh Thức Áp Dụng:</label>
+                            <span id="wakeCheckedCountBadge" style="font-size: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;">Đang áp dụng: 0 mô hình</span>
                         </div>
-                        <select id="cfgWakeSelectedModel" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: #f8fafc; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
-                            <option value="hey_nala" selected>🌟 Hey Nala (Trợ Lý NALA Smart Home)</option>
-                            <option value="hey_jarvis">⚡ Hey Jarvis (Độ nhạy cao)</option>
-                            <option value="alexa">🌐 Alexa (Chuẩn quốc tế)</option>
-                        </select>
+                        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 8px; line-height: 1.4;">
+                            Tích chọn các mô hình bạn muốn máy chủ nhận diện. Hệ thống chỉ nạp vào RAM đúng các mô hình được chọn:
+                        </div>
+                        <div id="cfgWakeModelsCheckboxContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow-y: auto; padding-right: 4px; margin-bottom: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Đang tải danh sách mô hình...</div>
+                        </div>
                         <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px dashed #475569;">
                             <span style="font-size: 11px; color: #cbd5e1;">Mô hình riêng:</span>
                             <label for="wakeModelUploadInput" style="display: inline-flex; align-items: center; gap: 5px; background: #0284c7; color: white; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer;">
-                                📤 Tải lên file (.tflite)
+                                📤 Tải lên file (.onnx / .tflite)
                             </label>
-                            <input type="file" id="wakeModelUploadInput" accept=".tflite" style="display: none;" onchange="uploadCustomWakeModel(this)">
+                            <input type="file" id="wakeModelUploadInput" accept=".onnx,.tflite" style="display: none;" onchange="uploadCustomWakeModel(this)">
                         </div>
                         <div id="wakeModelUploadStatus" style="font-size: 10px; margin-top: 4px; color: #94a3b8; text-align: right;"></div>
                     </div>
@@ -2342,6 +2344,137 @@
 
                 <!-- Live Wake Word Event Alert -->
                 <div id="wakeLiveEventAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;">
+                </div>
+
+                <!-- Live Wake Word Test & Real-time Matching Score Gauge -->
+                <div style="margin-top: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 10px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">🎙️</span>
+                            <div>
+                                <div style="font-size: 12px; font-weight: 700; color: #38bdf8;">Kiểm Thử Micro & Đo Điểm Độ Khớp Wake Word</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Thử giọng thật của các thành viên gia đình trực tiếp qua Màn hình ESP32 hoặc Micro PC</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="wakeTestStatusBadge" style="font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;">
+                                🟢 Đang lắng nghe ESP32
+                            </span>
+                            <button id="btnTogglePCMic" type="button" onclick="togglePCMicTest()" style="display: none; align-items: center; gap: 5px; background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                ▶ Bật Kiểm Thử Micro PC
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HỘP CHỌN THIẾT BỊ / NGUỒN THU ÂM (Màn hình ESP32 hoặc PC) -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; background: rgba(30, 41, 59, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 13px;">🎯</span>
+                            <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Nguồn Thu Âm / Thiết Bị Kiểm Thử:</label>
+                        </div>
+                        <select id="wakeTestSourceSelect" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onchange="onWakeTestSourceChange()">
+                            <option value="all">🌐 Tự động (Mọi màn hình ESP32 & PC)</option>
+                            <option value="pc">🖥️ Micro Máy Tính (PC Browser)</option>
+                        </select>
+                    </div>
+
+                    <!-- Hướng dẫn nguồn thu âm -->
+                    <div id="wakeSourceGuideBox" style="margin-bottom: 12px; padding: 8px 12px; border-radius: 6px; font-size: 11px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); color: #93c5fd; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                        <span id="wakeSourceGuideText">
+                            ✨ Bạn đang đứng gần màn hình ESP32. Hãy nói "Nala ơi" hoặc "Hey Nala" trước màn hình, thanh đo điểm bên dưới sẽ nhảy trực tiếp!
+                        </span>
+                        <button id="btnResetPeakScore" type="button" onclick="resetWakePeakScore()" style="background: rgba(148, 163, 184, 0.15); border: 1px solid #475569; color: #cbd5e1; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer;">
+                            🔄 Xóa Đỉnh
+                        </button>
+                    </div>
+
+                    <!-- Hướng dẫn bảo mật cờ Chrome nếu chọn Micro PC mà bị chặn -->
+                    <div id="pcMicHttpHelpBox" style="display: none; margin-bottom: 12px; padding: 12px; border-radius: 8px; font-size: 11px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; color: #fde68a;">
+                        <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: #fbbf24;">
+                            <span>⚠️</span> Hướng Dẫn Mở Khóa Micro PC Trên Trình Duyệt (Chrome / Edge):
+                        </div>
+                        <div style="margin-bottom: 8px; line-height: 1.5; color: #fef3c7;">
+                            Trình duyệt Chrome/Edge mặc định chặn quyền truy cập Micro trên IP mạng LAN HTTP (192.168.1.114:8765) vì chính sách bảo mật WebRTC.<br>
+                            Bạn chỉ cần bật cờ bảo mật 1 lần theo 3 bước sau:
+                        </div>
+                        <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border: 1px dashed #f59e0b; margin-bottom: 8px; font-size: 11px; color: #e2e8f0; line-height: 1.6;">
+                            <b>1.</b> Mở tab mới trong Chrome/Edge và dán: <span style="color: #38bdf8; font-family: monospace;">chrome://flags/#unsafely-treat-insecure-origin-as-secure</span><br>
+                            <b>2.</b> Tại ô <i>"Insecure origins treated as secure"</i>, nhập: <span style="color: #4ade80; font-family: monospace;">http://192.168.1.114:8765</span> và đổi sang <b>Enabled</b>.<br>
+                            <b>3.</b> Bấm nút màu xanh <b>Relaunch</b> (Khởi động lại trình duyệt) ở góc dưới bên phải.
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button type="button" onclick="copyChromeFlag()" style="background: #f59e0b; color: #0b0f14; border: none; padding: 5px 12px; border-radius: 5px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                                📋 Copy Link Cờ Chrome
+                            </button>
+                            <button type="button" onclick="copyOriginUrl()" style="background: #0284c7; color: white; border: none; padding: 5px 12px; border-radius: 5px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                                📋 Copy URL Hub (http://192.168.1.114:8765)
+                            </button>
+                            <span id="copyFlagStatus" style="font-size: 11px; color: #4ade80; font-weight: 600;"></span>
+                        </div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(245, 158, 11, 0.3); font-size: 10px; color: #cbd5e1;">
+                            💡 <b>Mẹo tiện lợi:</b> Bạn cũng có thể chọn nguồn <strong>"📱 Màn hình ESP32"</strong> ở trên để đứng thử giọng trực tiếp trước màn hình trong phòng mà không cần mở cờ trình duyệt!
+                        </div>
+                    </div>
+
+                    <!-- Cài đặt Ngưỡng kích hoạt (Threshold Slider) -->
+                    <div style="background: rgba(30, 41, 59, 0.6); padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="font-size: 11px; font-weight: 600; color: #cbd5e1;">🎯 Ngưỡng Kích Hoạt (Threshold):</label>
+                            <span id="wakeThresholdVal" style="font-family: Consolas, monospace; font-size: 12px; font-weight: 700; color: #10b981; background: #0f172a; padding: 2px 8px; border-radius: 4px; border: 1px solid #334155;">
+                                45% (0.45)
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="wakeThresholdSlider" min="0.10" max="0.95" step="0.05" value="0.45" 
+                                   style="flex: 1; accent-color: #10b981; cursor: pointer;" 
+                                   oninput="onWakeThresholdChange(this.value)">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-top: 4px;">
+                            <span>10% (Rất nhạy)</span>
+                            <span id="wakeThresholdHint" style="color: #38bdf8; font-weight: 600;">Khuyến nghị tiêu chuẩn cho gia đình</span>
+                            <span>95% (Nghiêm ngặt)</span>
+                        </div>
+                    </div>
+
+                    <!-- Thanh đo Âm lượng Micro (VU Meter) -->
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #cbd5e1;">🔊 Âm lượng Micro:</span>
+                            <span id="wakeVolText" style="font-family: Consolas, monospace; color: #94a3b8; font-size: 11px;">0% [░░░░░░░░░░] (-∞ dB)</span>
+                        </div>
+                        <div style="background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
+                            <div id="wakeVolBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981 60%, #f59e0b 85%, #ef4444 100%); transition: width 0.08s ease-out; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Thanh đo Điểm số Độ khớp (% Match Score Gauge) -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #cbd5e1;">
+                                🎯 Độ khớp từ khóa (<strong id="wakeModelLabelTest" style="color: #38bdf8;">Nala Ơi</strong>):
+                            </span>
+                            <span id="wakeScoreDisplay" style="font-family: Consolas, monospace; font-size: 14px; font-weight: 700; color: #38bdf8;">
+                                0% [░░░░░░░░░░]
+                            </span>
+                        </div>
+                        <div style="background: #1e293b; height: 18px; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid #334155;">
+                            <!-- Thanh điểm số chuyển động mượt mà -->
+                            <div id="wakeScoreBar" style="width: 0%; height: 100%; background: #38bdf8; transition: width 0.08s ease-out, background-color 0.15s; border-radius: 5px;"></div>
+                            <!-- Vạch chỉ thị Ngưỡng kích hoạt (Threshold Line Marker) -->
+                            <div id="wakeThresholdMarker" style="position: absolute; top: 0; bottom: 0; left: 45%; width: 2px; background: #ef4444; box-shadow: 0 0 5px #ef4444; z-index: 2;" title="Ngưỡng kích hoạt"></div>
+                        </div>
+                    </div>
+
+                    <!-- Nguồn âm thanh hiện tại đang phản hồi -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                        <span id="wakeActiveSourceInfo">Nguồn: <em>Chờ âm thanh từ Micro PC hoặc ESP32...</em></span>
+                        <span id="wakeLastPeakInfo" style="font-family: Consolas, monospace; font-size: 10px; color: #64748b;">Đỉnh cao nhất: 0%</span>
+                    </div>
+
+                    <!-- Banner Thông báo Đánh thức thành công (Live Alert) -->
+                    <div id="wakeDetectedBanner" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 700; font-size: 12px; text-align: center;">
+                        🎉 [WAKE DETECTED] Đã kích hoạt thành công từ khóa! Giọng nói đạt chuẩn!
+                    </div>
                 </div>
             </div>
 
@@ -3193,6 +3326,21 @@
 
         function handleWSMessage(data) {
             const type = data.type;
+
+            if (type === 'wake_score_tick') {
+                handleWakeScoreTick(data);
+                return;
+            }
+
+            if (type === 'wake_detected') {
+                triggerWakeDetectedUI(data);
+                return;
+            }
+
+            if (type === 'wake_config_update') {
+                loadWakeConfig();
+                return;
+            }
 
             if (type === 'init') {
                 if (data.system) updateSystemStatus(data.system);
@@ -5185,6 +5333,7 @@
                     if (fData.overview) updateFloorsOverview(fData.overview);
                     if (fData.house_status) updateAllHouseStrip(fData.house_status);
                 }
+                loadWakeConfig();
             } catch (e) {
                 console.warn("Bootstrap REST fetch warning:", e);
             }
@@ -5815,12 +5964,14 @@ async function saveAIConfig() {
         const code = chk.getAttribute('data-code');
         panelSettings[code] = { wake_enabled: chk.checked };
     });
+    const selected_models = Array.from(document.querySelectorAll('.wake-model-chk:checked')).map(c => c.value);
     fetch('/api/wake/config', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             global_enabled: document.getElementById('cfgWakeGlobalEnabled').checked,
-            selected_model: document.getElementById('cfgWakeSelectedModel').value,
+            selected_models: selected_models,
+            selected_model: selected_models[0] || 'nala_oiv1',
             arbitration_window_ms: parseInt(document.getElementById('cfgWakeWindowMs').value) || 300,
             panel_settings: panelSettings
         })
@@ -5957,18 +6108,171 @@ async function fetchModelsForProvider(provider) {
     }
 }
 
+async function saveWakeModelSelection(selected_models) {
+    if (!selected_models) {
+        selected_models = Array.from(document.querySelectorAll('.wake-model-chk:checked')).map(c => c.value);
+    }
+    const statusEl = document.getElementById('wakeModelUploadStatus');
+    try {
+        const res = await fetch('/api/wake/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                selected_models: selected_models,
+                selected_model: selected_models[0] || 'nala_oiv1'
+            })
+        });
+        if (res.ok) {
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color: #10b981;">✅ Đã lưu áp dụng ${selected_models.length} mô hình</span>`;
+                setTimeout(() => { if (statusEl && statusEl.innerText.includes('Đã lưu')) statusEl.innerHTML = ''; }, 3500);
+            }
+        }
+    } catch (e) {
+        console.error("Error saving wake model selection:", e);
+    }
+}
+
+async function onWakeCheckboxChanged() {
+    const checked = Array.from(document.querySelectorAll('.wake-model-chk:checked')).map(c => c.value);
+    
+    // Cập nhật nhãn số lượng đã chọn
+    const badge = document.getElementById('wakeCheckedCountBadge');
+    if (badge) {
+        badge.textContent = `Đang áp dụng: ${checked.length} mô hình`;
+        badge.style.color = checked.length > 0 ? '#10b981' : '#f87171';
+        badge.style.background = checked.length > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+        badge.style.borderColor = checked.length > 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+    }
+    
+    // Cập nhật nhãn tại khu vực kiểm thử Micro
+    const testModelLbl = document.getElementById('wakeModelLabelTest');
+    if (testModelLbl) {
+        testModelLbl.textContent = checked.length > 0 ? checked.join(', ') : 'Chưa chọn';
+    }
+
+    await saveWakeModelSelection(checked);
+}
+
+async function uploadCustomWakeModel(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const statusEl = document.getElementById('wakeModelUploadStatus');
+    if (statusEl) statusEl.innerHTML = `<span style="color: #38bdf8;">⏳ Đang truyền file ${file.name} lên server NAS...</span>`;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const base64Data = e.target.result.split(',')[1];
+            const res = await fetch('/api/wake/upload', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    filename: file.name,
+                    content_base64: base64Data
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                if (statusEl) statusEl.innerHTML = `<span style="color: #10b981;">✅ ${data.message}</span>`;
+                // Làm mới danh sách checkbox và tự động tích chọn model mới
+                await loadWakeConfig();
+                const chk = document.querySelector(`.wake-model-chk[value="${data.model_name}"]`);
+                if (chk) {
+                    chk.checked = true;
+                    await onWakeCheckboxChanged();
+                }
+            } else {
+                if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">❌ ${data.message || 'Lỗi tải lên'}</span>`;
+            }
+        } catch (err) {
+            if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">❌ Lỗi: ${err.message}</span>`;
+        } finally {
+            input.value = '';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
 async function loadWakeConfig() {
     try {
         const res = await fetch('/api/wake/config');
         if (res.ok) {
             const data = await res.json();
             document.getElementById('cfgWakeGlobalEnabled').checked = data.global_enabled !== false;
-            document.getElementById('cfgWakeSelectedModel').value = data.selected_model || 'hey_nala';
+            
+            // Cập nhật danh sách mô hình có sẵn vào container Checkbox
+            const modelsContainer = document.getElementById('cfgWakeModelsCheckboxContainer');
+            const currentSelected = data.selected_models || (data.selected_model ? [data.selected_model] : ['nala_oiv1']);
+            if (modelsContainer) {
+                if (data.available_models && data.available_models.length > 0) {
+                    modelsContainer.innerHTML = data.available_models.map(m => {
+                        let label = m;
+                        let badgeText = 'Custom ONNX';
+                        let badgeColor = '#38bdf8';
+                        let badgeBg = 'rgba(56, 189, 248, 0.15)';
+
+                        if (m === 'nala_oiv1') {
+                            label = '🌟 Nala Ơi (v1 - Tiếng Việt chính xác)';
+                            badgeText = 'Độ chính xác cao';
+                            badgeColor = '#10b981';
+                            badgeBg = 'rgba(16, 185, 129, 0.15)';
+                        } else if (m === 'nala_oi') {
+                            label = '🌟 Nala Ơi (Bản gốc)';
+                            badgeText = 'Tiếng Việt';
+                            badgeColor = '#06b6d4';
+                            badgeBg = 'rgba(6, 182, 212, 0.15)';
+                        } else if (m === 'hey_nala') {
+                            label = '🌟 Hey Nala (Tiếng Anh/Việt)';
+                            badgeText = 'Tiếng Anh/Việt';
+                            badgeColor = '#38bdf8';
+                            badgeBg = 'rgba(56, 189, 248, 0.15)';
+                        } else if (m === 'hey_jarvis') {
+                            label = '⚡ Hey Jarvis (Độ nhạy cao)';
+                            badgeText = 'Built-in';
+                            badgeColor = '#a855f7';
+                            badgeBg = 'rgba(168, 85, 247, 0.15)';
+                        } else if (m === 'alexa') {
+                            label = '🌐 Alexa (Chuẩn quốc tế)';
+                            badgeText = 'Built-in';
+                            badgeColor = '#f59e0b';
+                            badgeBg = 'rgba(245, 158, 11, 0.15)';
+                        }
+
+                        const isChecked = currentSelected.includes(m);
+                        const subName = (m === 'hey_jarvis' || m === 'alexa') ? `${m} (built-in)` : `${m}.onnx`;
+                        return `
+                            <label style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid ${isChecked ? '#0284c7' : '#334155'}; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='${isChecked ? '#0284c7' : '#334155'}'">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" class="wake-model-chk" value="${m}" ${isChecked ? 'checked' : ''} onchange="onWakeCheckboxChanged()" style="width: 16px; height: 16px; accent-color: #38bdf8; cursor: pointer;">
+                                    <div>
+                                        <div style="font-size: 11px; font-weight: 600; color: ${isChecked ? '#38bdf8' : '#e2e8f0'};">${label}</div>
+                                        <div style="font-size: 9px; color: #64748b; font-family: monospace;">${subName}</div>
+                                    </div>
+                                </div>
+                                <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeColor}40;">${badgeText}</span>
+                            </label>
+                        `;
+                    }).join('');
+                } else {
+                    modelsContainer.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 8px;">Chưa tìm thấy mô hình nào</div>';
+                }
+
+                const badge = document.getElementById('wakeCheckedCountBadge');
+                if (badge) {
+                    const cnt = modelsContainer.querySelectorAll('.wake-model-chk:checked').length;
+                    badge.textContent = `Đang áp dụng: ${cnt} mô hình`;
+                    badge.style.color = cnt > 0 ? '#10b981' : '#f87171';
+                    badge.style.background = cnt > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                    badge.style.borderColor = cnt > 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+                }
+            }
+            
             document.getElementById('cfgWakeWindowMs').value = data.arbitration_window_ms || 300;
 
-            const container = document.getElementById('wakeRoomsContainer');
+            const roomsContainer = document.getElementById('wakeRoomsContainer');
             if (data.panels_list && data.panels_list.length > 0) {
-                container.innerHTML = data.panels_list.map(p => `
+                roomsContainer.innerHTML = data.panels_list.map(p => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #1e293b;">
                         <div>
                             <span style="font-weight: 700; color: #f8fafc; font-size: 13px;">${p.room_name}</span>
@@ -5980,13 +6284,448 @@ async function loadWakeConfig() {
                         </div>
                     </div>
                 `).join('');
+
+                // Cập nhật danh sách thiết bị vào Dropdown Nguồn Kiểm Thử
+                const srcSel = document.getElementById('wakeTestSourceSelect');
+                if (srcSel) {
+                    const prevVal = srcSel.value;
+                    let opts = '<option value="all">🌐 Tự động (Mọi màn hình ESP32 & PC)</option>';
+                    data.panels_list.forEach(p => {
+                        const st = p.online ? '🟢 Online' : '⚪ Offline';
+                        opts += `<option value="${p.device_code}">📱 ${p.room_name} (${p.device_code}) - ${st}</option>`;
+                    });
+                    opts += '<option value="pc">🖥️ Micro Máy Tính (PC Browser)</option>';
+                    srcSel.innerHTML = opts;
+                    if (prevVal && [...srcSel.options].some(o => o.value === prevVal)) {
+                        srcSel.value = prevVal;
+                    }
+                    onWakeTestSourceChange();
+                }
             } else {
-                container.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">Chưa có màn hình nào kết nối.</div>';
+                roomsContainer.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">Chưa có màn hình nào kết nối.</div>';
+            }
+            if (data.threshold !== undefined) {
+                const slider = document.getElementById('wakeThresholdSlider');
+                if (slider) {
+                    slider.value = data.threshold;
+                    updateThresholdDisplay(data.threshold);
+                }
+            }
+            const testModelLbl = document.getElementById('wakeModelLabelTest');
+            if (testModelLbl) {
+                const activeChecked = (data.selected_models && data.selected_models.length > 0) 
+                    ? data.selected_models.join(', ') 
+                    : (data.selected_model || 'nala_oiv1');
+                testModelLbl.textContent = activeChecked;
             }
         }
     } catch (e) {
         console.error("Error loading wake config:", e);
     }
+}
+
+// ==================== KIỂM THỬ MICRO & ĐO ĐIỂM WAKE WORD ====================
+let pcMicStream = null;
+let pcAudioCtx = null;
+let pcScriptNode = null;
+let isPCMicTesting = false;
+let currentWakeTestSource = 'all'; // 'all', 'pc', hoặc '881C', 'D6F4',...
+let wakeMaxPeakScore = 0;
+let wakeThresholdDebounceTimer = null;
+let wakeAlertResetTimer = null;
+let wakeDecayTimer = null;
+
+function computeAsciiBar(pct) {
+    const totalBlocks = 10;
+    const filled = Math.min(totalBlocks, Math.max(0, Math.round(pct / (100 / totalBlocks))));
+    const empty = totalBlocks - filled;
+    return '█'.repeat(filled) + '░'.repeat(empty);
+}
+
+function updateThresholdDisplay(val) {
+    const pct = Math.round(val * 100);
+    const valEl = document.getElementById('wakeThresholdVal');
+    if (valEl) valEl.textContent = `${pct}% (${parseFloat(val).toFixed(2)})`;
+    const marker = document.getElementById('wakeThresholdMarker');
+    if (marker) marker.style.left = `${pct}%`;
+
+    const hint = document.getElementById('wakeThresholdHint');
+    if (hint) {
+        if (val < 0.3) {
+            hint.textContent = 'Rất nhạy (Dễ kích hoạt nhầm bởi tiếng ồn/TV)';
+            hint.style.color = '#f59e0b';
+        } else if (val > 0.6) {
+            hint.textContent = 'Nghiêm ngặt (Cần nói to, rõ ràng và gần micro)';
+            hint.style.color = '#ef4444';
+        } else {
+            hint.textContent = 'Khuyến nghị tiêu chuẩn cho gia đình';
+            hint.style.color = '#10b981';
+        }
+    }
+}
+
+function onWakeThresholdChange(val) {
+    const num = parseFloat(val);
+    updateThresholdDisplay(num);
+
+    clearTimeout(wakeThresholdDebounceTimer);
+    wakeThresholdDebounceTimer = setTimeout(() => {
+        fetch('/api/wake/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ threshold: num })
+        }).then(r => r.json()).then(res => {
+            console.log("[WAKE] Updated threshold:", num, res);
+        }).catch(e => console.error("Error saving threshold:", e));
+    }, 300);
+}
+
+function onWakeTestSourceChange() {
+    const srcSel = document.getElementById('wakeTestSourceSelect');
+    if (!srcSel) return;
+    currentWakeTestSource = srcSel.value;
+
+    const btnPC = document.getElementById('btnTogglePCMic');
+    const badge = document.getElementById('wakeTestStatusBadge');
+    const guideTxt = document.getElementById('wakeSourceGuideText');
+    const helpBox = document.getElementById('pcMicHttpHelpBox');
+
+    if (currentWakeTestSource === 'pc') {
+        if (btnPC) btnPC.style.display = 'inline-flex';
+        if (badge) {
+            if (isPCMicTesting) {
+                badge.innerHTML = '🔴 Đang nghe Micro PC...';
+                badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                badge.style.color = '#f87171';
+                badge.style.border = '1px solid #ef4444';
+            } else {
+                badge.innerHTML = '⚪ Chờ bật Micro PC';
+                badge.style.background = '#1e293b';
+                badge.style.color = '#94a3b8';
+                badge.style.border = '1px solid #334155';
+            }
+        }
+        if (guideTxt) {
+            guideTxt.textContent = 'Bấm "▶ Bật Kiểm Thử Micro PC" bên phải và nói vào Micro tai nghe/webcam của máy tính.';
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            if (helpBox) helpBox.style.display = 'block';
+        } else {
+            if (helpBox) helpBox.style.display = 'none';
+        }
+    } else {
+        if (isPCMicTesting) {
+            stopPCMicTest();
+        }
+        if (btnPC) btnPC.style.display = 'none';
+        if (helpBox) helpBox.style.display = 'none';
+
+        const selText = srcSel.options[srcSel.selectedIndex]?.text || 'ESP32';
+        if (badge) {
+            badge.innerHTML = `🟢 Đang lắng nghe ${currentWakeTestSource === 'all' ? 'ESP32' : 'màn hình'}`;
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.color = '#34d399';
+            badge.style.border = '1px solid #10b981';
+        }
+        if (guideTxt) {
+            if (currentWakeTestSource === 'all') {
+                guideTxt.textContent = '✨ Đang lắng nghe từ mọi màn hình ESP32. Hãy nói "Nala ơi" trước bất kỳ màn hình nào gần bạn nhất!';
+            } else {
+                guideTxt.textContent = `✨ Đang lắng nghe từ ${selText}. Bạn hãy đứng trước màn hình này và nói từ khóa để xem điểm số!`;
+            }
+        }
+        const srcInfo = document.getElementById('wakeActiveSourceInfo');
+        if (srcInfo) {
+            srcInfo.innerHTML = `Nguồn: <strong>${selText}</strong> — Sẵn sàng nhận giọng nói`;
+        }
+    }
+}
+
+function resetWakePeakScore() {
+    wakeMaxPeakScore = 0;
+    const peakEl = document.getElementById('wakeLastPeakInfo');
+    if (peakEl) peakEl.textContent = 'Đỉnh cao nhất: 0%';
+}
+
+function copyToClipboard(text, successMsg) {
+    const statusEl = document.getElementById('copyFlagStatus');
+    const fallbackCopy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            document.execCommand('copy');
+            if (statusEl) {
+                statusEl.textContent = successMsg;
+                setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3500);
+            } else {
+                alert(successMsg);
+            }
+        } catch (err) {
+            prompt("Hãy sao chép nội dung bên dưới:", text);
+        }
+        document.body.removeChild(ta);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (statusEl) {
+                statusEl.textContent = successMsg;
+                setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3500);
+            } else {
+                alert(successMsg);
+            }
+        }).catch(fallbackCopy);
+    } else {
+        fallbackCopy();
+    }
+}
+
+function copyChromeFlag() {
+    copyToClipboard("chrome://flags/#unsafely-treat-insecure-origin-as-secure", "✓ Đã copy link cờ Chrome!");
+}
+
+function copyOriginUrl() {
+    copyToClipboard(window.location.origin, "✓ Đã copy URL Hub (" + window.location.origin + ")!");
+}
+
+async function togglePCMicTest() {
+    if (isPCMicTesting) {
+        stopPCMicTest();
+    } else {
+        await startPCMicTest();
+    }
+}
+
+async function startPCMicTest() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const helpBox = document.getElementById('pcMicHttpHelpBox');
+        if (helpBox) {
+            helpBox.style.display = 'block';
+            helpBox.scrollIntoView({ behavior: 'smooth' });
+        }
+        alert("Trình duyệt yêu cầu HTTPS hoặc localhost hoặc cờ chrome://flags/#unsafely-treat-insecure-origin-as-secure để dùng Micro PC trên IP mạng LAN.\n\n💡 Bạn vẫn có thể thử giọng trực tiếp trước micro màn hình ESP32 trong phòng ngủ/phòng khách!");
+        return;
+    }
+
+    try {
+        pcMicStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                channelCount: 1,
+                sampleRate: 16000,
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: true
+            }
+        });
+
+        pcAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = pcAudioCtx.createMediaStreamSource(pcMicStream);
+
+        // Buffer size 2048 samples (~128ms tại 16kHz)
+        pcScriptNode = pcAudioCtx.createScriptProcessor(2048, 1, 1);
+        pcScriptNode.onaudioprocess = (e) => {
+            if (!isPCMicTesting) return;
+            const inputFloat = e.inputBuffer.getChannelData(0);
+
+            // Tính RMS cục bộ cho thanh âm lượng phản hồi tức thì
+            let sumSq = 0;
+            const int16 = new Int16Array(inputFloat.length);
+            for (let i = 0; i < inputFloat.length; i++) {
+                let s = inputFloat[i];
+                sumSq += s * s;
+                let clamped = Math.max(-1, Math.min(1, s));
+                int16[i] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
+            }
+
+            const rms = Math.sqrt(sumSq / inputFloat.length);
+            const rmsDb = rms > 1e-5 ? 20 * Math.log10(rms) : -80;
+            const volPct = Math.min(100, Math.max(0, Math.round((rmsDb + 60) * 2)));
+
+            // Cập nhật thanh VU âm lượng micro
+            updateMicVU(volPct, rmsDb);
+
+            // Gửi binary PCM int16 lên server qua WebSocket nếu socket sẵn sàng
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(int16.buffer);
+            }
+        };
+
+        source.connect(pcScriptNode);
+        pcScriptNode.connect(pcAudioCtx.destination);
+
+        isPCMicTesting = true;
+        const btn = document.getElementById('btnTogglePCMic');
+        if (btn) {
+            btn.innerHTML = '⏹ Dừng Kiểm Thử Micro PC';
+            btn.style.background = '#dc2626';
+        }
+        const badge = document.getElementById('wakeTestStatusBadge');
+        if (badge) {
+            badge.innerHTML = '🔴 Đang nghe Micro PC...';
+            badge.style.background = 'rgba(239, 68, 68, 0.2)';
+            badge.style.color = '#f87171';
+            badge.style.border = '1px solid #ef4444';
+        }
+        const srcInfo = document.getElementById('wakeActiveSourceInfo');
+        if (srcInfo) srcInfo.innerHTML = 'Nguồn: <strong>🎤 Micro Máy Tính (PC Browser)</strong> — Hãy nói từ khóa!';
+
+    } catch (err) {
+        console.error("Lỗi khởi tạo Micro PC:", err);
+        const helpBox = document.getElementById('pcMicHttpHelpBox');
+        if (helpBox) helpBox.style.display = 'block';
+        alert("Không thể mở Micro PC: " + err.message);
+        stopPCMicTest();
+    }
+}
+
+function stopPCMicTest() {
+    isPCMicTesting = false;
+    if (pcScriptNode) {
+        try { pcScriptNode.disconnect(); } catch (e) {}
+        pcScriptNode = null;
+    }
+    if (pcAudioCtx) {
+        try { pcAudioCtx.close(); } catch (e) {}
+        pcAudioCtx = null;
+    }
+    if (pcMicStream) {
+        pcMicStream.getTracks().forEach(t => t.stop());
+        pcMicStream = null;
+    }
+
+    const btn = document.getElementById('btnTogglePCMic');
+    if (btn) {
+        btn.innerHTML = '▶ Bật Kiểm Thử Micro PC';
+        btn.style.background = '#059669';
+    }
+    const badge = document.getElementById('wakeTestStatusBadge');
+    if (badge) {
+        badge.innerHTML = '⚪ Chờ kiểm thử';
+        badge.style.background = '#1e293b';
+        badge.style.color = '#94a3b8';
+        badge.style.border = '1px solid #334155';
+    }
+
+    updateMicVU(0, -80);
+}
+
+function updateMicVU(volPct, rmsDb) {
+    const bar = document.getElementById('wakeVolBar');
+    if (bar) bar.style.width = `${volPct}%`;
+    const txt = document.getElementById('wakeVolText');
+    if (txt) {
+        const ascii = computeAsciiBar(volPct);
+        const dbStr = isFinite(rmsDb) ? `${Math.round(rmsDb)} dB` : '-∞ dB';
+        txt.textContent = `${volPct}% [${ascii}] (${dbStr})`;
+    }
+}
+
+function handleWakeScoreTick(data) {
+    // 1. Kiểm tra bộ lọc nguồn kiểm thử
+    if (currentWakeTestSource === 'pc' && !data.device_id.startsWith('web_admin')) {
+        return; // Đang chọn Micro PC mà tín hiệu từ ESP32 thì bỏ qua
+    }
+    if (currentWakeTestSource !== 'all' && currentWakeTestSource !== 'pc') {
+        // Người dùng đã chọn đích danh một ESP32 Panel (ví dụ '881C')
+        if (data.device_id !== currentWakeTestSource) {
+            return; // Khác panel đã chọn thì bỏ qua
+        }
+    }
+
+    const scorePct = data.score_pct !== undefined ? data.score_pct : Math.round((data.score || 0) * 100);
+    const ascii = computeAsciiBar(scorePct);
+
+    // Cập nhật thanh VU âm lượng từ data.rms (cả khi nhận từ ESP32)
+    if (data.rms !== undefined && isFinite(data.rms)) {
+        const volPct = Math.min(100, Math.max(0, Math.round((data.rms + 60) * 2)));
+        updateMicVU(volPct, data.rms);
+    }
+
+    // Cập nhật điểm số & thanh ASCII [████████░░]
+    const disp = document.getElementById('wakeScoreDisplay');
+    if (disp) {
+        disp.textContent = `${scorePct}% [${ascii}]`;
+    }
+
+    // Cập nhật thanh tiến trình CSS
+    const bar = document.getElementById('wakeScoreBar');
+    if (bar) {
+        bar.style.width = `${scorePct}%`;
+        const threshPct = Math.round((data.threshold || 0.45) * 100);
+        if (scorePct >= threshPct) {
+            bar.style.background = '#10b981';
+            bar.style.boxShadow = '0 0 12px rgba(16, 185, 129, 0.8)';
+            if (disp) disp.style.color = '#10b981';
+        } else if (scorePct >= 30) {
+            bar.style.background = '#f59e0b';
+            bar.style.boxShadow = 'none';
+            if (disp) disp.style.color = '#f59e0b';
+        } else {
+            bar.style.background = '#38bdf8';
+            bar.style.boxShadow = 'none';
+            if (disp) disp.style.color = '#38bdf8';
+        }
+    }
+
+    // Cập nhật nhãn tên model
+    const testModelLbl = document.getElementById('wakeModelLabelTest');
+    if (testModelLbl && data.model) {
+        testModelLbl.textContent = data.model;
+    }
+
+    // Cập nhật đỉnh cao nhất (Peak score)
+    if (scorePct > wakeMaxPeakScore) {
+        wakeMaxPeakScore = scorePct;
+        const peakEl = document.getElementById('wakeLastPeakInfo');
+        if (peakEl) peakEl.textContent = `Đỉnh cao nhất: ${wakeMaxPeakScore}%`;
+    }
+
+    // Cập nhật nguồn đang nói (PC Mic hay ESP32 Phòng ngủ/Phòng khách)
+    const srcInfo = document.getElementById('wakeActiveSourceInfo');
+    if (srcInfo && data.room_name) {
+        srcInfo.innerHTML = `Nguồn: <strong>${data.room_name}</strong> (Âm lượng: ${Math.round(data.rms || 0)} dB)`;
+    }
+
+    // Tự động hồi phục/giảm dần (decay) thanh đo khi yên lặng sau 1.6s
+    clearTimeout(wakeDecayTimer);
+    wakeDecayTimer = setTimeout(() => {
+        if (!isPCMicTesting) {
+            updateMicVU(0, -80);
+            if (bar) bar.style.width = '0%';
+            if (disp) {
+                disp.textContent = '0% [░░░░░░░░░░]';
+                disp.style.color = '#38bdf8';
+            }
+        }
+    }, 1600);
+
+    // Nếu kích hoạt thành công (vượt ngưỡng)
+    if (data.is_wake) {
+        triggerWakeDetectedUI(data);
+    }
+}
+
+function triggerWakeDetectedUI(data) {
+    const banner = document.getElementById('wakeDetectedBanner');
+    if (banner) {
+        const scorePct = data.score_pct !== undefined ? data.score_pct : Math.round((data.score || 0) * 100);
+        banner.style.display = 'block';
+        banner.innerHTML = `🎉 <strong>[WAKE DETECTED]</strong> Đã kích hoạt từ khóa '<strong>${data.model || 'Nala'}</strong>' từ <strong>${data.room_name || 'Micro'}</strong> với độ khớp <strong>${scorePct}%</strong>! Giọng nói đạt chuẩn!`;
+    }
+
+    if (typeof playWebChime === 'function') {
+        playWebChime('wake');
+    }
+
+    clearTimeout(wakeAlertResetTimer);
+    wakeAlertResetTimer = setTimeout(() => {
+        if (banner) banner.style.display = 'none';
+    }, 2800);
 }
 
 function clearAIChatLogs() {

@@ -107,7 +107,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include <ESP32Time.h>
 ESP32Time rtc(7 * 3600); // Múi giờ Việt Nam GMT+7 (offset 25200s)
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.4.4"
+#define CURRENT_FIRMWARE_VERSION "v3.5.3"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -137,6 +137,11 @@ static volatile uint8_t my_intercom_id = 0x01; // Dynamic Intercom ID from NAS H
 static volatile bool is_hands_free_session = false;
 static unsigned long hands_free_start_time = 0;
 static unsigned long hands_free_last_voice = 0;
+
+// Cờ phản hồi thức tỉnh kiểu Xiaozhi (Chờ phát xong câu nói "Dạ, em nghe!" rồi mới mở mic thu âm)
+static volatile bool is_waiting_wake_speech = false;
+static unsigned long wake_trigger_start_ms = 0;
+static volatile unsigned long last_speaker_active_ms = 0; // Chống dội âm (Echo) loa vào Mic gây lặp Wake Word
 
 // Cờ Trò Chuyện Liên Tục (Xiaozhi Continuous Listening & Timeout)
 static volatile bool is_continuous_listening = false;
@@ -939,6 +944,7 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
     if (type == "abort" || type == "tts_stop") {
         Serial.println("[AI] Nhan lenh abort/tts_stop tu Server Hub -> Dung phat va xa DMA!");
         audioEngine.stop_playback();
+        audioEngine.enable_mic(true);
         rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Trở lại xanh lá
         rgb_led.show();
         if (taken) {
@@ -991,23 +997,28 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         if (taken) {
             uiDashboard.hide_screensaver();
             uiDashboard.switch_to_ai_tab();
-            uiDashboard.set_ai_state("listening", "Đang nghe...");
-            uiDashboard.set_ai_text("Dạ, Nala đang nghe bạn...");
+            
+            float w_score = doc["score"] | 0.0f;
+            char state_str[48];
+            if (w_score > 0.01f) {
+                int sc_pct = (int)round(w_score * 100.0f);
+                if (sc_pct > 100) sc_pct = 100;
+                snprintf(state_str, sizeof(state_str), "Đang nghe... (%d%%)", sc_pct);
+            } else {
+                snprintf(state_str, sizeof(state_str), "Đang nghe...");
+            }
+            uiDashboard.set_ai_state("listening", state_str);
+            uiDashboard.set_ai_text("Em nghe!");
             xSemaphoreGive(lvgl_mutex);
             taken = false; // Đã nhả mutex để Task LVGL render khung hình ngay lập tức
         }
 
-        // 2. Phát âm thanh chuông thức tỉnh Ding! (C6 -> G6)
+        // 2. Chế độ Xiaozhi: Đặt cờ chờ Server stream câu chào "Em nghe!" phát xong mới mở mic
         audioEngine.stop_playback();
-        audioEngine.play_wake_chime();
-
-        // 3. Kích hoạt tự động phiên thu âm lệnh AI rảnh tay
-        is_hands_free_session = true;
-        hands_free_start_time = millis();
-        hands_free_last_voice = 0; // Chờ người dùng cất tiếng nói
-        is_recording_ptt = true;
-        ptt_target_id = TARGET_ID_AI_SERVER;
-        ptt_start_flag = true;
+        wake_trigger_start_ms = millis();
+        is_waiting_wake_speech = true;
+        is_recording_ptt = false; // Đảm bảo Mic tắt hoàn toàn khi đang phát câu chào "Em nghe!"
+        audioEngine.enable_mic(false);
         return;
     } else if (type == "start_listen") {
         uint32_t t_ms = doc["payload"]["timeout_ms"] | 8000;
@@ -1023,7 +1034,7 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         }
         audioEngine.stop_playback();
         audioEngine.mute_speaker(false);
-        audioEngine.play_wake_chime();
+        // Chế độ Xiaozhi: KHÔNG phát chuông Ding để tránh mic tự thu lại tiếng chuông gây vòng lặp suy nghĩ vô tận!
         is_continuous_listening = true;
         continuous_listen_start = millis();
         continuous_listen_timeout_ms = t_ms;
@@ -1033,6 +1044,7 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         is_recording_ptt = true;
         ptt_target_id = TARGET_ID_AI_SERVER;
         ptt_start_flag = true;
+        audioEngine.enable_mic(true);
         return;
     } else if (type == "wake_suppress" || (type == "wake_event" && doc["payload"]["status"] == "suppressed")) {
         Serial.println("[AI] Phòng khác đã tiếp nhận Wake Word (Suppressing)...");
@@ -1052,9 +1064,18 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
     } else if (type == "done_chime") {
         Serial.println("[AI] Nhan lenh phat am thanh hoan thanh Ting!");
         audioEngine.play_done_chime();
+    } else if (type == "wake_config_update") {
+        const char* new_wake = doc["payload"]["wake_word"] | "";
+        if (new_wake && strlen(new_wake) > 0 && taken) {
+            uiDashboard.set_wake_word_name(new_wake);
+        }
+        return;
     } else if (type == "ai_state") {
         String state = doc["payload"]["state"] | "IDLE";
         String txt = doc["payload"]["text"] | "";
+        if (state.equalsIgnoreCase("idle")) {
+            audioEngine.enable_mic(true);
+        }
         if (taken) {
             if (state == "listening" || state == "speaking" || state == "thinking") {
                 uiDashboard.hide_screensaver();
@@ -1071,6 +1092,11 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         JsonArrayConst targets = doc["payload"]["intercom_targets"];
         if (targets.size() > 0 && taken) {
             uiDashboard.sync_intercom_targets(targets);
+        }
+
+        const char* new_wake = doc["payload"]["wake_word"] | "";
+        if (new_wake && strlen(new_wake) > 0 && taken) {
+            uiDashboard.set_wake_word_name(new_wake);
         }
 
         String new_room = doc["payload"]["room"] | "";
@@ -1287,23 +1313,56 @@ void on_ws_binary(const uint8_t* data, size_t len) {
             }
             size_t written = 0;
             i2s_write(I2S_NUM_0, stereo_out, sizeof(stereo_out), &written, portMAX_DELAY);
+            last_speaker_active_ms = millis();
 
             if (p->stream_flag == STREAM_FLAG_END) {
-                delay(200); // Đợi 200ms để DMA phát hết trọn vẹn từ cuối câu trước khi ngắt amply
+                delay(120); // Đợi 120ms để DMA phát hết trọn vẹn từ cuối câu trước khi ngắt amply
                 audioEngine.mute_speaker(true);
-                rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Trở lại xanh lá
-                rgb_led.show();
+                last_speaker_active_ms = millis();
 
-                if (!is_ai_or_server) {
-                    bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
-                    if (taken) {
-                        uiDashboard.hide_incoming_call();
-                        uiDashboard.set_intercom_status("Đàm thoại: Sẵn sàng", 0x10B981);
+                if (is_waiting_wake_speech) {
+                    // Luồng Xiaozhi: Đã nói xong "Dạ, em nghe!" -> Mở Micro thu âm câu lệnh người dùng tức thì!
+                    is_waiting_wake_speech = false;
+                    audioEngine.enable_mic(true);
+                    is_hands_free_session = true;
+                    hands_free_start_time = millis();
+                    hands_free_last_voice = 0; // Chờ người dùng cất tiếng nói
+                    is_recording_ptt = true;
+                    ptt_target_id = TARGET_ID_AI_SERVER;
+                    ptt_start_flag = true;
+
+                    rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 200)); // Xanh ngọc Cyan lắng nghe
+                    rgb_led.show();
+
+                    bool taken_ui = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(40)) == pdTRUE);
+                    if (taken_ui) {
+                        uiDashboard.set_ai_state("listening", "Đang nghe...");
+                        uiDashboard.set_ai_text("Đang nghe bạn nói...");
                         xSemaphoreGive(lvgl_mutex);
                     }
-                    Serial.println("[INTERCOM] Kết thúc cuộc gọi.");
+                    Serial.println("[AI] Đã phát xong câu chào 'Dạ, em nghe' -> Bắt đầu thu âm lệnh người dùng!");
                 } else {
-                    Serial.println("[AI VOICE] Đã phát xong âm thanh AI Nala.");
+                    rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Trở lại xanh lá
+                    rgb_led.show();
+
+                    if (!is_ai_or_server) {
+                        bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
+                        if (taken) {
+                            uiDashboard.hide_incoming_call();
+                            uiDashboard.set_intercom_status("Đàm thoại: Sẵn sàng", 0x10B981);
+                            xSemaphoreGive(lvgl_mutex);
+                        }
+                        Serial.println("[INTERCOM] Kết thúc cuộc gọi.");
+                    } else {
+                        Serial.println("[AI VOICE] Đã phát xong âm thanh AI Nala.");
+                        audioEngine.enable_mic(true);
+                        bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
+                        if (taken) {
+                            uiDashboard.set_ai_state("idle", "");
+                            uiDashboard.set_ai_sentence("");
+                            xSemaphoreGive(lvgl_mutex);
+                        }
+                    }
                 }
             }
         }
@@ -1318,6 +1377,20 @@ void handle_mic_streaming() {
     static int16_t stereo_raw[AUDIO_FRAME_SAMPLES * 2]; // 512 int16_t = 1024 bytes (256 L + 256 R)
     static bool was_recording = false;
     size_t bytes_read = 0;
+
+    // Timeout Fallback: Nếu sau 1500ms không nhận được audio chào từ Server Hub, tự phát chuông ding và mở mic
+    if (is_waiting_wake_speech && (millis() - wake_trigger_start_ms > 1500)) {
+        is_waiting_wake_speech = false;
+        audioEngine.enable_mic(true);
+        audioEngine.play_wake_chime();
+        is_hands_free_session = true;
+        hands_free_start_time = millis();
+        hands_free_last_voice = 0;
+        is_recording_ptt = true;
+        ptt_target_id = TARGET_ID_AI_SERVER;
+        ptt_start_flag = true;
+        Serial.println("[AI] Timeout chờ audio chào -> Tự mở mic thu âm fallback!");
+    }
 
     if (is_recording_ptt) {
         if (!was_recording) {
@@ -1363,7 +1436,7 @@ void handle_mic_streaming() {
                 }
                 int32_t cur_rms = (int32_t)sqrt(ssq / AUDIO_FRAME_SAMPLES);
                 unsigned long now = millis();
-                if (cur_rms >= 150) { // Ngưỡng bắt tiếng nói tự nhiên ở cự ly 1.5 - 2m
+                if (cur_rms >= 85) { // Nguong bat tieng noi nhay (85 RMS tuong duong 75 cua Wake Scan), bat tron ven giong noi tu 1 - 2.5m
                     hands_free_last_voice = now;
                     if (is_continuous_listening) {
                         is_continuous_listening = false; // Người dùng đã cất tiếng nói, bắt đầu thu âm lệnh!
@@ -1372,12 +1445,14 @@ void handle_mic_streaming() {
 
                 // 1. Trường hợp chờ câu nói tiếp theo (Continuous Listening) mà hết timeout (mặc định 8s) không có ai nói
                 if (is_continuous_listening && (hands_free_last_voice == 0) && (now - continuous_listen_start > continuous_listen_timeout_ms)) {
-                    Serial.printf("[CONTINUOUS] Het thoi gian cho (%lu ms) khong co tieng noi -> Ve IDLE.\n", (unsigned long)continuous_listen_timeout_ms);
+                    Serial.printf("[CONTINUOUS] Het thoi gian cho (%lu ms) khong co tieng noi -> Chao tam biet.\n", (unsigned long)continuous_listen_timeout_ms);
                     is_recording_ptt = false;
                     is_hands_free_session = false;
                     is_continuous_listening = false;
+                    was_recording = false; // QUAN TRỌNG: Đặt false để KHÔNG gửi STREAM_FLAG_END kéo theo âm thanh rác
+                    seq = 0;
+                    audioEngine.enable_mic(true);
 
-                    audioEngine.play_done_chime();
                     rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Xanh lá
                     rgb_led.show();
 
@@ -1389,11 +1464,15 @@ void handle_mic_streaming() {
                     }
                     wsManager.send_text("{\"type\":\"listen_timeout\"}");
                 }
-                // 2. Trường hợp vừa kích hoạt Wake Word nhưng quá 5s không có ai nói gì -> Tự động kết thúc phiên và về IDLE
-                else if (!is_continuous_listening && (hands_free_last_voice == 0) && (now - hands_free_start_time > 5000)) {
-                    Serial.println("[VAD] Khong phat hien giong noi sau Wake Word (5s) -> Ket thuc phien!");
+                // 2. Trường hợp vừa kích hoạt Wake Word nhưng quá 6s không có ai nói gì -> Tự động kết thúc phiên và về IDLE
+                else if (!is_continuous_listening && (hands_free_last_voice == 0) && (now - hands_free_start_time > 6000)) {
+                    Serial.println("[VAD] Khong phat hien giong noi sau Wake Word (6s) -> Ket thuc phien!");
                     is_recording_ptt = false;
                     is_hands_free_session = false;
+                    was_recording = false; // QUAN TRỌNG: Đặt false để KHÔNG gửi STREAM_FLAG_END kéo theo âm thanh rác
+                    seq = 0;
+                    audioEngine.enable_mic(true);
+
                     rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Xanh lá idle
                     rgb_led.show();
                     bool taken_ui = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(30)) == pdTRUE);
@@ -1402,10 +1481,11 @@ void handle_mic_streaming() {
                         uiDashboard.set_ai_text("Sẵn sàng lắng nghe...");
                         xSemaphoreGive(lvgl_mutex);
                     }
+                    wsManager.send_text("{\"type\":\"listen_timeout\"}");
                 }
-                // 3. Trường hợp đã nói (hands_free_last_voice > 0), sau đó im lặng quá 1.5s (hoặc max 7s) -> Ngắt thu âm, chuyển sang xử lý!
-                else if (hands_free_last_voice > 0 && ((now - hands_free_last_voice > 1500 && now - hands_free_start_time > 1200) || (now - hands_free_start_time > 7000))) {
-                    Serial.println("[VAD] Phat hien im lang / het cau lenh -> Tu dong ket thuc thu am ranh tay!");
+                // 3. Trường hợp đã nói (hands_free_last_voice > 0), sau đó im lặng quá 750ms (hoặc max 7s) -> Ngắt thu âm, chuyển sang xử lý!
+                else if (hands_free_last_voice > 0 && ((now - hands_free_last_voice > 750 && now - hands_free_start_time > 800) || (now - hands_free_start_time > 7500))) {
+                    Serial.println("[VAD] Phat hien im lang (750ms) / het cau lenh -> Tu dong ket thuc thu am ranh tay!");
                     is_recording_ptt = false;
                     is_hands_free_session = false;
                     is_continuous_listening = false;
@@ -1417,9 +1497,9 @@ void handle_mic_streaming() {
                 }
             }
 
-            // Nếu đang trong chế độ continuous listening mà chưa có tiếng nói thì không gửi audio rác lên Server
-            if (is_continuous_listening && hands_free_last_voice == 0) {
-                // Đang đếm ngược chờ người dùng nói, không truyền audio rác
+            // CHỐNG RÁC & ẢO GIÁC: Nếu người dùng chưa cất tiếng nói (hands_free_last_voice == 0), TUYỆT ĐỐI KHÔNG gửi audio lên Server!
+            if (is_hands_free_session && hands_free_last_voice == 0) {
+                // Đang đếm ngược chờ người dùng nói, không truyền audio im lặng/nhiễu nền lên Server!
             } else {
                 pkt.crc8 = calculate_crc8((const uint8_t*)&pkt, 519);
                 wsManager.send_binary((const uint8_t*)&pkt, sizeof(AudioPacket_t));
@@ -1447,6 +1527,14 @@ void handle_mic_streaming() {
         static uint16_t wake_seq = 0;
 
         if (nvsStore.get().wake_word_enabled && wsManager.is_connected()) {
+            // Chống Loa tự thu vào Mic gây vòng lặp Wake Word (Acoustic Echo Suppression)
+            if (millis() - last_speaker_active_ms < 1200) {
+                wake_ring_count = 0;
+                is_wake_streaming = false;
+                vTaskDelay(pdMS_TO_TICKS(10));
+                return;
+            }
+
             esp_err_t res = i2s_read(I2S_NUM_0, stereo_raw, sizeof(stereo_raw), &bytes_read, pdMS_TO_TICKS(25));
             if (res == ESP_OK && bytes_read == sizeof(stereo_raw)) {
                 int64_t sum_sq = 0;

@@ -108,6 +108,7 @@ private:
     // Zero-RAM Smart Floor & Room Navigation State
     DashboardViewMode current_view_mode;
     char home_room_name[28];
+    char wake_word_name[28];
     uint8_t room_view_timeout_sec;
     uint32_t last_remote_touch_ms;
 
@@ -314,6 +315,7 @@ public:
             lbl_clim_modes[m] = nullptr;
         }
         strncpy(home_room_name, "Thiết Bị", sizeof(home_room_name));
+        strncpy(wake_word_name, "Hey Nala", sizeof(wake_word_name));
         strncpy(cached_house_summary, "Tất cả thiết bị tắt", sizeof(cached_house_summary));
         for (int i = 0; i < MAX_ROOM_CHIPS; i++) {
             chip_rooms[i] = nullptr;
@@ -364,6 +366,7 @@ public:
             home_room_name[sizeof(home_room_name) - 1] = '\0';
         } else {
             strncpy(home_room_name, "Thiết Bị", sizeof(home_room_name));
+        strncpy(wake_word_name, "Hey Nala", sizeof(wake_word_name));
         }
         lv_obj_t* scr = lv_scr_act();
         lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
@@ -890,6 +893,21 @@ public:
         }
     }
 
+    void set_wake_word_name(const char* name) {
+        if (!name || strlen(name) == 0) return;
+        strncpy(wake_word_name, name, sizeof(wake_word_name) - 1);
+        wake_word_name[sizeof(wake_word_name) - 1] = '\0';
+        if (lbl_ai_state) {
+            lv_label_set_text_fmt(lbl_ai_state, "AI: Sẵn sàng (%s)", wake_word_name);
+        }
+        if (ta_ai_response) {
+            char buf[160];
+            snprintf(buf, sizeof(buf), "Xin chào! Tôi là Trợ Lý NALA AI.\nNói '%s' hoặc nhấn giữ nút bên dưới để trò chuyện...", wake_word_name);
+            lv_textarea_set_text(ta_ai_response, buf);
+        }
+        Serial.printf("[UI] Updated Wake Word display name: %s\n", wake_word_name);
+    }
+
     void set_room_title(const char* room_name) {
         if (room_name && strlen(room_name) > 0) {
             strncpy(home_room_name, room_name, sizeof(home_room_name) - 1);
@@ -1225,8 +1243,10 @@ public:
                 set_mochi_state(MOCHI_STATE_GOODBYE);
                 if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "👋 HẸN GẶP LẠI!");
             } else {
-                lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Hey Nala)");
-                lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x94A3B8), 0);
+                if (lbl_ai_state) {
+                    lv_label_set_text_fmt(lbl_ai_state, "AI: Sẵn sàng (%s)", wake_word_name);
+                    lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x94A3B8), 0);
+                }
                 set_mochi_state(MOCHI_STATE_IDLE);
                 if (lbl_ai_ptt_text) lv_label_set_text(lbl_ai_ptt_text, "GIỮ ĐỂ NÓI VỚI NALA AI");
             }
@@ -2061,7 +2081,7 @@ private:
 
         // 1. Header: AI Status
         lbl_ai_state = lv_label_create(tab_ai);
-        lv_label_set_text(lbl_ai_state, "AI: Sẵn sàng (Hey Nala)");
+        lv_label_set_text_fmt(lbl_ai_state, "AI: Sẵn sàng (%s)", wake_word_name);
         lv_obj_set_style_text_color(lbl_ai_state, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_text_font(lbl_ai_state, &font_vietnamese_14, 0);
         lv_obj_align(lbl_ai_state, LV_ALIGN_TOP_MID, 0, 2);
@@ -2177,7 +2197,9 @@ private:
         lv_obj_set_style_border_color(ta_ai_response, lv_color_hex(0x1E293B), 0);
         lv_obj_set_style_radius(ta_ai_response, 10, 0);
         lv_obj_set_style_text_font(ta_ai_response, &font_vietnamese_14, 0);
-        lv_textarea_set_text(ta_ai_response, "Xin chào! Tôi là Trợ Lý NALA AI.\nNói 'Hey Nala' hoặc nhấn giữ nút bên dưới để trò chuyện...");
+        char prompt_buf[160];
+        snprintf(prompt_buf, sizeof(prompt_buf), "Xin chào! Tôi là Trợ Lý NALA AI.\nNói '%s' hoặc nhấn giữ nút bên dưới để trò chuyện...", wake_word_name);
+        lv_textarea_set_text(ta_ai_response, prompt_buf);
 
         // 4. Large PTT Button (Y: 192..230)
         btn_ai_ptt = lv_btn_create(tab_ai);

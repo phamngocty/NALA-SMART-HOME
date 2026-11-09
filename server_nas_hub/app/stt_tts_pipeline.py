@@ -19,11 +19,32 @@ import edge_tts
 
 logger = logging.getLogger("AudioPipeline")
 
+WHISPER_HALLUCINATIONS = [
+    "la la school", "lala school", "hãy subscribe", "subscribe cho kênh",
+    "để không bỏ lỡ những video", "nhớ đăng ký kênh", "cảm ơn các bạn đã theo dõi",
+    "cảm ơn các bạn đã xem", "chúc các bạn một ngày", "like và subscribe",
+    "hẹn gặp lại các bạn", "đăng ký kênh", "hãy bấm đăng ký", "nhớ like và share",
+    "subcribe", "xem video tiếp theo", "đừng quên bấm chuông", "video tiếp theo",
+    "video hấp dẫn", "kênh của mình", "ủng hộ kênh", "hãy ấn đăng ký",
+    "nhấn chuông để nhận thông báo", "theo dõi kênh", "hãy like", "chia sẻ video"
+]
+
+def is_whisper_hallucination(text: str) -> bool:
+    if not text:
+        return True
+    lower = text.lower().strip().strip(".?!,;:")
+    if len(lower) < 2:
+        return True
+    for phrase in WHISPER_HALLUCINATIONS:
+        if phrase in lower:
+            return True
+    return False
+
 class AudioPipeline:
     def __init__(self, stt_url: Optional[str] = None, tts_url: Optional[str] = None):
         self.stt_url = stt_url or os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions")
         self.tts_url = tts_url or os.getenv("TTS_SERVICE_URL", "http://localhost:5000/api/tts")
-        self.default_voice = os.getenv("TTS_VOICE", "vi-VN-NamMinhNeural")
+        self.default_voice = os.getenv("TTS_VOICE", "vi-VN-HoaiMyNeural")
         
         # In-memory audio cache for common prompt confirmations (<1ms latency)
         self._pcm_cache: Dict[str, bytes] = {}
@@ -31,6 +52,8 @@ class AudioPipeline:
     async def prewarm_common_cache(self):
         """Khởi tạo trước các mẫu âm thanh phản xạ tức thì (<1ms) vào RAM."""
         common_phrases = [
+            "Em nghe!",
+            "Dạ, em nghe!",
             "Dạ,",
             "Vâng ạ,",
             "Đã bật.",
@@ -44,13 +67,18 @@ class AudioPipeline:
             "Đã tắt toàn bộ thiết bị.",
             "Đã tắt toàn bộ thiết bị trong nhà cho bạn.",
             "Đã bật thiết bị thành công.",
-            "Đã tắt thiết bị thành công."
+            "Đã tắt thiết bị thành công.",
+            "Tạm biệt bạn nhé!",
+            "Em tạm biệt bạn nhé!",
+            "Hẹn gặp lại bạn sau nhé!"
         ]
+        voices_to_warm = [self.default_voice, "google_fast", "vi-VN-NamMinhNeural", "vi-VN-HoaiMyNeural"]
         for phrase in common_phrases:
-            try:
-                await self.text_to_pcm(phrase, voice="vi-VN-NamMinhNeural")
-            except Exception:
-                pass
+            for v in set(voices_to_warm):
+                try:
+                    await self.text_to_pcm(phrase, voice=v)
+                except Exception:
+                    pass
         logger.info("⚡ Prewarmed %d instant audio phrases in RAM cache.", len(self._pcm_cache))
 
     async def groq_whisper_stt(self, wav_bytes: bytes, api_key: str, model: str = "whisper-large-v3-turbo") -> str:
@@ -59,7 +87,8 @@ class AudioPipeline:
             return ""
         url = "https://api.groq.com/openai/v1/audio/transcriptions"
         headers = {
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         }
         data = aiohttp.FormData()
         data.add_field('file', io.BytesIO(wav_bytes), filename='speech.wav', content_type='audio/wav')
@@ -93,6 +122,17 @@ class AudioPipeline:
             logger.warning("PCM data too short (%d bytes), skipping STT", len(pcm_data) if pcm_data else 0)
             return ""
 
+        # Kiểm tra mức năng lượng âm thanh RMS (chống ảo giác Whisper khi im lặng hoặc tiếng ồn gió)
+        try:
+            samples = np.frombuffer(pcm_data, dtype=np.int16)
+            if len(samples) > 0:
+                rms = float(np.sqrt(np.mean(samples.astype(np.float32) ** 2)))
+                if rms < 100:
+                    logger.info("Âm lượng quá nhỏ (RMS: %.1f < 100) -> Bỏ qua STT để chống ảo giác", rms)
+                    return ""
+        except Exception:
+            pass
+
         # Đóng gói PCM thô thành file WAV chuẩn trong bộ nhớ
         wav_buffer = io.BytesIO()
         with wave.open(wav_buffer, 'wb') as wav_file:
@@ -106,6 +146,9 @@ class AudioPipeline:
         if stt_provider in ("groq", "auto") and groq_api_key:
             groq_text = await self.groq_whisper_stt(wav_bytes, groq_api_key, model=groq_model)
             if groq_text:
+                if is_whisper_hallucination(groq_text):
+                    logger.warning("Phát hiện ảo giác Whisper từ Groq: '%s' -> Loại bỏ!", groq_text)
+                    return ""
                 return groq_text
             if stt_provider == "groq":
                 logger.warning("Groq STT failed and provider set to groq. Falling back to local Faster-Whisper.")
@@ -125,6 +168,9 @@ class AudioPipeline:
                         res = await response.json()
                         text = res.get("text", "").strip()
                         elapsed = time.time() - t0
+                        if is_whisper_hallucination(text):
+                            logger.warning("Phát hiện ảo giác Whisper từ Local: '%s' -> Loại bỏ!", text)
+                            return ""
                         logger.info("Faster-Whisper GPU STT: '%s' (in %.2fs)", text, elapsed)
                         return text
                     else:
@@ -155,22 +201,45 @@ class AudioPipeline:
         return b""
 
     async def google_tts_to_pcm(self, clean_text: str) -> bytes:
-        """Tổng hợp giọng nói tiếng Việt siêu tốc qua Google TTS (~0.12s, 100% tin cậy)."""
+        """Tổng hợp giọng nói tiếng Việt siêu tốc qua Google TTS (~0.12s - 0.3s, 100% tin cậy)."""
         try:
-            url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={quote(clean_text)}&tl=vi&client=tw-ob"
+            # Google TTS translate hoạt động tối ưu với câu < 150 ký tự
+            parts = []
+            if len(clean_text) <= 150:
+                parts = [clean_text]
+            else:
+                import re
+                raw_parts = re.split(r'([.?!,;\n]+)', clean_text)
+                cur = ""
+                for p in raw_parts:
+                    if len(cur) + len(p) < 140:
+                        cur += p
+                    else:
+                        if cur.strip(): parts.append(cur.strip())
+                        cur = p
+                if cur.strip(): parts.append(cur.strip())
+
             headers = {"User-Agent": "Mozilla/5.0"}
+            pcm_combined = bytearray()
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
-                    if resp.status == 200:
-                        mp3_data = await resp.read()
-                        if mp3_data:
-                            return await self._mp3_to_pcm(mp3_data)
+                for part in parts:
+                    if not part.strip(): continue
+                    url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={quote(part.strip())}&tl=vi&client=tw-ob"
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=2.0)) as resp:
+                        if resp.status == 200:
+                            mp3_data = await resp.read()
+                            if mp3_data:
+                                pcm_chunk = await self._mp3_to_pcm(mp3_data)
+                                if pcm_chunk:
+                                    pcm_combined.extend(pcm_chunk)
+            if pcm_combined:
+                return bytes(pcm_combined)
         except Exception as e:
             logger.warning("Google TTS error for '%s': %s", clean_text[:30], e)
         return b""
 
     async def text_to_pcm(self, text: str, voice: Optional[str] = None) -> bytes:
-        """Tạo audio giọng nói tiếng Việt chất lượng cao kết hợp Edge-TTS & Google TTS Ultra-Fast Fallback."""
+        """Tạo audio giọng nói tiếng Việt kết hợp Google TTS Ultra-Fast (0.3s) & Edge-TTS Neural."""
         if not text or not text.strip():
             return b""
 
@@ -186,12 +255,34 @@ class AudioPipeline:
                 clean_text = clean_text[:350]
 
         selected_voice = voice or self.default_voice
-        if selected_voice == "vi-VN-HoaiMyNeural":
-            selected_voice = "vi-VN-NamMinhNeural"
 
         cache_key = f"{selected_voice}:{clean_text}"
         if cache_key in self._pcm_cache:
             return self._pcm_cache[cache_key]
+
+        # 0. Fast-path cho câu ngắn (<= 12 ký tự như 'Em nghe!', 'Dạ,', 'Vâng ạ')
+        if len(clean_text) <= 12:
+            try:
+                pcm_out = await self.google_tts_to_pcm(clean_text)
+                if pcm_out:
+                    if len(self._pcm_cache) < 200:
+                        self._pcm_cache[cache_key] = pcm_out
+                    return pcm_out
+            except Exception:
+                pass
+
+        # 0.1 NẾU CHỌN ENGINE GOOGLE TTS SIÊU TỐC (~0.3s): Bỏ qua Edge-TTS hoàn toàn để phản xạ tức thì!
+        if selected_voice in ("google_fast", "google", "fast") or selected_voice.startswith("google"):
+            try:
+                t0 = time.time()
+                pcm_out = await self.google_tts_to_pcm(clean_text)
+                if pcm_out:
+                    logger.info("⚡ Google Fast TTS (%s) synthesized %d bytes PCM in %.2fs", selected_voice, len(pcm_out), time.time() - t0)
+                    if len(self._pcm_cache) < 200:
+                        self._pcm_cache[cache_key] = pcm_out
+                    return pcm_out
+            except Exception as e:
+                logger.error("Google Fast TTS error: %s", e)
 
         # 1. Thử qua Edge-TTS Neural với timeout ngắn (1.8s)
         try:

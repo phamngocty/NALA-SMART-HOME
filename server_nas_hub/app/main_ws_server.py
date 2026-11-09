@@ -180,22 +180,35 @@ async def abort_ai_flow(device_id: str, ws: Optional[WebSocket] = None):
 
 async def on_wake_winner(device_id: str, candidate_info: dict):
     ws = active_sockets.get(device_id)
+    # Khóa cooldown ngay lập tức để không thể kích hoạt lặp lại trong 4 giây
+    wake_mgr.set_cooldown(device_id, duration_sec=4.0)
     # Cắt lời AI nếu đang phát âm thanh cũ khi người dùng gọi từ khóa Wake Word mới
     await abort_ai_flow(device_id, ws)
     dev_info = devices_db.get(device_id, {})
     room_name = dev_info.get("room_name", f"Panel {device_id}")
+    tts_voice = ai_router.config.get("tts_voice", "google_fast")
     if ws:
         try:
-            # Gửi duy nhất lệnh wake_trigger đến ESP32 chiến thắng (ESP32 sẽ tự bật LED Cyan, chuyển Tab AI, đổi Mochi listening, phát chuông Ding và bắt đầu nghe rảnh tay)
+            # Gửi lệnh wake_trigger đến ESP32 chiến thắng kèm phản hồi câu thoại Xiaozhi
             await ws.send_json({
                 "type": "wake_trigger",
                 "source": "wake_word",
                 "model": candidate_info.get("model", "hey_nala"),
                 "score": candidate_info.get("score", 1.0),
-                "room": room_name
+                "room": room_name,
+                "text": "Em nghe!"
             })
+            # Phát âm thanh phản hồi "Em nghe!" tức thì từ RAM cache (<1ms) như XiaoZhi
+            greeting_pcm = await audio_pipeline.text_to_pcm("Em nghe!", voice=tts_voice)
+            if greeting_pcm:
+                logger.info("[WAKE] Gửi âm thanh chào 'Em nghe!' (%d bytes) đến panel [%s]", len(greeting_pcm), device_id)
+                is_opus = (client_audio_formats.get(device_id) == "opus") and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                last_seq = await send_audio_chunks(ws, greeting_pcm, is_opus=is_opus, start_seq=0)
+                await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+            else:
+                logger.warning("[WAKE] greeting_pcm rỗng, không thể phát chào cho [%s]!", device_id)
         except Exception as e:
-            logger.error("Error sending wake_trigger to %s: %s", device_id, e)
+            logger.error("Error sending wake_trigger / greeting to %s: %s", device_id, e)
 
     asyncio.create_task(broadcast_to_admins({
         "type": "wake_notification",
@@ -222,7 +235,41 @@ async def on_wake_suppressed(device_id: str, candidate_info: dict):
         except Exception:
             pass
 
-wake_mgr = WakeWordManager(on_winner_callback=on_wake_winner, on_suppress_callback=on_wake_suppressed)
+async def on_wake_score_tick(device_id: str, model: str, score: float, rms: float, threshold: float):
+    # Chỉ broadcast nếu là web_admin test HOẶC có âm thanh/score đáng chú ý để tránh tràn kênh
+    if device_id.startswith("web_admin") or score >= 0.05 or rms > -45.0:
+        room_name = "Micro Máy Tính (PC Browser)" if device_id.startswith("web_admin") else devices_db.get(device_id, {}).get("room_name", f"Panel {device_id}")
+        await broadcast_to_admins({
+            "type": "wake_score_tick",
+            "device_id": device_id,
+            "room_name": room_name,
+            "model": model,
+            "score": round(score, 4),
+            "score_pct": int(round(score * 100)),
+            "rms": round(rms, 1),
+            "threshold": round(threshold, 2),
+            "is_wake": score >= threshold
+        })
+
+async def on_wake_detected(device_id: str, model: str, score: float, rms: float, threshold: float):
+    room_name = "Micro Máy Tính (PC Browser)" if device_id.startswith("web_admin") else devices_db.get(device_id, {}).get("room_name", f"Panel {device_id}")
+    await broadcast_to_admins({
+        "type": "wake_detected",
+        "device_id": device_id,
+        "room_name": room_name,
+        "model": model,
+        "score": round(score, 4),
+        "score_pct": int(round(score * 100)),
+        "rms": round(rms, 1),
+        "threshold": round(threshold, 2)
+    })
+
+wake_mgr = WakeWordManager(
+    on_winner_callback=on_wake_winner, 
+    on_suppress_callback=on_wake_suppressed,
+    on_score_tick_callback=on_wake_score_tick,
+    on_detect_callback=on_wake_detected
+)
 
 def get_buttons_with_state(dev: dict, include_all_house_active: bool = False) -> list:
     """Đính kèm trạng thái thực tế từ HA vào các nút bấm của panel, kèm các thiết bị đang bật toàn nhà."""
@@ -661,6 +708,41 @@ async def broadcast_to_admins(msg: dict):
                 await ws.send_json(msg)
             except Exception:
                 pass
+
+async def broadcast_to_panels(msg: dict):
+    """Gửi thông điệp thời gian thực tới tất cả màn hình ESP32 đang kết nối."""
+    for dev_id, ws in list(active_sockets.items()):
+        if not dev_id.startswith("web_admin"):
+            try:
+                await ws.send_json(msg)
+            except Exception:
+                pass
+
+def get_wake_model_label(m_name: str) -> str:
+    """Chuyển đổi mã model sang tên hiển thị thân thiện tiếng Việt/tiếng Anh trên ESP32."""
+    if not m_name:
+        return "Hey Nala"
+    if m_name == "hey_nala":
+        return "Hey Nala"
+    elif m_name == "nala_oi":
+        return "Nala Ơi"
+    elif m_name == "hey_jarvis":
+        return "Hey Jarvis"
+    elif m_name == "alexa":
+        return "Alexa"
+    return m_name.replace("_", " ").title()
+
+def get_available_wake_models() -> list:
+    """Lấy danh sách các model Wake Word có sẵn (.onnx hoặc built-in)."""
+    available_models = ["hey_nala", "nala_oi", "hey_jarvis", "alexa"]
+    custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
+    if os.path.exists(custom_models_dir):
+        for fname in os.listdir(custom_models_dir):
+            if fname.endswith(".onnx") or fname.endswith(".tflite"):
+                m_name = os.path.splitext(fname)[0]
+                if m_name not in available_models:
+                    available_models.append(m_name)
+    return available_models
 
 async def on_ha_state_change(entity_id: str, new_state: str, raw_obj: dict):
     """Khi có thiết bị trong Home Assistant thay đổi trạng thái, broadcast xuống tất cả Panel & Web Admin."""
@@ -1164,8 +1246,19 @@ class AIChatRequest(BaseModel):
 
 @app.get("/api/wake/config")
 async def get_wake_config():
-    """Lấy cấu hình Wake Word đa phòng hiện tại."""
+    """Lấy cấu hình Wake Word đa phòng hiện tại và danh sách mô hình có sẵn."""
     cfg = dict(wake_mgr.config)
+    # Quét danh sách mô hình có sẵn trong data/models (.onnx, .tflite) + built-in
+    available_models = ["hey_nala", "nala_oi", "hey_jarvis", "alexa"]
+    custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
+    if os.path.exists(custom_models_dir):
+        for fname in os.listdir(custom_models_dir):
+            if fname.endswith(".onnx") or fname.endswith(".tflite"):
+                m_name = os.path.splitext(fname)[0]
+                if m_name not in available_models:
+                    available_models.append(m_name)
+    cfg["available_models"] = available_models
+
     # Gộp danh sách devices để hiển thị từng phòng trên Web Admin
     devices_summary = []
     for code, dev in devices_db.items():
@@ -1182,13 +1275,13 @@ async def get_wake_config():
 
 @app.post("/api/wake/upload")
 async def upload_wake_model(request: Request):
-    """Tải lên mô hình Wake Word tùy biến (.tflite) dạng Base64 JSON."""
+    """Tải lên mô hình Wake Word tùy biến (.tflite hoặc .onnx) dạng Base64 JSON."""
     try:
         data = await request.json()
-        filename = data.get("filename", "hey_nala.tflite")
+        filename = data.get("filename", "hey_nala.onnx")
         b64_content = data.get("content_base64", "")
-        if not filename.endswith(".tflite"):
-            return JSONResponse({"status": "error", "message": "Chỉ chấp nhận file định dạng .tflite"}, status_code=400)
+        if not (filename.endswith(".tflite") or filename.endswith(".onnx")):
+            return JSONResponse({"status": "error", "message": "Chỉ chấp nhận file định dạng .tflite hoặc .onnx"}, status_code=400)
         import base64
         file_bytes = base64.b64decode(b64_content)
         custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
@@ -1196,9 +1289,27 @@ async def upload_wake_model(request: Request):
         dest_path = os.path.join(custom_models_dir, filename)
         with open(dest_path, "wb") as f:
             f.write(file_bytes)
-        wake_mgr._init_model()
         model_name = os.path.splitext(filename)[0]
         wake_mgr.save_config({"selected_model": model_name})
+        wake_mgr._init_model()
+
+        # Broadcast đồng bộ tên Wake Word mới tới toàn bộ màn hình ESP32 và Web Admin
+        wake_label = get_wake_model_label(model_name)
+        await broadcast_to_panels({
+            "type": "wake_config_update",
+            "payload": {
+                "wake_word": wake_label,
+                "model": model_name
+            }
+        })
+        await broadcast_to_admins({
+            "type": "wake_config_update",
+            "payload": {
+                "selected_model": model_name,
+                "available_models": get_available_wake_models()
+            }
+        })
+
         return JSONResponse({
             "status": "success",
             "message": f"Đã nạp thành công mô hình Wake Word '{model_name}'!",
@@ -1215,6 +1326,22 @@ async def save_wake_config(req: Request):
         data = await req.json()
         saved = wake_mgr.save_config(data)
         if saved:
+            new_model = wake_mgr.config.get("selected_model", "hey_nala")
+            wake_label = get_wake_model_label(new_model)
+            await broadcast_to_panels({
+                "type": "wake_config_update",
+                "payload": {
+                    "wake_word": wake_label,
+                    "model": new_model
+                }
+            })
+            await broadcast_to_admins({
+                "type": "wake_config_update",
+                "payload": {
+                    "selected_model": new_model,
+                    "available_models": get_available_wake_models()
+                }
+            })
             return JSONResponse({"status": "success", "message": "Đã lưu cấu hình Wake Word thành công!"})
         return JSONResponse({"status": "error", "message": "Lưu cấu hình thất bại"}, status_code=500)
     except Exception as e:
@@ -1752,7 +1879,7 @@ async def download_firmware(filename: str, request: Request, code: Optional[str]
         "Content-Disposition": f'attachment; filename="{safe_name}"',
         "Accept-Ranges": "bytes"
     }
-    return StreamingResponse(file_sender(), media_type="application/octet-stream", headers=headers)
+    return FileResponse(file_path, filename=safe_name, media_type="application/octet-stream", headers=headers)
 
 @app.post("/api/ota/start")
 async def start_ota_update(req: OTAStartRequest, request: Request):
@@ -2034,9 +2161,10 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                             "epoch": cur_epoch
                         })
 
-                        # Tự động sync cấu hình đã lưu xuống Panel kèm kênh đàm thoại
+                        # Tự động sync cấu hình đã lưu xuống Panel kèm kênh đàm thoại & Từ khóa Wake Word
                         targets = intercom.get_targets(exclude_device_key=code)
                         rname = dev.get("room_name", f"Panel {code}")
+                        active_wake_model = wake_mgr.config.get("selected_model", "hey_nala")
                         await websocket.send_json({
                             "type": "config_sync",
                             "epoch": cur_epoch,
@@ -2046,6 +2174,8 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                                 "floor": dev['floor'],
                                 "my_intercom_id": assigned_intercom_id,
                                 "intercom_targets": targets,
+                                "wake_word": get_wake_model_label(active_wake_model),
+                                "wake_model": active_wake_model,
                                 "buttons": get_buttons_with_state(dev, include_all_house_active=False),
                                 "all_rooms": get_all_rooms_summary(local_room=rname),
                                 "house_status": get_house_status_summary(),
@@ -2230,17 +2360,20 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                 # Khi Panel báo timeout chế độ hội thoại liên tục (không phát hiện tiếng nói sau timeout)
                 elif msg_type == "listen_timeout":
                     code = dev_code or device_id
+                    wake_mgr.set_cooldown(code, duration_sec=4.0)
                     logger.info("Panel [%s] continuous listen timed out -> Saying farewell & closing session.", code)
-                    # 1. Xóa session lịch sử hội thoại
+                    # 1. Hủy buffer âm thanh rác và task AI đang chạy để chống vòng lặp
+                    audio_record_buffers[code].clear()
+                    await abort_ai_flow(code, websocket)
                     ai_router.session_mgr.clear_session(code)
 
-                    # 2. Phát TTS câu chào tạm biệt qua loa
-                    farewell_text = "Tạm biệt bạn."
+                    # 2. Phát TTS câu chào tạm biệt qua loa chuẩn phong cách XiaoZhi
+                    farewell_text = "Tạm biệt bạn nhé!"
                     try:
                         await websocket.send_json({"type": "tts", "state": "sentence_start", "text": farewell_text})
                         await websocket.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": farewell_text}})
 
-                        tts_voice = ai_router.config.get("voice", "vi-VN-HoaiMyNeural")
+                        tts_voice = ai_router.config.get("tts_voice", "google_fast")
                         fw_pcm = await audio_pipeline.text_to_pcm(farewell_text, voice=tts_voice)
                         if fw_pcm:
                             is_opus = (client_audio_formats.get(code) == "opus") and OPUS_AVAILABLE and not str(code).startswith("web_admin")
@@ -2366,6 +2499,11 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
 
                         await intercom.route_binary_packet(sender_key, packet)
 
+                # 2.3 GÓI TIN RAW PCM TỪ WEB ADMIN / KIỂM THỬ MICRO PC
+                else:
+                    if sender_key.startswith("web_admin") or (len(packet) % 2 == 0 and len(packet) >= 128):
+                        asyncio.create_task(wake_mgr.feed_audio_chunk(sender_key, packet))
+
     except WebSocketDisconnect:
         logger.info("Device disconnected: %s", dev_code or device_id)
     except Exception as e:
@@ -2404,6 +2542,7 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
     """Luồng xử lý giọng nói hoàn chỉnh: STT -> AI Intent / HA Action -> Sentence Chunking TTS -> Gửi Binary Audio về ESP32."""
     curr_task = asyncio.current_task()
     active_ai_tasks[device_id] = curr_task
+    wake_mgr.set_cooldown(device_id, duration_sec=5.0)
     try:
         # Phát âm thanh đã nhận trọn vẹn câu lệnh ("Poong!" - Xiaozhi Ack Style)
         await ws.send_json({"type": "ack_chime"})
@@ -2421,14 +2560,15 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             stt_provider=stt_provider,
             groq_model=stt_model
         )
-        if not text:
-            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Không nhận diện được giọng nói."}})
+        if not text or not text.strip():
+            logger.info("[AI] Không có giọng nói hoặc phát hiện âm thanh rác từ [%s] -> Đưa về IDLE an toàn, dập tắt vòng lặp.", device_id)
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
             return
 
         # 2. Phân loại lệnh & Kiến trúc Pipelined Queue Phản xạ tức thì (Sub-200ms)
         dev = devices_db.get(device_id, {})
         room_name = dev.get("room_name", "")
-        tts_voice = ai_router.config.get("tts_voice", "vi-VN-NamMinhNeural")
+        tts_voice = ai_router.config.get("tts_voice", "google_fast")
 
         lower_text = text.lower().strip()
         is_turn_on = any(w in lower_text for w in ["bật", "mở", "khởi động", "set", "chỉnh"])
@@ -2670,6 +2810,7 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             turn_idx = ai_router.session_mgr.add_turn(device_id, text, accumulated_text) or 1
 
         # Lưu vào Lịch sử Giọng nói & Ghi âm Audio
+        target_ai_model = ai_router.config.get("llm_model") or ai_router.config.get("gemini", {}).get("model", "gemini-2.0-flash")
         rec = history_mgr.add_record(
             device_code=device_id,
             room_name=dev.get("room_name", f"Panel {device_id}"),
@@ -2686,6 +2827,12 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
         # Kiểm tra cơ chế Trò Chuyện Liên Tục (Xiaozhi Style)
         continuous_enabled = ai_router.config.get("continuous_conversation", True)
         is_farewell = ai_router.session_mgr.is_farewell(text)
+
+        # Nếu AI không sinh được câu trả lời (do lỗi API/rỗng), kết thúc phiên ngay để chống kẹt vòng lặp suy nghĩ
+        if not accumulated_text:
+            logger.warning("[AI] LLM không sinh được câu trả lời cho [%s], đưa về IDLE chống kẹt vòng lặp.", device_id)
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Em chưa nghe rõ, bạn nói lại nhé."}})
+            return
 
         if continuous_enabled and not is_farewell:
             timeout_ms = int(ai_router.config.get("continuous_timeout_ms", 8000))
@@ -2721,7 +2868,8 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             pass
         raise
     except Exception as e:
-        logger.error("Error in AI voice flow for %s: %s", device_id, e)
+        import traceback
+        logger.error("Error in AI voice flow for %s: %s\n%s", device_id, e, traceback.format_exc())
         await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": "Lỗi xử lý âm thanh."}})
     finally:
         if active_ai_tasks.get(device_id) is curr_task:

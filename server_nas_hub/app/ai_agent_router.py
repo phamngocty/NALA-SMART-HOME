@@ -125,18 +125,46 @@ class ConversationSessionManager:
 
     @staticmethod
     def is_farewell(text: str) -> bool:
-        """Phát hiện các câu chào tạm biệt hoặc kết thúc phiên trò chuyện."""
+        """Phát hiện các câu chào tạm biệt hoặc kết thúc phiên trò chuyện chuẩn xác, tránh bắt nhầm lệnh điều khiển."""
         if not text:
             return False
         normalized = _normalize_vn(text).strip()
+        if not normalized:
+            return False
+
+        # 1. Chống bắt nhầm: Nếu câu có chứa từ khóa lệnh điều khiển / truy vấn nhà thông minh -> KHÔNG PHẢI tạm biệt
+        action_keywords = [
+            "bat", "tat", "mo", "dong", "chinh", "tang", "giam", "cai", "set",
+            "den", "quat", "may lanh", "dieu hoa", "rem", "cong tac", "o cam",
+            "binh nong lanh", "nhiet do", "may gio", "thoi tiet", "bao nhieu",
+            "the nao", "tai sao", "la gi", "ai do", "ai day"
+        ]
+        norm_words = normalized.split()
+        for kw in action_keywords:
+            if " " in kw:
+                if kw in normalized:
+                    return False
+            else:
+                if kw in norm_words:
+                    return False
+
+        # 2. Danh sách từ khóa tạm biệt / kết thúc phiên thực sự
         farewell_keywords = [
             "tam biet", "bye", "goodbye", "cam on", "cam on nhe", "cam on ban",
             "thoi", "thoi duoc roi", "nghi di", "im di", "im lang", "het roi",
             "khong co gi", "dung lai", "khong can nua", "ok roi", "duoc roi"
         ]
-        for kw in farewell_keywords:
-            if normalized == kw or normalized.startswith(kw + " ") or normalized.endswith(" " + kw) or (f" {kw} " in normalized):
-                return True
+
+        # Khớp chính xác hoàn toàn câu (Exact match)
+        if normalized in farewell_keywords:
+            return True
+
+        # Nếu là câu ngắn (<= 4 từ), cho phép bắt đầu hoặc kết thúc bằng từ khóa chào
+        if len(norm_words) <= 4:
+            for kw in farewell_keywords:
+                if normalized == kw or normalized.startswith(kw + " ") or normalized.endswith(" " + kw):
+                    return True
+
         return False
 
 class AIAgentRouter:
@@ -186,7 +214,7 @@ class AIAgentRouter:
                 "model": "",
                 "base_url": "http://localhost:11434/v1"
             },
-            "tts_voice": "vi-VN-HoaiMyNeural",
+            "tts_voice": "google_fast",
             "stt_service_url": os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions"),
             "stt_provider": "auto",
             "stt_groq_model": "whisper-large-v3-turbo",
@@ -567,7 +595,7 @@ class AIAgentRouter:
             return {"status": "error", "message": f"Chưa có API Key cho {provider}"}
 
         try:
-            async with httpx.AsyncClient(timeout=12.0) as client:
+            async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}, timeout=12.0) as client:
                 # 1. GOOGLE GEMINI (Interactions API / generateContent)
                 if provider == "gemini":
                     norm_mod = normalize_gemini_model(mod)
@@ -1033,7 +1061,7 @@ class AIAgentRouter:
         if self.session_mgr.is_farewell(user_text):
             if device_id:
                 self.session_mgr.clear_session(device_id)
-            return "Dạ, rất hân hạnh được hỗ trợ bạn. Khi nào cần bạn cứ gọi Nala nhé!"
+            return "Dạ, tạm biệt bạn nhé! Hẹn gặp lại bạn sau."
 
         history = self.session_mgr.get_history(device_id) if device_id else []
 
@@ -1082,7 +1110,7 @@ class AIAgentRouter:
                         prov, prov_idx + 1, len(candidates), model)
 
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
+                async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}, timeout=10.0) as client:
                     if prov == "gemini":
                         norm_mod = normalize_gemini_model(model)
                         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{norm_mod}:generateContent"
@@ -1226,7 +1254,7 @@ class AIAgentRouter:
         if self.session_mgr.is_farewell(user_text):
             if device_id:
                 self.session_mgr.clear_session(device_id)
-            farewell_msg = "Dạ, rất hân hạnh được hỗ trợ bạn. Khi nào cần bạn cứ gọi Nala nhé!"
+            farewell_msg = "Dạ, tạm biệt bạn nhé! Hẹn gặp lại bạn sau."
             for word in farewell_msg.split(" "):
                 yield word + " "
                 await asyncio.sleep(0.02)
@@ -1291,7 +1319,7 @@ class AIAgentRouter:
                         prov, prov_idx + 1, len(candidates), model)
 
             try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
+                async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}, timeout=15.0) as client:
                     if prov != "gemini":
                         if prov == "groq":
                             endpoint = "https://api.groq.com/openai/v1/chat/completions"

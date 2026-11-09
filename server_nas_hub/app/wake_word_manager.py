@@ -24,9 +24,15 @@ class SpatialArbitrationSession:
         self.is_resolved = False
 
 class WakeWordManager:
-    def __init__(self, data_dir: Optional[str] = None, on_winner_callback: Optional[Callable] = None, on_suppress_callback: Optional[Callable] = None):
+    def __init__(self, data_dir: Optional[str] = None, 
+                 on_winner_callback: Optional[Callable] = None, 
+                 on_suppress_callback: Optional[Callable] = None,
+                 on_score_tick_callback: Optional[Callable] = None,
+                 on_detect_callback: Optional[Callable] = None):
         self.on_winner_callback = on_winner_callback
         self.on_suppress_callback = on_suppress_callback
+        self.on_score_tick_callback = on_score_tick_callback
+        self.on_detect_callback = on_detect_callback
 
         if data_dir:
             self.data_dir = data_dir
@@ -48,15 +54,23 @@ class WakeWordManager:
         # Per-device state
         self.device_buffers: Dict[str, bytearray] = {}
         self.device_last_rms: Dict[str, float] = {}
+        self.device_wake_cooldown: Dict[str, float] = {}
 
         # Spatial Arbitration state
         self.active_arbitration: Optional[SpatialArbitrationSession] = None
         self._arbitration_lock = asyncio.Lock()
 
+    def set_cooldown(self, device_id: str, duration_sec: float = 3.5):
+        """Khóa tạm thời không kích hoạt Wake Word cho thiết bị này để chống lặp và chống echo loa."""
+        self.device_wake_cooldown[device_id] = time.time() + duration_sec
+        if device_id in self.device_buffers:
+            self.device_buffers[device_id].clear()
+
     def _load_config(self) -> Dict[str, Any]:
         default_cfg = {
             "global_enabled": True,
-            "selected_model": "hey_jarvis", # "hey_jarvis", "alexa"
+            "selected_models": ["nala_oiv1"],
+            "selected_model": "nala_oiv1",
             "threshold": 0.5,
             "arbitration_window_ms": 300,
             "panel_settings": {} # device_id: {"wake_enabled": bool, "sensitivity": 0.5}
@@ -72,10 +86,22 @@ class WakeWordManager:
 
     def save_config(self, new_cfg: Dict[str, Any]) -> bool:
         try:
+            prev_models = list(self.config.get("selected_models", []))
+            prev_model = self.config.get("selected_model")
             self.config.update(new_cfg)
+            if "selected_models" in new_cfg and new_cfg["selected_models"]:
+                self.config["selected_model"] = new_cfg["selected_models"][0]
+            elif "selected_model" in new_cfg and not self.config.get("selected_models"):
+                self.config["selected_models"] = [new_cfg["selected_model"]]
+
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
             logger.info("Saved Wake Word configuration to %s", self.config_file)
+            
+            cur_models = self.config.get("selected_models", [])
+            cur_model = self.config.get("selected_model")
+            if cur_models != prev_models or cur_model != prev_model:
+                self._init_model()
             return True
         except Exception as e:
             logger.error("Failed to save Wake Word config: %s", e)
@@ -85,35 +111,58 @@ class WakeWordManager:
         try:
             import openwakeword
             from openwakeword.model import Model
-            selected = self.config.get("selected_model", "hey_jarvis")
-            models_to_load = []
-            
-            # 1. Kiểm tra xem có file mô hình custom .tflite trong thư mục data/models không
+
+            # Lấy danh sách các mô hình được người dùng tích chọn (checkbox)
+            selected_models = self.config.get("selected_models")
+            if not selected_models:
+                single = self.config.get("selected_model", "nala_oiv1")
+                selected_models = [single] if single else ["nala_oiv1"]
+            elif isinstance(selected_models, str):
+                selected_models = [selected_models]
+
             custom_models_dir = os.path.join(self.data_dir, "models")
             os.makedirs(custom_models_dir, exist_ok=True)
-            for fname in os.listdir(custom_models_dir):
-                if fname.endswith(".tflite"):
-                    full_p = os.path.join(custom_models_dir, fname)
-                    models_to_load.append(full_p)
-                    logger.info("Found custom Wake Word model: %s", full_p)
-
-            # 2. Danh sách các model có sẵn (built-in) của OpenWakeWord
             BUILTIN_MODELS = {"hey_jarvis", "alexa", "timer", "weather"}
-            if selected in BUILTIN_MODELS and selected not in models_to_load:
-                models_to_load.append(selected)
 
-            # 3. Luôn nạp ít nhất hey_jarvis và alexa làm mô hình nền
-            for m in ["hey_jarvis", "alexa"]:
-                if m not in models_to_load:
-                    models_to_load.append(m)
+            models_to_load = []
+            for sel in selected_models:
+                sel = sel.strip()
+                if not sel:
+                    continue
+                target_path = None
+                if sel.endswith(".onnx"):
+                    p = os.path.join(custom_models_dir, sel)
+                    if os.path.exists(p):
+                        target_path = p
+                else:
+                    p = os.path.join(custom_models_dir, f"{sel}.onnx")
+                    if os.path.exists(p):
+                        target_path = p
+                    else:
+                        for fname in os.listdir(custom_models_dir):
+                            if fname.endswith(".onnx") and os.path.splitext(fname)[0].lower() == sel.lower():
+                                target_path = os.path.join(custom_models_dir, fname)
+                                break
 
-            self.oww_model = Model(wakeword_models=models_to_load)
-            logger.info("OpenWakeWord engine initialized successfully with models: %s", list(self.oww_model.models.keys()))
+                if target_path and target_path not in models_to_load:
+                    models_to_load.append(target_path)
+                    logger.info("OpenWakeWord: Loading user-checked custom model: %s", target_path)
+                elif sel in BUILTIN_MODELS and sel not in models_to_load:
+                    models_to_load.append(sel)
+                    logger.info("OpenWakeWord: Loading user-checked built-in model: %s", sel)
+
+            if not models_to_load:
+                logger.warning("No wake models checked by user! Wake Word engine paused.")
+                self.oww_model = None
+                return
+
+            self.oww_model = Model(wakeword_models=models_to_load, inference_framework="onnx")
+            logger.info("OpenWakeWord engine initialized successfully with ONLY selected model(s): %s", list(self.oww_model.models.keys()))
         except Exception as e:
-            logger.warning("Failed to initialize OpenWakeWord model: %s. Using fallback ['hey_jarvis', 'alexa']...", e)
+            logger.warning("Failed to initialize OpenWakeWord model: %s. Using fallback ['hey_jarvis']...", e)
             try:
                 from openwakeword.model import Model
-                self.oww_model = Model(wakeword_models=["hey_jarvis", "alexa"])
+                self.oww_model = Model(wakeword_models=["hey_jarvis"], inference_framework="onnx")
                 logger.info("Fallback OpenWakeWord model loaded successfully: %s", list(self.oww_model.models.keys()))
             except Exception as fe:
                 logger.error("Critical: Could not initialize fallback OpenWakeWord model: %s", fe)
@@ -144,6 +193,13 @@ class WakeWordManager:
         if not self.config.get("global_enabled", True):
             return None
 
+        # Kiểm tra Cooldown chống kích hoạt lặp
+        cooldown_until = self.device_wake_cooldown.get(device_id, 0.0)
+        if time.time() < cooldown_until:
+            if device_id in self.device_buffers:
+                self.device_buffers[device_id].clear()
+            return None
+
         # Kiểm tra xem màn hình phòng này có bật tính năng Wake Word không
         panel_cfg = self.config.get("panel_settings", {}).get(device_id, {})
         if not panel_cfg.get("wake_enabled", True):
@@ -171,24 +227,32 @@ class WakeWordManager:
                 audio_array = np.frombuffer(frame_data, dtype=np.int16)
                 preds = self.oww_model.predict(audio_array)
 
-                target_model = self.config.get("selected_model", "hey_jarvis")
+                selected_models = self.config.get("selected_models")
+                if not selected_models:
+                    single = self.config.get("selected_model", "nala_oiv1")
+                    selected_models = [single] if single else ["nala_oiv1"]
+                elif isinstance(selected_models, str):
+                    selected_models = [selected_models]
+
+                clean_selected = {os.path.splitext(os.path.basename(m))[0].lower() for m in selected_models}
                 threshold = panel_cfg.get("sensitivity", self.config.get("threshold", 0.35))
 
                 score = 0.0
                 matched_key = None
                 for k, s in preds.items():
-                    is_match = False
-                    if target_model == "hey_nala":
-                        if any(alias in k.lower() for alias in ["hey_jarvis", "alexa", "nala"]):
-                            is_match = True
-                    elif target_model.lower() in k.lower() or k.lower() in target_model.lower():
-                        is_match = True
-                    elif "hey_jarvis" in k.lower() or "alexa" in k.lower():
-                        is_match = True
-
-                    if is_match and s > score:
+                    k_clean = os.path.splitext(os.path.basename(k))[0].lower()
+                    # CHỈ KHỚP NẾU k_clean NẰM ĐÚNG TRONG DANH SÁCH MÔ HÌNH ĐÃ ĐƯỢC TÍCH CHỌN
+                    if k_clean in clean_selected and s > score:
                         score = float(s)
-                        matched_key = k
+                        matched_key = k_clean
+
+                if self.on_score_tick_callback:
+                    try:
+                        res = self.on_score_tick_callback(device_id, matched_key or target_model, score, rms, threshold)
+                        if asyncio.iscoroutine(res):
+                            asyncio.create_task(res)
+                    except Exception:
+                        pass
 
                 if score >= 0.15:
                     logger.info("Panel [%s] OWW Score: %.3f (model: %s, threshold: %.2f, rms: %.1fdB)",
@@ -198,6 +262,10 @@ class WakeWordManager:
                     logger.info("Wake Word DETECTED from Panel [%s]! Model: %s, Score: %.3f, RMS: %.1fdB",
                                 device_id, matched_key, score, rms)
 
+                    # Xóa bộ đệm âm thanh của thiết bị này ngay lập tức để âm đuôi không kích hoạt lần 2!
+                    if device_id in self.device_buffers:
+                        self.device_buffers[device_id].clear()
+
                     wake_candidate = {
                         "device_id": device_id,
                         "model": matched_key,
@@ -206,8 +274,18 @@ class WakeWordManager:
                         "timestamp": time.time()
                     }
 
-                    # Đưa vào cửa sổ Phân Xử Không Gian (Spatial Arbitration)
-                    await self._submit_to_arbitration(wake_candidate)
+                    if self.on_detect_callback:
+                        try:
+                            res = self.on_detect_callback(device_id, matched_key, score, rms, threshold)
+                            if asyncio.iscoroutine(res):
+                                asyncio.create_task(res)
+                        except Exception:
+                            pass
+
+                    # Nếu là micro test từ web browser -> không cần đưa vào phân xử không gian ESP32
+                    if not device_id.startswith("web_admin"):
+                        await self._submit_to_arbitration(wake_candidate)
+
                     detected_candidate = wake_candidate
                     break # Chỉ kích hoạt 1 lần khi vượt ngưỡng
 
@@ -260,6 +338,12 @@ class WakeWordManager:
 
             logger.info("SPATIAL ARBITRATION RESOLVED! Winner: [%s] (RMS: %.1fdB, Score: %.3f) out of %d candidates",
                         winning_id, winner["rms"], winner["score"], len(session.candidates))
+
+            # Khóa Cooldown 4 giây cho thiết bị chiến thắng để phát "Em nghe!" và nhận lệnh
+            self.set_cooldown(winning_id, duration_sec=4.0)
+            for c in sorted_candidates[1:]:
+                if c["device_id"] != winning_id:
+                    self.set_cooldown(c["device_id"], duration_sec=2.5)
 
             # 1. Báo cho phòng chiến thắng thức dậy
             if self.on_winner_callback:
