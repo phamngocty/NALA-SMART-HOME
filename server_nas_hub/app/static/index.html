@@ -1212,6 +1212,11 @@
                     <span class="status-dot" id="haStatusDot"></span>
                     <span id="haStatusText">HA Pi 5: <strong>Đang kết nối...</strong></span>
                 </div>
+                <div class="badge-pill" style="cursor: pointer; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.35);" onclick="syncSystemTime()" title="Bấm để đồng bộ giờ thực GMT+7 xuống toàn bộ màn hình ESP32">
+                    <span style="font-size: 13px;">🕒</span>
+                    <span id="headerClockText" style="color: #38bdf8; font-weight: 700;">--:--:--</span>
+                    <span style="font-size: 10px; background: #0284c7; color: white; padding: 1px 6px; border-radius: 4px; font-weight: 700;">Đồng Bộ Giờ</span>
+                </div>
                                 <button class="btn-allhouse-header" onclick="openAllHouseConfigModal()" style="background: linear-gradient(135deg, #0284c7, #06b6d4); border: none; color: white; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">
                     🏠 Cấu Hình Nút Toàn Nhà
                 </button>
@@ -1229,6 +1234,9 @@
                 </button>
                 <button class="btn-history-header" onclick="openHistoryModal()" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                     💬 Lịch Sử Giọng Nói & Chat Xiaozhi
+                </button>
+                <button class="btn-memory-header" onclick="openMemoryModal()" style="background: linear-gradient(135deg, #9333ea, #7c3aed); border: none; color: white; padding: 7px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.35); transition: all 0.2s;">
+                    🧠 Trí Nhớ Nala
                 </button>
             </div>
         </header>
@@ -2175,10 +2183,35 @@
                     <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
                         * <i>Ghi chú:</i> Bấm nút <b>🔄 Quét Model</b> để hệ thống tự động tải danh sách model chat.
                     </div>
+                    <div style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.35); padding: 8px 12px; border-radius: 8px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div style="font-size: 11px; color: #fdba74;">
+                            🛡️ <b>Tự Quét Model & Rollback Dự Phòng:</b> Tự động quét model Groq còn hoạt động và tự động Rollback (70B ➔ 8B ➔ Qwen ➔ Local HA) khi chạm ngưỡng giới hạn (Rate Limit 429) hoặc lỗi model.
+                        </div>
+                        <span style="background: #ea580c; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">Failover Active</span>
+                    </div>
                     <div style="font-size: 11px; color: #f97316; margin-top: 6px; background: rgba(249, 115, 22, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(249, 115, 22, 0.25); line-height: 1.5;">
                         🎁 <b>Tích hợp sẵn STT Miễn Phí:</b> Groq cấp <b>whisper-large-v3-turbo</b> (2,000 req/ngày, 28,800 giây nói/ngày). Khi lưu API Key này, hệ thống sẽ tự động dùng Groq Whisper giải mã giọng nói ESP32 trong ~0.15s mà <b>không tốn 1% GPU trên NAS</b>!
                     </div>
                     <div id="testRes_groq" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- Nala Adaptive Learned Memory Card -->
+                <div style="background: linear-gradient(135deg, rgba(88, 28, 135, 0.25), rgba(30, 27, 75, 0.35)); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 26px;">🧠</div>
+                        <div>
+                            <div style="font-weight: 700; color: #d8b4fe; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                <span>Trí Nhớ Tự Học & Thích Ứng (Nala Learned Memory)</span>
+                                <span style="background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid #c084fc; padding: 1px 7px; border-radius: 6px; font-size: 10px; font-weight: 700;">100% Cục Bộ NAS</span>
+                            </div>
+                            <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">
+                                Xem và quản lý toàn bộ biệt danh thiết bị, thói quen sinh hoạt và thông tin gia đình Nala đã học được.
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openMemoryModal()" style="background: linear-gradient(135deg, #9333ea, #7c3aed); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.35);">
+                        🧠 Mở Bảng Quản Lý Trí Nhớ
+                    </button>
                 </div>
 
                 <!-- OpenRouter (9 Router) Card -->
@@ -2524,6 +2557,84 @@
         <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #1e293b; display: flex; justify-content: flex-end; gap: 12px; background: #0f172a;">
             <button type="button" class="btn-cancel" onclick="closeAIConfigModal()" style="padding: 9px 18px; border-radius: 8px; background: #334155; border: none; color: #f1f5f9; cursor: pointer; font-size: 13px;">Đóng</button>
             <button type="button" class="btn-primary" onclick="saveAIConfig()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 9px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;">💾 Lưu Cấu Hình AI</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Trí Nhớ Học Hỏi Của Nala -->
+<div class="modal-overlay" id="nalaMemoryModal" onclick="if(event.target===this) closeMemoryModal()" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
+    <div class="modal-box" style="max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; background: #0b1120; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 16px 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: #0f172a;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">🧠</span>
+                <div>
+                    <div style="font-size: 16px; font-weight: 800; color: #f8fafc;">Trí Nhớ Tự Học & Thích Ứng Của Nala</div>
+                    <div style="font-size: 11px; color: #94a3b8;">100% Cục bộ trên NAS - Tự học biệt danh, thói quen và phản hồi sửa sai</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #e2e8f0; cursor: pointer; background: rgba(30, 41, 59, 0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid #475569;">
+                    <span>Tự Học:</span>
+                    <input type="checkbox" id="chkMemoryEnabled" onchange="toggleMemoryEnabled(this.checked)" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                </label>
+                <button onclick="closeMemoryModal()" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer;">&times;</button>
+            </div>
+        </div>
+
+        <!-- Metric Badges & Action Bar -->
+        <div style="padding: 12px 24px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <span id="badgeAliasCount" style="font-size: 11px; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">🏷️ 0/50 Biệt danh</span>
+                <span id="badgeHabitCount" style="font-size: 11px; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);">⏰ 0/30 Thói quen</span>
+                <span id="badgeFactCount" style="font-size: 11px; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">👤 0/20 Thông tin</span>
+                <span id="badgeSizeCount" style="font-size: 11px; font-weight: 700; color: #a855f7; background: rgba(168, 85, 247, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.3);">💾 0 KB</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="promptAddAlias()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">➕ Thêm Biệt Danh</button>
+                <button onclick="promptAddFact()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">➕ Thêm Ghi Nhớ</button>
+                <button onclick="cleanGarbageMemory()" style="background: #334155; color: #cbd5e1; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🧹 Dọn Rác</button>
+                <button onclick="resetAllMemory()" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">⚠️ Đặt Lại</button>
+            </div>
+        </div>
+
+        <!-- 3 Columns Content -->
+        <div class="modal-body" style="padding: 18px 24px; display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 16px;">
+            <!-- Column 1: Aliases -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 10px; padding: 12px; display: flex; flex-direction: column;">
+                <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>🏷️ Biệt Danh Thiết Bị</span>
+                    <span style="font-size: 10px; color: #94a3b8;">(Tự nạp Fast-Path)</span>
+                </div>
+                <div id="memoryAliasesList" style="flex: 1; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Đang tải...</div>
+                </div>
+            </div>
+
+            <!-- Column 2: Habits -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 10px; padding: 12px; display: flex; flex-direction: column;">
+                <div style="font-size: 13px; font-weight: 700; color: #f59e0b; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>⏰ Thói Quen Theo Giờ</span>
+                    <span style="font-size: 10px; color: #94a3b8;">(Tự học chu kỳ)</span>
+                </div>
+                <div id="memoryHabitsList" style="flex: 1; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Đang tải...</div>
+                </div>
+            </div>
+
+            <!-- Column 3: Facts -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 10px; padding: 12px; display: flex; flex-direction: column;">
+                <div style="font-size: 13px; font-weight: 700; color: #10b981; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>👤 Thông Tin Gia Đình</span>
+                    <span style="font-size: 10px; color: #94a3b8;">(Ngữ cảnh dài hạn)</span>
+                </div>
+                <div id="memoryFactsList" style="flex: 1; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Đang tải...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 12px 24px; border-top: 1px solid #1e293b; display: flex; justify-content: flex-end; background: #0f172a;">
+            <button onclick="closeMemoryModal()" style="padding: 8px 18px; border-radius: 8px; background: #334155; border: none; color: #f1f5f9; cursor: pointer; font-size: 12px; font-weight: 600;">Đóng</button>
         </div>
     </div>
 </div>
@@ -4948,6 +5059,211 @@
             renderHistoryList();
         }
 
+        async function openMemoryModal() {
+            const modal = document.getElementById('nalaMemoryModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+            await loadMemoryData();
+        }
+
+        function closeMemoryModal() {
+            const modal = document.getElementById('nalaMemoryModal');
+            if (modal) {
+                modal.classList.remove('active');
+                setTimeout(() => { modal.style.display = 'none'; }, 200);
+            }
+        }
+
+        async function loadMemoryData() {
+            try {
+                const res = await fetch('/api/memory');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const chk = document.getElementById('chkMemoryEnabled');
+                if (chk) chk.checked = data.enabled !== false;
+                const bA = document.getElementById('badgeAliasCount');
+                if (bA) bA.textContent = `🏷️ ${data.aliases_count}/${data.max_aliases} Biệt danh`;
+                const bH = document.getElementById('badgeHabitCount');
+                if (bH) bH.textContent = `⏰ ${data.habits_count}/${data.max_habits} Thói quen`;
+                const bF = document.getElementById('badgeFactCount');
+                if (bF) bF.textContent = `👤 ${data.facts_count}/${data.max_facts} Thông tin`;
+                const bS = document.getElementById('badgeSizeCount');
+                if (bS) bS.textContent = `💾 ${data.file_size_kb || 0} KB`;
+
+                // Render Aliases
+                const aliasList = document.getElementById('memoryAliasesList');
+                if (aliasList) {
+                    if (data.aliases && Object.keys(data.aliases).length > 0) {
+                        aliasList.innerHTML = Object.entries(data.aliases).map(([phrase, info]) => `
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 11px;">
+                                <div>
+                                    <div style="font-weight: 700; color: #38bdf8;">"${phrase}"</div>
+                                    <div style="font-size: 9px; color: #94a3b8; font-family: monospace;">${info.entity_id} ${info.room ? '• ' + info.room : ''}</div>
+                                    <div style="font-size: 9px; color: #64748b;">Dùng: ${info.hit_count} lần | Độ tin cậy: ${Math.round((info.confidence || 0.8) * 100)}%</div>
+                                </div>
+                                <button onclick="deleteMemoryItem('alias', '${phrase}')" title="Xóa biệt danh" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;">🗑️</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        aliasList.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Chưa có biệt danh nào</div>';
+                    }
+                }
+
+                // Render Habits
+                const habitList = document.getElementById('memoryHabitsList');
+                if (habitList) {
+                    if (data.habits && data.habits.length > 0) {
+                        habitList.innerHTML = data.habits.map(h => `
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 11px;">
+                                <div>
+                                    <div style="font-weight: 700; color: #f59e0b;">Khung giờ: ${h.time_bucket}</div>
+                                    <div style="font-size: 9px; color: #cbd5e1;">Hành động: ${h.action} tại ${h.room || 'Toàn nhà'}</div>
+                                    <div style="font-size: 9px; color: #64748b; font-family: monospace;">${h.entity_id} (${h.hit_count} lần)</div>
+                                </div>
+                                <button onclick="deleteMemoryItem('habit', '${h.id}')" title="Xóa thói quen" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;">🗑️</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        habitList.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Chưa hình thành thói quen nào</div>';
+                    }
+                }
+
+                // Render Facts
+                const factList = document.getElementById('memoryFactsList');
+                if (factList) {
+                    if (data.facts && data.facts.length > 0) {
+                        factList.innerHTML = data.facts.map(f => `
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 11px;">
+                                <div>
+                                    <div style="color: #f1f5f9; font-weight: 600;">${f.content}</div>
+                                    <div style="font-size: 9px; color: #64748b;">Danh mục: ${f.category || 'general'}</div>
+                                </div>
+                                <button onclick="deleteMemoryItem('fact', '${f.id}')" title="Xóa ghi nhớ" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;">🗑️</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        factList.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">Chưa có thông tin ghi nhớ nào</div>';
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading memory:", e);
+            }
+        }
+
+        async function toggleMemoryEnabled(enabled) {
+            try {
+                const res = await fetch('/api/memory/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                const data = await res.json();
+                showToast(data.message || 'Đã cập nhật trạng thái tự học');
+            } catch (e) {
+                showToast('Lỗi khi cập nhật trạng thái', true);
+            }
+        }
+
+        async function deleteMemoryItem(type, id) {
+            if (!confirm(`Bạn có chắc muốn xóa mục trí nhớ này không?`)) return;
+            try {
+                const res = await fetch('/api/memory/item', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ type: type, id: id })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast('🗑️ ' + data.message);
+                    await loadMemoryData();
+                } else {
+                    showToast('❌ ' + (data.message || 'Lỗi khi xóa'), true);
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối: ' + e.message, true);
+            }
+        }
+
+        async function promptAddAlias() {
+            const phrase = prompt("Nhập biệt danh hoặc cụm từ bạn muốn Nala nhớ (ví dụ: 'đèn hoa sen'):");
+            if (!phrase || !phrase.trim()) return;
+            const entity_id = prompt(`Nhập Entity ID Home Assistant tương ứng cho '${phrase.trim()}' (ví dụ: 'light.phong_khach_chum'):`);
+            if (!entity_id || !entity_id.trim()) return;
+            const room = prompt("Nhập tên phòng (tùy chọn, ví dụ: 'Phòng khách'):") || "";
+
+            try {
+                const res = await fetch('/api/memory/item', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        type: 'alias',
+                        phrase: phrase.trim(),
+                        entity_id: entity_id.trim(),
+                        room: room.trim()
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast('✅ ' + data.message);
+                    await loadMemoryData();
+                } else {
+                    showToast('❌ ' + (data.message || 'Không thể lưu'), true);
+                }
+            } catch (e) {
+                showToast('❌ Lỗi: ' + e.message, true);
+            }
+        }
+
+        async function promptAddFact() {
+            const content = prompt("Nhập thông tin hoặc quy tắc gia đình Nala cần nhớ (ví dụ: 'Nhà thích điều hòa ban đêm 26 độ'):");
+            if (!content || !content.trim()) return;
+            try {
+                const res = await fetch('/api/memory/item', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        type: 'fact',
+                        content: content.trim(),
+                        category: 'family'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast('✅ ' + data.message);
+                    await loadMemoryData();
+                } else {
+                    showToast('❌ ' + (data.message || 'Không thể lưu'), true);
+                }
+            } catch (e) {
+                showToast('❌ Lỗi: ' + e.message, true);
+            }
+        }
+
+        async function cleanGarbageMemory() {
+            try {
+                const res = await fetch('/api/memory/clean', { method: 'POST' });
+                const data = await res.json();
+                showToast('🧹 ' + data.message);
+                await loadMemoryData();
+            } catch (e) {
+                showToast('❌ Lỗi dọn rác', true);
+            }
+        }
+
+        async function resetAllMemory() {
+            if (!confirm("⚠️ CẢNH BÁO: Toàn bộ biệt danh, thói quen và thông tin Nala đã học sẽ bị xóa sạch về mặc định!\nBạn có chắc chắn muốn đặt lại không?")) return;
+            try {
+                const res = await fetch('/api/memory/reset', { method: 'POST' });
+                const data = await res.json();
+                showToast('⚠️ ' + data.message);
+                await loadMemoryData();
+            } catch (e) {
+                showToast('❌ Lỗi đặt lại', true);
+            }
+        }
+
         async function openHistoryModal() {
             isHistoryModalOpen = true;
             document.getElementById('historyModal').classList.add('active');
@@ -5339,10 +5655,40 @@
             }
         }
 
+        async function syncSystemTime() {
+            const clockEl = document.getElementById('headerClockText');
+            if (clockEl) clockEl.textContent = 'Đang đồng bộ...';
+            try {
+                const res = await fetch('/api/time/sync', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`✅ Đã đồng bộ giờ: ${data.local_time} tới ${data.panels_synced} màn hình ESP32!`);
+                } else {
+                    showToast('❌ Lỗi khi đồng bộ giờ từ máy chủ', true);
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối NAS Hub: ' + e, true);
+            }
+        }
+
+        function startHeaderClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
+                const el = document.getElementById('headerClockText');
+                if (el) {
+                    el.textContent = `${timeStr} (GMT+7)`;
+                }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
         // Initialize on load
         window.addEventListener('DOMContentLoaded', () => {
             fetchInitialData();
             initWebSocket();
+            startHeaderClock();
         });
     </script>
 <script>
@@ -6194,6 +6540,32 @@ async function uploadCustomWakeModel(input) {
     reader.readAsDataURL(file);
 }
 
+async function deleteWakeModel(modelName, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    if (!confirm(`Bạn có chắc chắn muốn xóa mô hình '${modelName}' không?\n(File mô hình sẽ bị xóa và giải phóng bộ nhớ RAM máy chủ)`)) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/wake/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ model_name: modelName })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            showToast(`🗑️ ${data.message || 'Đã xóa mô hình thành công'}`);
+            await loadWakeConfig();
+        } else {
+            showToast(`❌ ${data.message || 'Lỗi khi xóa mô hình'}`, true);
+        }
+    } catch (err) {
+        showToast(`❌ Lỗi kết nối máy chủ: ${err.message}`, true);
+    }
+}
+
 async function loadWakeConfig() {
     try {
         const res = await fetch('/api/wake/config');
@@ -6242,16 +6614,21 @@ async function loadWakeConfig() {
                         const isChecked = currentSelected.includes(m);
                         const subName = (m === 'hey_jarvis' || m === 'alexa') ? `${m} (built-in)` : `${m}.onnx`;
                         return `
-                            <label style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid ${isChecked ? '#0284c7' : '#334155'}; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='${isChecked ? '#0284c7' : '#334155'}'">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; border: 1px solid ${isChecked ? '#0284c7' : '#334155'}; padding: 6px 10px; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='${isChecked ? '#0284c7' : '#334155'}'">
+                                <label style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; margin: 0;">
                                     <input type="checkbox" class="wake-model-chk" value="${m}" ${isChecked ? 'checked' : ''} onchange="onWakeCheckboxChanged()" style="width: 16px; height: 16px; accent-color: #38bdf8; cursor: pointer;">
                                     <div>
                                         <div style="font-size: 11px; font-weight: 600; color: ${isChecked ? '#38bdf8' : '#e2e8f0'};">${label}</div>
                                         <div style="font-size: 9px; color: #64748b; font-family: monospace;">${subName}</div>
                                     </div>
+                                </label>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeColor}40;">${badgeText}</span>
+                                    <button type="button" onclick="deleteWakeModel('${m}', event)" title="Xóa mô hình '${m}'" style="background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 3px 7px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px;" onmouseover="this.style.background='#ef4444'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(239, 68, 68, 0.12)'; this.style.color='#f87171';">
+                                        🗑️ Xóa
+                                    </button>
                                 </div>
-                                <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeColor}40;">${badgeText}</span>
-                            </label>
+                            </div>
                         `;
                     }).join('');
                 } else {

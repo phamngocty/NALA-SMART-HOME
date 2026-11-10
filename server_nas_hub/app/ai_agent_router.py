@@ -18,6 +18,16 @@ import unicodedata
 from typing import Dict, Any, List, Optional, AsyncGenerator
 import httpx
 
+try:
+    from .groq_failover_client import GroqFailoverClient
+except ImportError:
+    from groq_failover_client import GroqFailoverClient
+
+try:
+    from .adaptive_memory_manager import AdaptiveMemoryManager
+except ImportError:
+    from adaptive_memory_manager import AdaptiveMemoryManager
+
 logger = logging.getLogger("AIRouter")
 
 SYSTEM_PROMPT_TEMPLATE = """Bạn là Nala - Trợ lý giọng nói và quản gia AI của hệ thống NALA Smart Home.
@@ -186,6 +196,13 @@ class AIAgentRouter:
         self.config = self._load_initial_config(gemini_api_key, deepseek_api_key)
         self.session_mgr = ConversationSessionManager(session_timeout=self.config.get("session_timeout_seconds", 120.0))
 
+        groq_cfg = self.config.get("groq", {})
+        self.groq_client = GroqFailoverClient(
+            api_key=groq_cfg.get("api_key", ""),
+            default_preferred_model=groq_cfg.get("model", "llama-3.3-70b-versatile")
+        )
+        self.memory_mgr = AdaptiveMemoryManager(data_dir=self.data_dir)
+
     def _load_initial_config(self, default_gemini: str, default_deepseek: str) -> Dict[str, Any]:
         default_cfg = {
             "active_provider": "gemini",
@@ -327,6 +344,13 @@ class AIAgentRouter:
                     new_key = p_data.get("api_key", "").strip()
                     if new_key and "..." not in new_key and "****" not in new_key:
                         self.config[prov]["api_key"] = new_key
+
+            if hasattr(self, "groq_client"):
+                g_cfg = self.config.get("groq", {})
+                if g_cfg.get("api_key"):
+                    self.groq_client.set_api_key(g_cfg["api_key"])
+                if g_cfg.get("model"):
+                    self.groq_client.default_preferred_model = g_cfg["model"]
 
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
@@ -537,9 +561,9 @@ class AIAgentRouter:
 
         return raw_eid, raw_eid
 
-    async def execute_tool(self, name: str, args: Dict[str, Any]) -> str:
-        """Thực thi action gọi thiết bị vào Home Assistant."""
-        logger.info("Executing HA Tool: %s with args %s", name, args)
+    async def execute_tool(self, name: str, args: Dict[str, Any], context_room: str = "", user_text: str = "") -> str:
+        """Thực thi action gọi thiết bị vào Home Assistant và học hỏi thói quen."""
+        logger.info("Executing HA Tool: %s with args %s (room: %s, text: %s)", name, args, context_room, user_text)
         try:
             if name == "control_home_device":
                 raw_eid = args.get("entity_id", "")
@@ -547,6 +571,16 @@ class AIAgentRouter:
                 domain = "climate" if action == "set_temperature" else (raw_eid.split(".")[0] if "." in raw_eid else "light")
 
                 eid, friendly_name = self._resolve_real_entity_id(raw_eid, domain)
+
+                # Ghi nhận học hỏi thói quen & biệt danh nếu có user_text
+                if user_text and hasattr(self, "memory_mgr"):
+                    try:
+                        if self.memory_mgr.is_user_correction(user_text):
+                            self.memory_mgr.learn_user_correction(user_text, eid, context_room)
+                        else:
+                            self.memory_mgr.learn_device_interaction(user_text, eid, context_room, domain, action)
+                    except Exception as me:
+                        logger.warning("Adaptive Memory learning exception: %s", me)
 
                 if action == "set_temperature":
                     temp = args.get("temperature", 25)
@@ -1073,6 +1107,21 @@ class AIAgentRouter:
             cnt = res.get("turned_off_count", 0)
             return f"Đã tắt {cnt} thiết bị trong nhà cho bạn."
 
+        # 1.1 FAST-PATH TỰ THÍCH ỨNG TỪ TRÍ NHỚ ĐÃ HỌC CỦA NALA (<20ms)
+        fast_match = self.memory_mgr.match_fast_path(user_text, context_room)
+        if fast_match:
+            eid = fast_match["entity_id"]
+            act = fast_match["action"]
+            domain = eid.split(".")[0] if "." in eid else "light"
+            logger.info("Executing Fast-Path from Learned Memory: %s.%s on %s", domain, act, eid)
+            if self.ha_bridge:
+                await self.ha_bridge.call_service(domain, act, entity_id=eid)
+                verb = "bật" if act == "turn_on" else "tắt"
+                ret = f"Đã {verb} {fast_match['phrase']} theo thói quen cho bạn."
+                if device_id:
+                    self.session_mgr.add_turn(device_id, user_text, ret)
+                return ret
+
         # 2. Xây dựng danh sách ứng viên Provider theo thứ tự ưu tiên (Primary -> Fallbacks)
         preferred = model_preference or self.config.get("active_provider", "gemini")
         auto_fallback = self.config.get("auto_fallback", True)
@@ -1093,8 +1142,9 @@ class AIAgentRouter:
             return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI khả dụng."
 
         device_ctx = self._build_device_context()
+        learned_ctx = self.memory_mgr.get_prompt_context(context_room or "", user_text)
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx,
+            device_context=device_ctx + learned_ctx,
             current_room=context_room or "Không xác định"
         )
 
@@ -1140,7 +1190,7 @@ class AIAgentRouter:
                             for part in parts:
                                 if "functionCall" in part:
                                     fn = part["functionCall"]
-                                    res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
+                                    res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}), context_room=context_room, user_text=user_text)
                                     confirmations.append(res_msg)
                                 elif "text" in part:
                                     text_replies.append(part["text"].strip())
@@ -1160,12 +1210,54 @@ class AIAgentRouter:
                                            res.status_code, res.text[:120])
                             continue
 
+                    elif prov == "groq":
+                        openai_messages = [{"role": "system", "content": system_instruction}]
+                        for h in history:
+                            openai_messages.append({"role": h["role"], "content": h["content"]})
+                        openai_messages.append({"role": "user", "content": user_text})
+
+                        groq_res = await self.groq_client.chat_completion(
+                            messages=openai_messages,
+                            preferred_model=model,
+                            tools=self._get_ha_tools_schema_openai(),
+                            tool_choice="auto",
+                            max_tokens=150,
+                            temperature=0.4
+                        )
+
+                        if groq_res.get("success"):
+                            msg = groq_res.get("message", {})
+                            tool_calls = msg.get("tool_calls", [])
+                            if tool_calls:
+                                confirmations = []
+                                for tc in tool_calls:
+                                    func = tc.get("function", {})
+                                    fn_name = func.get("name", "")
+                                    raw_args = func.get("arguments", "{}")
+                                    try:
+                                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                                    except Exception:
+                                        args = {}
+                                    res_msg = await self.execute_tool(fn_name, args, context_room=context_room, user_text=user_text)
+                                    confirmations.append(res_msg)
+                                ret = " ".join(confirmations) if confirmations else "Đã thực hiện yêu cầu cho bạn."
+                                if device_id:
+                                    self.session_mgr.add_turn(device_id, user_text, ret)
+                                return ret
+
+                            content = msg.get("content", "").strip()
+                            if content:
+                                if device_id:
+                                    self.session_mgr.add_turn(device_id, user_text, content)
+                                return content
+                        else:
+                            last_error_desc = f"Groq Failover: {groq_res.get('error')}"
+                            logger.warning("Groq failover exhausted: %s. Auto-falling back to next provider...",
+                                           groq_res.get('error'))
+                            continue
+
                     else:
-                        if prov == "groq":
-                            endpoint = "https://api.groq.com/openai/v1/chat/completions"
-                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                            use_model = model or "llama-3.3-70b-versatile"
-                        elif prov == "deepseek":
+                        if prov == "deepseek":
                             endpoint = "https://api.deepseek.com/chat/completions"
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                             use_model = model or "deepseek-flash"
@@ -1214,7 +1306,7 @@ class AIAgentRouter:
                                         args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
                                     except Exception:
                                         args = {}
-                                    res_msg = await self.execute_tool(fn_name, args)
+                                    res_msg = await self.execute_tool(fn_name, args, context_room=context_room, user_text=user_text)
                                     confirmations.append(res_msg)
                                 ret = " ".join(confirmations) if confirmations else "Đã thực hiện yêu cầu cho bạn."
                                 if device_id:
@@ -1274,6 +1366,22 @@ class AIAgentRouter:
                 await asyncio.sleep(0.03)
             return
 
+        # 1.1 FAST-PATH TỰ THÍCH ỨNG TỪ TRÍ NHỚ ĐÃ HỌC CỦA NALA (Stream <20ms)
+        fast_match = self.memory_mgr.match_fast_path(user_text, context_room)
+        if fast_match:
+            eid = fast_match["entity_id"]
+            act = fast_match["action"]
+            domain = eid.split(".")[0] if "." in eid else "light"
+            logger.info("Executing Fast-Path from Learned Memory (Stream): %s.%s on %s", domain, act, eid)
+            if self.ha_bridge:
+                await self.ha_bridge.call_service(domain, act, entity_id=eid)
+                verb = "bật" if act == "turn_on" else "tắt"
+                msg = f"Đã {verb} {fast_match['phrase']} theo thói quen cho bạn."
+                for word in msg.split(" "):
+                    yield word + " "
+                    await asyncio.sleep(0.02)
+                return
+
         # 2. Xây dựng danh sách ứng viên Provider theo thứ tự ưu tiên (Primary -> Fallbacks)
         preferred = model_preference or self.config.get("active_provider", "gemini")
         auto_fallback = self.config.get("auto_fallback", True)
@@ -1301,8 +1409,9 @@ class AIAgentRouter:
             return
 
         device_ctx = self._build_device_context()
+        learned_ctx = self.memory_mgr.get_prompt_context(context_room or "", user_text)
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx,
+            device_context=device_ctx + learned_ctx,
             current_room=context_room or "Không xác định"
         )
 
@@ -1320,12 +1429,122 @@ class AIAgentRouter:
 
             try:
                 async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}, timeout=15.0) as client:
-                    if prov != "gemini":
-                        if prov == "groq":
-                            endpoint = "https://api.groq.com/openai/v1/chat/completions"
-                            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                            use_model = model or "llama-3.3-70b-versatile"
-                        elif prov == "deepseek":
+                    if prov == "groq":
+                        await self.groq_client.scan_and_sync_models()
+                        groq_candidates = self.groq_client.get_candidate_models(model)
+                        endpoint = "https://api.groq.com/openai/v1/chat/completions"
+                        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+                        openai_messages = [{"role": "system", "content": system_instruction}]
+                        for h in history:
+                            openai_messages.append({"role": h["role"], "content": h["content"]})
+                        openai_messages.append({"role": "user", "content": user_text})
+
+                        groq_stream_success = False
+                        for g_model in groq_candidates:
+                            payload = {
+                                "model": g_model,
+                                "messages": openai_messages,
+                                "tools": self._get_ha_tools_schema_openai(),
+                                "tool_choice": "auto",
+                                "stream": True,
+                                "max_tokens": 200,
+                                "temperature": 0.3
+                            }
+                            accumulated_tool_calls: Dict[int, Dict[str, Any]] = {}
+                            has_text = False
+
+                            try:
+                                async with client.stream("POST", endpoint, headers=headers, json=payload) as response:
+                                    if response.status_code == 429:
+                                        self.groq_client.mark_model_cooldown(g_model, "Stream 429 Rate Limit")
+                                        continue
+                                    elif response.status_code == 404 or "model_decommissioned" in (await response.aread()).decode('utf-8', 'ignore'):
+                                        self.groq_client.mark_model_deprecated(g_model, "Stream 404 Decommissioned")
+                                        continue
+                                    elif response.status_code in [500, 502, 503, 504]:
+                                        logger.warning("Groq stream HTTP %d on model '%s'. Rolling back...", response.status_code, g_model)
+                                        continue
+                                    elif response.status_code != 200:
+                                        err_body = await response.aread()
+                                        last_error_msg = f"groq HTTP {response.status_code}"
+                                        logger.warning("Groq stream error %d on model '%s': %s",
+                                                       response.status_code, g_model, err_body[:100].decode('utf-8', 'ignore'))
+                                        break
+
+                                    async for line in response.aiter_lines():
+                                        line = line.strip()
+                                        if not line or not line.startswith("data: "):
+                                            continue
+                                        data_str = line[6:]
+                                        if data_str == "[DONE]":
+                                            break
+
+                                        try:
+                                            chunk_json = json.loads(data_str)
+                                            choices = chunk_json.get("choices", [])
+                                            if not choices:
+                                                continue
+                                            delta = choices[0].get("delta", {})
+
+                                            if "tool_calls" in delta and delta["tool_calls"]:
+                                                for tc in delta["tool_calls"]:
+                                                    idx = tc.get("index", 0)
+                                                    if idx not in accumulated_tool_calls:
+                                                        accumulated_tool_calls[idx] = {
+                                                            "name": tc.get("function", {}).get("name", ""),
+                                                            "args": ""
+                                                        }
+                                                    fn_data = tc.get("function", {})
+                                                    if "name" in fn_data and fn_data["name"]:
+                                                        accumulated_tool_calls[idx]["name"] = fn_data["name"]
+                                                    if "arguments" in fn_data and fn_data["arguments"]:
+                                                        accumulated_tool_calls[idx]["args"] += fn_data["arguments"]
+
+                                            content_piece = delta.get("content", "")
+                                            if content_piece:
+                                                has_text = True
+                                                yield content_piece
+
+                                        except Exception:
+                                            continue
+
+                                if accumulated_tool_calls:
+                                    confirmations = []
+                                    for idx, call in accumulated_tool_calls.items():
+                                        fn_name = call.get("name", "")
+                                        raw_args = call.get("args", "{}")
+                                        try:
+                                            args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                                        except Exception:
+                                            args = {}
+                                        res_msg = await self.execute_tool(fn_name, args, context_room=context_room, user_text=user_text)
+                                        confirmations.append(res_msg)
+
+                                    final_msg = " ".join(confirmations) if confirmations else "Đã thực hiện xong cho bạn."
+                                    if has_text:
+                                        yield " " + final_msg
+                                    else:
+                                        for word in final_msg.split(" "):
+                                            yield word + " "
+                                            await asyncio.sleep(0.03)
+
+                                completed_successfully = True
+                                groq_stream_success = True
+                                break
+
+                            except Exception as stream_err:
+                                logger.warning("Stream attempt on Groq model '%s' failed: %s. Rolling back...", g_model, stream_err)
+                                continue
+
+                        if groq_stream_success:
+                            break
+                        else:
+                            last_error_msg = "Groq stream failover exhausted."
+                            continue
+
+                    elif prov != "gemini":
+                        if prov == "deepseek":
                             endpoint = "https://api.deepseek.com/chat/completions"
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                             use_model = model or "deepseek-flash"
@@ -1417,7 +1636,7 @@ class AIAgentRouter:
                                     args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
                                 except Exception:
                                     args = {}
-                                res_msg = await self.execute_tool(fn_name, args)
+                                res_msg = await self.execute_tool(fn_name, args, context_room=context_room, user_text=user_text)
                                 confirmations.append(res_msg)
 
                             final_msg = " ".join(confirmations) if confirmations else "Đã thực hiện xong cho bạn."
@@ -1474,7 +1693,7 @@ class AIAgentRouter:
                                             yield p["text"]
                                         elif "functionCall" in p:
                                             fn = p["functionCall"]
-                                            res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}))
+                                            res_msg = await self.execute_tool(fn.get("name", ""), fn.get("args", {}), context_room=context_room, user_text=user_text)
                                             for word in res_msg.split(" "):
                                                 yield word + " "
                                                 await asyncio.sleep(0.03)

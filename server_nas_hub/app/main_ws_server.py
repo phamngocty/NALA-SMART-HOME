@@ -19,6 +19,12 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, Streamin
 from pydantic import BaseModel
 import uvicorn
 
+# Force Vietnam Timezone (Asia/Ho_Chi_Minh - GMT+7) across all platforms & Docker
+if "TZ" not in os.environ:
+    os.environ["TZ"] = "Asia/Ho_Chi_Minh"
+if hasattr(time, "tzset"):
+    time.tzset()
+
 try:
     import opuslib
     OPUS_AVAILABLE = True
@@ -733,14 +739,16 @@ def get_wake_model_label(m_name: str) -> str:
     return m_name.replace("_", " ").title()
 
 def get_available_wake_models() -> list:
-    """Lấy danh sách các model Wake Word có sẵn (.onnx hoặc built-in)."""
-    available_models = ["hey_nala", "nala_oi", "hey_jarvis", "alexa"]
+    """Lấy danh sách các model Wake Word có sẵn (.onnx hoặc built-in), trừ các model đã ẩn."""
+    base_models = ["nala_oiv1", "hey_nala", "nala_oi", "hey_jarvis", "alexa"]
+    hidden_models = set(wake_mgr.config.get("hidden_models", []))
+    available_models = [m for m in base_models if m not in hidden_models]
     custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
     if os.path.exists(custom_models_dir):
         for fname in os.listdir(custom_models_dir):
             if fname.endswith(".onnx") or fname.endswith(".tflite"):
                 m_name = os.path.splitext(fname)[0]
-                if m_name not in available_models:
+                if m_name not in available_models and m_name not in hidden_models:
                     available_models.append(m_name)
     return available_models
 
@@ -844,6 +852,23 @@ async def history_cleanup_task():
         except Exception as e:
             logger.error("Error in history cleanup task: %s", e)
 
+async def time_sync_periodic_task():
+    """Periodically sync real-time clock down to all connected ESP32 panels every 30 minutes."""
+    while True:
+        try:
+            await asyncio.sleep(1800)  # Mỗi 30 phút tự động đồng bộ giờ
+            cur_epoch = int(time.time())
+            await broadcast_to_panels({
+                "type": "time_sync",
+                "epoch": cur_epoch
+            })
+            logger.info("Periodic time_sync broadcasted to panels: epoch %d (%s)", cur_epoch, time.strftime("%Y-%m-%d %H:%M:%S %Z"))
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("Error in time_sync_periodic_task: %s", e)
+            await asyncio.sleep(60)
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting NALA Central Hub on port %d...", PORT)
@@ -853,6 +878,7 @@ async def startup_event():
     asyncio.create_task(audio_pipeline.prewarm_common_cache())
     asyncio.create_task(history_cleanup_task())
     asyncio.create_task(device_heartbeat_task())
+    asyncio.create_task(time_sync_periodic_task())
 
 # -----------------------------------------------------------------------------
 # WEB MANAGEMENT HUB & REST APIS
@@ -890,6 +916,51 @@ async def get_system_status():
         "devices_paired": sum(1 for d in devices if d.get("is_paired")),
         "active_sockets": len(active_sockets)
     })
+
+@app.post("/api/time/sync")
+async def trigger_time_sync():
+    """Manually trigger RTC time synchronization to all connected ESP32 panels and Web Admins."""
+    cur_epoch = int(time.time())
+    local_str = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    
+    panel_count = 0
+    for dev_id, ws in list(active_sockets.items()):
+        if not dev_id.startswith("web_admin"):
+            try:
+                await ws.send_json({
+                    "type": "time_sync",
+                    "epoch": cur_epoch
+                })
+                panel_count += 1
+            except Exception:
+                pass
+
+    await broadcast_to_admins({
+        "type": "time_synced",
+        "epoch": cur_epoch,
+        "local_time": local_str,
+        "panels_synced": panel_count
+    })
+
+    logger.info("Manual time_sync triggered: epoch=%d (%s), synced %d panels", cur_epoch, local_str, panel_count)
+    return {
+        "status": "ok",
+        "epoch": cur_epoch,
+        "local_time": local_str,
+        "panels_synced": panel_count,
+        "timezone": os.environ.get("TZ", "Asia/Ho_Chi_Minh")
+    }
+
+@app.get("/api/time/status")
+async def get_time_status():
+    """Get current server time and timezone status."""
+    cur_epoch = int(time.time())
+    return {
+        "epoch": cur_epoch,
+        "local_time": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "timezone": os.environ.get("TZ", "Asia/Ho_Chi_Minh"),
+        "is_dst": bool(time.localtime().tm_isdst)
+    }
 
 class ButtonConfig(BaseModel):
     id: Optional[str] = None
@@ -1248,16 +1319,16 @@ class AIChatRequest(BaseModel):
 async def get_wake_config():
     """Lấy cấu hình Wake Word đa phòng hiện tại và danh sách mô hình có sẵn."""
     cfg = dict(wake_mgr.config)
-    # Quét danh sách mô hình có sẵn trong data/models (.onnx, .tflite) + built-in
-    available_models = ["hey_nala", "nala_oi", "hey_jarvis", "alexa"]
+    cfg["available_models"] = get_available_wake_models()
+
+    # Quét danh sách mô hình có file vật lý trong data/models (.onnx, .tflite)
     custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
+    custom_models = []
     if os.path.exists(custom_models_dir):
         for fname in os.listdir(custom_models_dir):
             if fname.endswith(".onnx") or fname.endswith(".tflite"):
-                m_name = os.path.splitext(fname)[0]
-                if m_name not in available_models:
-                    available_models.append(m_name)
-    cfg["available_models"] = available_models
+                custom_models.append(os.path.splitext(fname)[0])
+    cfg["custom_models"] = custom_models
 
     # Gộp danh sách devices để hiển thị từng phòng trên Web Admin
     devices_summary = []
@@ -1290,6 +1361,13 @@ async def upload_wake_model(request: Request):
         with open(dest_path, "wb") as f:
             f.write(file_bytes)
         model_name = os.path.splitext(filename)[0]
+
+        # Khôi phục nếu trước đó model này từng bị ẩn
+        hidden_models = list(wake_mgr.config.get("hidden_models", []))
+        if model_name in hidden_models:
+            hidden_models.remove(model_name)
+            wake_mgr.save_config({"hidden_models": hidden_models})
+
         wake_mgr.save_config({"selected_model": model_name})
         wake_mgr._init_model()
 
@@ -1317,6 +1395,72 @@ async def upload_wake_model(request: Request):
         })
     except Exception as e:
         logger.error("Lỗi upload mô hình wake word: %s", e)
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/wake/delete")
+@app.delete("/api/wake/model")
+async def delete_wake_model(request: Request):
+    """Xóa mô hình Wake Word khỏi máy chủ (xóa file .onnx / .tflite và giải phóng RAM)."""
+    try:
+        data = await request.json()
+        model_name = data.get("model_name", "").strip()
+        if not model_name:
+            return JSONResponse({"status": "error", "message": "Tên mô hình không hợp lệ"}, status_code=400)
+
+        custom_models_dir = os.path.join(wake_mgr.data_dir, "models")
+        deleted_file = False
+        if os.path.exists(custom_models_dir):
+            for fname in os.listdir(custom_models_dir):
+                base, ext = os.path.splitext(fname)
+                if ext.lower() in [".onnx", ".tflite"] and base.lower() == model_name.lower():
+                    file_path = os.path.join(custom_models_dir, fname)
+                    try:
+                        os.remove(file_path)
+                        deleted_file = True
+                        logger.info("Deleted custom wake word model file: %s", file_path)
+                    except Exception as fe:
+                        logger.error("Failed to delete file %s: %s", file_path, fe)
+                        return JSONResponse({"status": "error", "message": f"Không thể xóa file: {fe}"}, status_code=500)
+
+        # Cập nhật danh sách selected_models & hidden_models trong wake_config
+        selected_models = list(wake_mgr.config.get("selected_models", []))
+        if model_name in selected_models:
+            selected_models.remove(model_name)
+
+        hidden_models = list(wake_mgr.config.get("hidden_models", []))
+        if model_name not in hidden_models:
+            hidden_models.append(model_name)
+
+        new_selected = selected_models if selected_models else ["nala_oiv1"]
+        wake_mgr.save_config({
+            "selected_models": new_selected,
+            "hidden_models": hidden_models
+        })
+
+        # Nạp lại mô hình trong RAM để giải phóng bộ nhớ ngay lập tức
+        wake_mgr._init_model()
+
+        avail = get_available_wake_models()
+        # Broadcast đồng bộ tới Web Admin
+        await broadcast_to_admins({
+            "type": "wake_config_update",
+            "payload": {
+                "deleted_model": model_name,
+                "selected_models": new_selected,
+                "available_models": avail
+            }
+        })
+
+        msg = f"Đã xóa vĩnh viễn file mô hình '{model_name}' và giải phóng RAM!" if deleted_file else f"Đã gỡ mô hình '{model_name}' khỏi danh sách áp dụng!"
+        return JSONResponse({
+            "status": "success",
+            "message": msg,
+            "model_name": model_name,
+            "available_models": avail,
+            "selected_models": new_selected
+        })
+    except Exception as e:
+        logger.error("Lỗi khi xóa mô hình wake word: %s", e)
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/api/wake/config")
@@ -1384,6 +1528,100 @@ async def clear_ai_context(req: Request):
         dev_id = "web_admin"
     ai_router.session_mgr.clear_session(dev_id)
     return JSONResponse({"status": "success", "message": f"Đã xóa ngữ cảnh trò chuyện của [{dev_id}]"})
+
+# ==============================================================================
+# NALA ADAPTIVE LEARNED MEMORY ENDPOINTS
+# ==============================================================================
+
+@app.get("/api/memory")
+async def get_adaptive_memory():
+    """Lấy toàn bộ thống kê và các mục trí nhớ Nala đã học được."""
+    if not hasattr(ai_router, "memory_mgr"):
+        return JSONResponse({"status": "error", "message": "Memory manager chưa được khởi tạo"}, status_code=500)
+    return JSONResponse(ai_router.memory_mgr.get_summary())
+
+@app.post("/api/memory/config")
+async def save_adaptive_memory_config(req: Request):
+    """Bật / Tắt chế độ tự học của Nala."""
+    try:
+        data = await req.json()
+        enabled = bool(data.get("enabled", True))
+        ai_router.memory_mgr.set_enabled(enabled)
+        return JSONResponse({"status": "success", "enabled": enabled, "message": f"Đã {'bật' if enabled else 'tắt'} chế độ tự học!"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/memory/item")
+async def add_adaptive_memory_item(req: Request):
+    """Thêm hoặc sửa thủ công một mục trí nhớ (biệt danh hoặc thông tin gia đình)."""
+    try:
+        data = await req.json()
+        item_type = data.get("type", "alias")
+        if item_type == "alias":
+            phrase = data.get("phrase", "").strip().lower()
+            entity_id = data.get("entity_id", "").strip()
+            room = data.get("room", "").strip()
+            if not phrase or not entity_id:
+                return JSONResponse({"status": "error", "message": "Vui lòng nhập đầy đủ cụm từ và Entity ID"}, status_code=400)
+            aliases = ai_router.memory_mgr.data.setdefault("aliases", {})
+            aliases[phrase] = {
+                "entity_id": entity_id,
+                "room": room,
+                "hit_count": max(1, aliases.get(phrase, {}).get("hit_count", 1)),
+                "last_used": time.time(),
+                "confidence": 1.0
+            }
+            ai_router.memory_mgr._evict_if_needed()
+            ai_router.memory_mgr.save_memory()
+            return JSONResponse({"status": "success", "message": f"Đã lưu biệt danh '{phrase}' -> {entity_id}"})
+        elif item_type == "fact":
+            content = data.get("content", "").strip()
+            category = data.get("category", "general").strip()
+            if not content:
+                return JSONResponse({"status": "error", "message": "Nội dung ghi nhớ không được để trống"}, status_code=400)
+            added = ai_router.memory_mgr.add_fact(content, category)
+            if added:
+                return JSONResponse({"status": "success", "message": f"Đã thêm ghi nhớ: '{content}'"})
+            else:
+                return JSONResponse({"status": "error", "message": "Nội dung bị chặn hoặc trùng lặp"}, status_code=400)
+        return JSONResponse({"status": "error", "message": "Loại mục nhớ không hợp lệ"}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.delete("/api/memory/item")
+@app.post("/api/memory/delete")
+async def delete_adaptive_memory_item(req: Request):
+    """Xóa một mục trí nhớ (alias, habit hoặc fact)."""
+    try:
+        data = await req.json()
+        item_type = data.get("type", "")
+        item_id = data.get("id", "")
+        if not item_type or not item_id:
+            return JSONResponse({"status": "error", "message": "Thiếu type hoặc id của mục cần xóa"}, status_code=400)
+        success = ai_router.memory_mgr.delete_item(item_type, item_id)
+        if success:
+            return JSONResponse({"status": "success", "message": f"Đã xóa thành công mục trí nhớ [{item_id}]"})
+        return JSONResponse({"status": "error", "message": "Không tìm thấy mục cần xóa"}, status_code=404)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/memory/clean")
+async def clean_adaptive_memory():
+    """Dọn dẹp rác, ứng viên trôi hạn và các mục trí nhớ có độ tin cậy thấp."""
+    try:
+        cleaned_cnt = ai_router.memory_mgr.clean_garbage_and_decay()
+        return JSONResponse({"status": "success", "message": f"Đã dọn dẹp {cleaned_cnt} mục trí nhớ rác và trôi hạn!"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/memory/reset")
+async def reset_adaptive_memory():
+    """Khôi phục trí nhớ Nala về trạng thái ban đầu."""
+    try:
+        ai_router.memory_mgr.reset_all_memory()
+        return JSONResponse({"status": "success", "message": "Đã đặt lại toàn bộ trí nhớ Nala về mặc định thành công!"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/api/ai/chat/stream")
 async def ai_chat_stream_endpoint(req: AIChatRequest):
