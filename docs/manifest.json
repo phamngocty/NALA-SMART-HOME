@@ -1,0 +1,16 @@
+{
+  "name": "NALA Smart Panel ESP32-S3 (TỰ LÀM ĐIỆN TỬ)",
+  "version": "v3.6.1",
+  "home_assistant_domain": "esphome",
+  "funding_url": "https://github.com",
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "firmware/bootloader.bin", "offset": 0 },
+        { "path": "firmware/partitions.bin", "offset": 32768 },
+        { "path": "firmware/firmware.bin", "offset": 65536 }
+      ]
+    }
+  ]
+}

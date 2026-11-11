@@ -57,8 +57,8 @@ except Exception as patch_err:
 
 from app.ha_bridge import HomeAssistantBridge
 from app.intercom_router import IntercomRouter
-from app.stt_tts_pipeline import AudioPipeline
-from app.ai_agent_router import AIAgentRouter
+from app.stt_tts_pipeline import AudioPipeline, DEFAULT_SMART_HOME_WHISPER_PROMPT
+from app.ai_agent_router import AIAgentRouter, _normalize_vn
 from app.wake_word_manager import WakeWordManager
 from app.history_manager import HistoryManager
 
@@ -869,6 +869,59 @@ async def time_sync_periodic_task():
             logger.error("Error in time_sync_periodic_task: %s", e)
             await asyncio.sleep(60)
 
+async def handle_intercom_silence_warning(session: dict):
+    """Phát cảnh báo im lặng 10s (đếm ngược 3s) tới 2 bên màn hình."""
+    caller_k = session.get("caller_key")
+    target_k = session.get("target_key")
+    warn_msg = {
+        "type": "intercom_silence_warning",
+        "countdown": 3,
+        "session_id": session.get("session_id")
+    }
+    for k in (caller_k, target_k):
+        ws = active_sockets.get(k)
+        if ws:
+            try:
+                await ws.send_json(warn_msg)
+            except Exception:
+                pass
+
+async def handle_intercom_silence_hangup(session: dict, reason: str):
+    """Cúp máy do im lặng 13s, thông báo tới 2 bên màn hình và Web Admin."""
+    caller_k = session.get("caller_key")
+    target_k = session.get("target_key")
+    hangup_msg = {
+        "type": "intercom_hangup",
+        "reason": reason,
+        "session_id": session.get("session_id")
+    }
+    for k in (caller_k, target_k):
+        ws = active_sockets.get(k)
+        if ws:
+            try:
+                await ws.send_json(hangup_msg)
+            except Exception:
+                pass
+    await broadcast_to_admins({
+        "type": "intercom_active_calls",
+        "calls": intercom.get_active_calls_summary()
+    })
+
+async def intercom_silence_watchdog_task():
+    """Kiểm tra thời gian im lặng định kỳ 1 giây/lần cho đàm thoại rảnh tay (Silence Watchdog 10s)."""
+    while True:
+        try:
+            await asyncio.sleep(1.0)
+            if intercom.active_handsfree_sessions:
+                await intercom.check_silence_watchdogs(
+                    on_warning_cb=handle_intercom_silence_warning,
+                    on_hangup_cb=handle_intercom_silence_hangup
+                )
+        except asyncio.CancelledError:
+            break
+        except Exception as ex:
+            logger.warning("Error in intercom silence watchdog: %s", ex)
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting NALA Central Hub on port %d...", PORT)
@@ -879,6 +932,7 @@ async def startup_event():
     asyncio.create_task(history_cleanup_task())
     asyncio.create_task(device_heartbeat_task())
     asyncio.create_task(time_sync_periodic_task())
+    asyncio.create_task(intercom_silence_watchdog_task())
 
 # -----------------------------------------------------------------------------
 # WEB MANAGEMENT HUB & REST APIS
@@ -961,6 +1015,102 @@ async def get_time_status():
         "timezone": os.environ.get("TZ", "Asia/Ho_Chi_Minh"),
         "is_dst": bool(time.localtime().tm_isdst)
     }
+
+@app.get("/api/intercom/targets")
+async def get_intercom_targets_api():
+    """Lấy danh sách các kênh Intercom có sẵn và trạng thái online."""
+    return {
+        "status": "ok",
+        "targets": intercom.get_targets()
+    }
+
+@app.get("/api/intercom/active_calls")
+async def get_active_intercom_calls_api():
+    """Lấy danh sách các cuộc gọi đàm thoại rảnh tay đang diễn ra."""
+    return {
+        "status": "ok",
+        "active_calls": intercom.get_active_calls_summary()
+    }
+
+class IntercomCallRequest(BaseModel):
+    caller_key: str
+    target_key: str
+
+@app.post("/api/intercom/call")
+async def start_intercom_call_api(req: IntercomCallRequest):
+    """Bắt đầu cuộc gọi đàm thoại rảnh tay giữa 2 màn hình từ Web Admin."""
+    caller_k = req.caller_key.strip().upper()
+    target_k = req.target_key.strip().upper()
+    caller_ws = intercom.connections.get(caller_k) or active_sockets.get(caller_k)
+    target_ws = intercom.connections.get(target_k) or active_sockets.get(target_k)
+
+    if not target_ws:
+        return {"status": "error", "message": f"Màn hình phòng đích [{target_k}] đang ngoại tuyến."}
+
+    sess = intercom.start_handsfree_call(caller_k, target_k)
+    if caller_ws:
+        try:
+            await caller_ws.send_json({
+                "type": "intercom_call_started",
+                "role": "caller",
+                "target_room": sess["target_room"],
+                "target_code": target_k,
+                "session_id": sess["session_id"]
+            })
+        except Exception:
+            pass
+
+    try:
+        await target_ws.send_json({
+            "type": "intercom_incoming_call",
+            "role": "callee",
+            "caller_room": sess["caller_room"],
+            "caller_code": caller_k,
+            "auto_answer": True,
+            "session_id": sess["session_id"]
+        })
+    except Exception:
+        pass
+
+    await broadcast_to_admins({
+        "type": "intercom_active_calls",
+        "calls": intercom.get_active_calls_summary()
+    })
+    return {"status": "ok", "session": sess}
+
+class IntercomHangupRequest(BaseModel):
+    device_key: Optional[str] = None
+    session_id: Optional[str] = None
+
+@app.post("/api/intercom/hangup")
+async def hangup_intercom_call_api(req: IntercomHangupRequest):
+    """Cúp máy cuộc gọi đàm thoại rảnh tay từ xa."""
+    dev_key = (req.device_key or "").strip().upper()
+    sess = None
+    if dev_key:
+        sess = intercom.end_handsfree_call(dev_key, reason="admin_hangup")
+    elif req.session_id:
+        for k, s in list(intercom.active_handsfree_sessions.items()):
+            if s.get("session_id") == req.session_id:
+                sess = intercom.end_handsfree_call(k, reason="admin_hangup")
+                break
+
+    if sess:
+        hangup_payload = {"type": "intercom_hangup", "reason": "admin_hangup", "session_id": sess.get("session_id")}
+        for k in (sess.get("caller_key"), sess.get("target_key")):
+            k_ws = active_sockets.get(k)
+            if k_ws:
+                try:
+                    await k_ws.send_json(hangup_payload)
+                except Exception:
+                    pass
+        await broadcast_to_admins({
+            "type": "intercom_active_calls",
+            "calls": intercom.get_active_calls_summary()
+        })
+        return {"status": "ok", "message": "Đã ngắt cuộc gọi."}
+
+    return {"status": "error", "message": "Không tìm thấy cuộc gọi đang hoạt động."}
 
 class ButtonConfig(BaseModel):
     id: Optional[str] = None
@@ -2580,6 +2730,21 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                     sender_key = dev_code or device_id
                     await abort_ai_flow(sender_key, websocket)
 
+                # Chạm nút Cúp Máy trên màn hình cảm ứng ESP32 hoặc Web Admin (Lớp 2: Touch Hangup)
+                elif msg_type in ("intercom_hangup", "intercom_end_call"):
+                    sender_k = dev_code or device_id
+                    ended_sess = intercom.end_handsfree_call(sender_k, reason="touch_button")
+                    if ended_sess:
+                        hangup_payload = {"type": "intercom_hangup", "reason": "touch_button", "session_id": ended_sess.get("session_id")}
+                        for k in (ended_sess.get("caller_key"), ended_sess.get("target_key")):
+                            k_ws = active_sockets.get(k)
+                            if k_ws:
+                                try:
+                                    await k_ws.send_json(hangup_payload)
+                                except Exception:
+                                    pass
+                        await broadcast_to_admins({"type": "intercom_active_calls", "calls": intercom.get_active_calls_summary()})
+
                 # Phản hồi tiến độ cập nhật OTA từ màn hình Panel
                 elif msg_type == "ota_progress":
                     progress = data.get("progress", 0)
@@ -2786,27 +2951,112 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
         await ws.send_json({"type": "ack_chime"})
         await ws.send_json({"type": "ai_state", "payload": {"state": "thinking", "text": "Đang suy nghĩ..."}})
 
-        # 1. Speech-to-Text: Tu dong uu tien Groq Whisper Turbo 0.15s (0% GPU NAS), fallback Faster-Whisper
+        # 1. Speech-to-Text: Tự động ưu tiên Groq Whisper Turbo 0.15s (0% GPU NAS), fallback Faster-Whisper
         groq_cfg = ai_router.config.get("groq", {})
         groq_key = groq_cfg.get("api_key", "")
         stt_provider = ai_router.config.get("stt_provider", "auto")
         stt_model = ai_router.config.get("stt_groq_model", "whisper-large-v3-turbo")
 
+        dev = devices_db.get(device_id, {})
+        room_name = dev.get("room_name", "")
+        tts_voice = ai_router.config.get("tts_voice", "google_fast")
+
+        # STT Prompt Bias: Ghim từ vựng phòng hiện tại và danh mục smart home
+        stt_prompt = f"Phòng {room_name}, {DEFAULT_SMART_HOME_WHISPER_PROMPT}" if room_name else DEFAULT_SMART_HOME_WHISPER_PROMPT
+
         text = await audio_pipeline.pcm_to_text(
             pcm_audio,
             groq_api_key=groq_key,
             stt_provider=stt_provider,
-            groq_model=stt_model
+            groq_model=stt_model,
+            prompt=stt_prompt
         )
         if not text or not text.strip():
             logger.info("[AI] Không có giọng nói hoặc phát hiện âm thanh rác từ [%s] -> Đưa về IDLE an toàn, dập tắt vòng lặp.", device_id)
             await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
             return
 
+        # -------------------------------------------------------------
+        # 📞 KIỂM TRA LỚP 1: CÚP MÁY BẰNG GIỌNG NÓI (Hands-Free Hangup)
+        # -------------------------------------------------------------
+        active_sess = intercom.get_active_session_for_device(device_id)
+        norm_text = _normalize_vn(text)
+        is_hangup_intent = any(k in norm_text for k in [
+            "cup may", "tat cuoc goi", "ngat may", "dung goi",
+            "thoi khong goi nua", "tat may", "cup di", "dung cuoc goi", "nala cup may"
+        ])
+        if active_sess and is_hangup_intent:
+            ended_sess = intercom.end_handsfree_call(device_id, reason="voice_command")
+            hangup_payload = {"type": "intercom_hangup", "reason": "voice_command", "session_id": active_sess.get("session_id")}
+            for k in (active_sess.get("caller_key"), active_sess.get("target_key")):
+                k_ws = active_sockets.get(k)
+                if k_ws:
+                    try:
+                        await k_ws.send_json(hangup_payload)
+                    except Exception:
+                        pass
+            confirm_pcm = await audio_pipeline.text_to_pcm("Đã cúp máy.", voice=tts_voice)
+            if confirm_pcm:
+                is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                last_seq = await send_audio_chunks(ws, confirm_pcm, is_opus=is_opus, start_seq=0)
+                await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+            await broadcast_to_admins({"type": "intercom_active_calls", "calls": intercom.get_active_calls_summary()})
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+            return
+
+        # -------------------------------------------------------------
+        # 📞 KIỂM TRA LỆNH GỌI LIÊN PHÒNG BẰNG GIỌNG NÓI ("Gọi cho phòng...")
+        # -------------------------------------------------------------
+        call_target = ai_router.detect_intercom_call_intent(text, intercom.get_targets(exclude_device_key=device_id))
+        if call_target:
+            t_key = call_target.get("code")
+            t_name = call_target.get("name")
+            t_online = call_target.get("online")
+            target_ws = intercom.connections.get(t_key) or active_sockets.get(t_key)
+
+            if t_online and target_ws:
+                sess = intercom.start_handsfree_call(device_id, t_key)
+                caller_ic_id = intercom.device_to_id.get(device_id, 1)
+                target_ic_id = intercom.device_to_id.get(t_key, 2)
+                await ws.send_json({
+                    "type": "intercom_call_started",
+                    "role": "caller",
+                    "target_room": t_name,
+                    "target_code": t_key,
+                    "target_intercom_id": target_ic_id,
+                    "caller_intercom_id": caller_ic_id,
+                    "session_id": sess["session_id"]
+                })
+                await target_ws.send_json({
+                    "type": "intercom_incoming_call",
+                    "role": "callee",
+                    "caller_room": room_name or f"Panel {device_id}",
+                    "caller_code": device_id,
+                    "caller_intercom_id": caller_ic_id,
+                    "target_intercom_id": target_ic_id,
+                    "auto_answer": True,
+                    "session_id": sess["session_id"]
+                })
+                filler_pcm = await audio_pipeline.text_to_pcm(f"Dạ, đang kết nối với {t_name}...", voice=tts_voice)
+                if filler_pcm:
+                    is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                    last_seq = await send_audio_chunks(ws, filler_pcm, is_opus=is_opus, start_seq=0)
+                    await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+
+                await broadcast_to_admins({"type": "intercom_active_calls", "calls": intercom.get_active_calls_summary()})
+                await ws.send_json({"type": "ai_state", "payload": {"state": "calling", "text": f"Đang đàm thoại với {t_name}..."}})
+                return
+            else:
+                offline_reply = f"Phòng {t_name} hiện chưa kết nối hoặc đang ngoại tuyến ạ."
+                off_pcm = await audio_pipeline.text_to_pcm(offline_reply, voice=tts_voice)
+                if off_pcm:
+                    is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                    last_seq = await send_audio_chunks(ws, off_pcm, is_opus=is_opus, start_seq=0)
+                    await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+                await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+                return
+
         # 2. Phân loại lệnh & Kiến trúc Pipelined Queue Phản xạ tức thì (Sub-200ms)
-        dev = devices_db.get(device_id, {})
-        room_name = dev.get("room_name", "")
-        tts_voice = ai_router.config.get("tts_voice", "google_fast")
 
         lower_text = text.lower().strip()
         is_turn_on = any(w in lower_text for w in ["bật", "mở", "khởi động", "set", "chỉnh"])
@@ -2820,16 +3070,38 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
         fast_handled = False
         fast_reply = ""
 
-        if is_master_off and ai_router.ha_bridge:
-            res = await ai_router.ha_bridge.master_turn_off_all()
-            cnt = res.get("turned_off_count", 0)
-            fast_reply = f"Đã tắt toàn bộ {cnt} thiết bị trong nhà cho bạn."
-            fast_handled = True
-        elif (is_turn_on or is_turn_off) and is_device_keyword and ai_router.ha_bridge:
-            local_res = await ai_router._try_local_rule_fallback(text, context_room=room_name)
-            if local_res:
-                fast_reply = local_res
+        # Ưu tiên 1: Khớp trực tiếp Biệt danh Trí Nhớ Nala (< 15ms)
+        if hasattr(ai_router, "memory_mgr") and ai_router.memory_mgr.is_enabled():
+            mem_match = ai_router.memory_mgr.match_fast_path(text, context_room=room_name)
+            if mem_match and ai_router.ha_bridge:
+                target_eid = mem_match["entity_id"]
+                target_act = mem_match["action"]
+                target_dom = target_eid.split(".")[0]
+                action_viet = "bật" if target_act == "turn_on" else "tắt"
+                ha_ok = await ai_router.ha_bridge.call_service(target_dom, target_act, {"entity_id": target_eid})
+                if ha_ok:
+                    fast_reply = f"Đã {action_viet} {mem_match.get('phrase', target_eid)}."
+                    fast_handled = True
+                    ai_router.memory_mgr.learn_device_interaction(text, target_eid, context_room=room_name, domain=target_dom, action=target_act)
+
+        if not fast_handled:
+            # Ưu tiên 1.5: Suy luận Ý định gián tiếp (Nóng quá, Lạnh quá, Tối quá, Đi ngủ, Ra ngoài)
+            indirect_res = await ai_router.handle_indirect_intent(text, context_room=room_name)
+            if indirect_res:
+                fast_reply = indirect_res
                 fast_handled = True
+
+        if not fast_handled:
+            if is_master_off and ai_router.ha_bridge:
+                res = await ai_router.ha_bridge.master_turn_off_all()
+                cnt = res.get("turned_off_count", 0)
+                fast_reply = f"Đã tắt toàn bộ {cnt} thiết bị trong nhà cho bạn."
+                fast_handled = True
+            elif (is_turn_on or is_turn_off) and is_device_keyword and ai_router.ha_bridge:
+                local_res = await ai_router._try_local_rule_fallback(text, context_room=room_name)
+                if local_res:
+                    fast_reply = local_res
+                    fast_handled = True
 
         if fast_handled and fast_reply:
             # 1. Phát ngay Done Chime ("Ting!" 80ms) tới ESP32 trong < 50ms!

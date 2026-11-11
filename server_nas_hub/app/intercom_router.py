@@ -5,6 +5,8 @@ Supports Dynamic ID Assignment, Peer-to-Peer Unicast, House Broadcast (0xFF), an
 """
 
 import logging
+import time
+import asyncio
 from typing import Dict, Set, Optional, List
 from fastapi import WebSocket
 
@@ -22,6 +24,8 @@ class IntercomRouter:
         self.admin_sockets: Set[WebSocket] = set()
         # Metadata cache: device_key -> {room_name, floor}
         self.device_meta: Dict[str, dict] = {}
+        # Hands-free active calls: device_key -> session dict
+        self.active_handsfree_sessions: Dict[str, dict] = {}
 
     def assign_id(self, device_key: str, preferred_id: Optional[int] = None) -> int:
         """Gán hoặc lấy intercom_id duy nhất cho thiết bị."""
@@ -87,6 +91,123 @@ class IntercomRouter:
             })
         return targets
 
+    def start_handsfree_call(self, caller_key: str, target_key: str) -> Optional[dict]:
+        """Bắt đầu phiên đàm thoại rảnh tay 2 chiều giữa 2 màn hình."""
+        caller_id = self.device_to_id.get(caller_key, 1)
+        target_id = self.device_to_id.get(target_key, 2)
+        caller_meta = self.device_meta.get(caller_key, {})
+        target_meta = self.device_meta.get(target_key, {})
+
+        # Kết thúc bất kỳ phiên cũ nào trước đó của 2 bên
+        self.end_handsfree_call(caller_key, reason="new_call")
+        self.end_handsfree_call(target_key, reason="new_call")
+
+        now = time.time()
+        sess_id = f"call_{caller_key}_{target_key}_{int(now)}"
+        session = {
+            "session_id": sess_id,
+            "caller_key": caller_key,
+            "caller_id": caller_id,
+            "caller_room": caller_meta.get("room_name", f"Panel {caller_key}"),
+            "target_key": target_key,
+            "target_id": target_id,
+            "target_room": target_meta.get("room_name", f"Panel {target_key}"),
+            "start_time": now,
+            "last_audio_time": now,
+            "active_speaker": None,
+            "speaker_release_time": 0.0,
+            "warning_sent": False,
+            "state": "active"
+        }
+        self.active_handsfree_sessions[caller_key] = session
+        self.active_handsfree_sessions[target_key] = session
+        logger.info("📞 Started Handsfree Intercom call: [%s] (%s) <--> [%s] (%s)",
+                    caller_key, session["caller_room"], target_key, session["target_room"])
+        return session
+
+    def get_active_session_for_device(self, device_key: str) -> Optional[dict]:
+        """Lấy phiên gọi rảnh tay đang diễn ra của thiết bị (nếu có)."""
+        return self.active_handsfree_sessions.get(device_key)
+
+    def end_handsfree_call(self, device_key: str, reason: str = "hangup") -> Optional[dict]:
+        """Kết thúc phiên đàm thoại rảnh tay của thiết bị và phòng đối diện."""
+        session = self.active_handsfree_sessions.get(device_key)
+        if not session:
+            return None
+
+        caller_k = session.get("caller_key")
+        target_k = session.get("target_key")
+
+        self.active_handsfree_sessions.pop(caller_k, None)
+        self.active_handsfree_sessions.pop(target_k, None)
+
+        session["state"] = "ended"
+        session["end_reason"] = reason
+        session["duration"] = round(time.time() - session.get("start_time", time.time()), 1)
+        logger.info("🛑 Ended Handsfree Intercom call %s (Reason: %s, Duration: %ss)",
+                    session.get("session_id"), reason, session.get("duration"))
+        return session
+
+    def get_active_calls_summary(self) -> List[dict]:
+        """Danh sách các cuộc gọi đang diễn ra để hiển thị trên Web Admin."""
+        seen_sessions = set()
+        res = []
+        now = time.time()
+        for dev_k, sess in list(self.active_handsfree_sessions.items()):
+            sid = sess.get("session_id")
+            if sid and sid not in seen_sessions:
+                seen_sessions.add(sid)
+                res.append({
+                    "session_id": sid,
+                    "caller_key": sess.get("caller_key"),
+                    "caller_room": sess.get("caller_room"),
+                    "target_key": sess.get("target_key"),
+                    "target_room": sess.get("target_room"),
+                    "duration": int(now - sess.get("start_time", now)),
+                    "last_active": int(now - sess.get("last_audio_time", now))
+                })
+        return res
+
+    async def check_silence_watchdogs(self, on_warning_cb=None, on_hangup_cb=None):
+        """Kiểm tra thời gian im lặng (Watchdog 10s):
+        - Nếu im lặng >= 10s: Cảnh báo bíp bíp và đếm ngược 3s
+        - Nếu im lặng >= 13s: Tự động cúp máy an toàn
+        """
+        now = time.time()
+        processed_sids = set()
+
+        for dev_k, sess in list(self.active_handsfree_sessions.items()):
+            sid = sess.get("session_id")
+            if not sid or sid in processed_sids or sess.get("state") != "active":
+                continue
+            processed_sids.add(sid)
+
+            silence_sec = now - sess.get("last_audio_time", now)
+
+            # 1. Cảnh báo im lặng 10s
+            if silence_sec >= 10.0 and not sess.get("warning_sent", False):
+                sess["warning_sent"] = True
+                logger.info("⚠️ Silence watchdog 10s triggered for call %s", sid)
+                if on_warning_cb:
+                    try:
+                        res = on_warning_cb(sess)
+                        if asyncio.iscoroutine(res):
+                            await res
+                    except Exception as ex:
+                        logger.warning("Error in on_warning_cb: %s", ex)
+
+            # 2. Cúp máy sau 13s im lặng liên tục
+            if silence_sec >= 13.0:
+                logger.info("⏱️ Silence watchdog 13s expired: auto-hanging up call %s", sid)
+                ended_sess = self.end_handsfree_call(sess.get("caller_key"), reason="silence_timeout")
+                if on_hangup_cb and ended_sess:
+                    try:
+                        res = on_hangup_cb(ended_sess, "silence_timeout")
+                        if asyncio.iscoroutine(res):
+                            await res
+                    except Exception as ex:
+                        logger.warning("Error in on_hangup_cb: %s", ex)
+
     async def route_binary_packet(self, sender_key: str, packet: bytes):
         """
         Định tuyến gói tin Audio (Raw PCM 520B hoặc Nén Opus 0xA55B):
@@ -99,6 +220,21 @@ class IntercomRouter:
         is_opus = (len(packet) >= 9 and packet[0] == 0x5B and packet[1] == 0xA5)
         if not (is_pcm or is_opus):
             return
+
+        # KIỂM SOÁT VOICE-SWITCHING (TRIỆT TIÊU VỌNG ÂM & HÚ RÍT)
+        sess = self.get_active_session_for_device(sender_key)
+        if sess and sess.get("state") == "active":
+            now = time.time()
+            other_key = sess["target_key"] if sender_key == sess["caller_key"] else sess["caller_key"]
+            # Nếu bên đối diện vừa phát âm thanh và chưa hết thời gian nhả loa (150ms release)
+            if sess.get("active_speaker") == other_key and now < sess.get("speaker_release_time", 0):
+                # Khóa mic bên nhận trong khi loa bên nhận đang phát -> triệt tiêu 100% vòng lặp âm thanh
+                return
+
+            sess["active_speaker"] = sender_key
+            sess["speaker_release_time"] = now + 0.150  # 150ms nhả mic
+            sess["last_audio_time"] = now
+            sess["warning_sent"] = False
 
         sender_id = packet[2]
         target_id = packet[3]

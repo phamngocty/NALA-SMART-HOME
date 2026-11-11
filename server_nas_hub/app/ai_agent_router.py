@@ -128,6 +128,22 @@ class ConversationSessionManager:
             sess["history"] = sess["history"][-self.max_history_turns:]
         return sess["turn_count"]
 
+    def set_last_interacted(self, key: str, entity_id: str, domain: str, room: str = "", friendly_name: str = ""):
+        sess = self.get_or_create_session(key)
+        sess["last_interacted"] = {
+            "entity_id": entity_id,
+            "domain": domain,
+            "room": room,
+            "name": friendly_name or entity_id,
+            "timestamp": time.time()
+        }
+
+    def get_last_interacted(self, key: str) -> Optional[Dict[str, Any]]:
+        sess = self.sessions.get(key)
+        if not sess:
+            return None
+        return sess.get("last_interacted")
+
     def clear_session(self, device_id: str):
         if device_id in self.sessions:
             logger.info("Cleared conversation session for [%s]", device_id)
@@ -482,8 +498,9 @@ class AIAgentRouter:
             }
         ]
 
-    def _build_device_context(self) -> str:
-        """Tóm tắt danh sách thiết bị có trong Home Assistant để đưa vào context của AI."""
+    def _build_device_context(self, context_room: str = "") -> str:
+        """Tóm tắt danh sách thiết bị có trong Home Assistant để đưa vào context của AI.
+        Nếu có context_room, ưu tiên nhóm thiết bị của phòng hiện tại lên đầu danh sách."""
         if not self.ha_bridge:
             return "Không có kết nối tới Home Assistant."
 
@@ -501,7 +518,11 @@ class AIAgentRouter:
                 return 99
 
         sorted_entities = sorted(entities, key=sort_key)
-        lines = []
+        norm_room = _normalize_vn(context_room).strip() if context_room else ""
+
+        local_room_entities = []
+        other_entities = []
+
         for e in sorted_entities:
             dom = e.get("domain") or e.get("entity_id", "").split(".")[0]
             if dom in priority_domains:
@@ -509,13 +530,34 @@ class AIAgentRouter:
                 name = e.get("name") or e.get("attributes", {}).get("friendly_name") or eid
                 area = e.get("area_name", "Chung")
                 state = e.get("state", "off")
-                lines.append(f"- {name} ({eid}) | Phòng: {area} | Trạng thái: {state}")
+                line_str = f"- {name} ({eid}) | Phòng: {area} | Trạng thái: {state}"
 
-        # Tăng giới hạn lên 120 để bao phủ toàn bộ thiết bị trong nhà, đảm bảo máy lạnh không bị cắt xén
-        return "\n".join(lines[:120])
+                is_local = False
+                if norm_room and area:
+                    norm_area = _normalize_vn(area).strip()
+                    if norm_room in norm_area or norm_area in norm_room:
+                        is_local = True
 
-    def _resolve_real_entity_id(self, raw_eid: str, target_domain: str = "") -> tuple:
-        """Tự động phân giải entity_id thật nếu LLM gọi nhầm mã ảo hoặc tên không dấu."""
+                if is_local:
+                    local_room_entities.append(line_str)
+                else:
+                    other_entities.append(line_str)
+
+        lines = []
+        if local_room_entities and context_room:
+            lines.append(f"=== [THIẾT BỊ TẠI PHÒNG HIỆN TẠI ({context_room}) - MẶC ĐỊNH ÁP DỤNG KHI KHÔNG NÊU TÊN PHÒNG] ===")
+            lines.extend(local_room_entities)
+            lines.append("")
+            lines.append("=== [CÁC THIẾT BỊ KHÁC TRONG NHÀ (CHỈ ĐIỀU KHIỂN KHI NÊU RÕ TÊN PHÒNG KHÁC)] ===")
+            lines.extend(other_entities[:100])
+        else:
+            lines.extend(other_entities[:120] if not local_room_entities else (local_room_entities + other_entities)[:120])
+
+        return "\n".join(lines)
+
+    def _resolve_real_entity_id(self, raw_eid: str, target_domain: str = "", context_room: str = "") -> tuple:
+        """Tự động phân giải entity_id thật nếu LLM gọi nhầm mã ảo hoặc tên không dấu.
+        Ưu tiên các thiết bị cùng domain và cùng phòng hiện tại (context_room) để chống ảo giác."""
         if not self.ha_bridge:
             return raw_eid, raw_eid
 
@@ -526,7 +568,9 @@ class AIAgentRouter:
                 fname = e.get("name") or e.get("attributes", {}).get("friendly_name") or raw_eid
                 return raw_eid, fname
 
-        # 2. Fuzzy match theo từ khóa
+        # 2. Fuzzy match theo Levenshtein SequenceMatcher & Token overlap
+        import difflib
+
         def remove_accents(s):
             if not s:
                 return ""
@@ -537,8 +581,10 @@ class AIAgentRouter:
         clean_query = remove_accents(raw_eid.replace(".", " ").replace("_", " "))
         tokens = [t for t in re.split(r'\s+', clean_query) if len(t) > 1 and t not in ["climate", "light", "switch", "fan", "cover", "scene"]]
 
+        norm_room = remove_accents(context_room).strip() if context_room else ""
+
         best_match = None
-        best_score = 0
+        best_score = 0.0
 
         for e in entities:
             dom = e.get("domain") or e.get("entity_id", "").split(".")[0]
@@ -548,15 +594,27 @@ class AIAgentRouter:
             name = e.get("name") or e.get("attributes", {}).get("friendly_name") or ""
             area = e.get("area_name") or ""
             target_str = remove_accents(f"{e.get('entity_id')} {name} {area}")
+            norm_area = remove_accents(area).strip()
 
-            score = sum(1 for t in tokens if t in target_str)
+            # Điểm khớp token
+            score = float(sum(2 for t in tokens if t in target_str))
+
+            # Điểm tương đồng chuỗi (SequenceMatcher ratio)
+            sim_ratio = difflib.SequenceMatcher(None, clean_query, target_str).ratio()
+            score += sim_ratio * 2.0
+
+            # Điểm cộng ưu tiên cho phòng hiện tại
+            if norm_room and norm_area and (norm_room in norm_area or norm_area in norm_room):
+                score += 1.5
+
             if score > best_score:
                 best_score = score
                 best_match = e
 
-        if best_match and best_score >= 1:
+        if best_match and best_score >= 1.5:
             fname = best_match.get("attributes", {}).get("friendly_name") or best_match.get("name") or best_match.get("entity_id")
-            logger.info("Fuzzy resolved entity [%s] -> Real [%s] (%s)", raw_eid, best_match.get("entity_id"), fname)
+            logger.info("Fuzzy resolved entity [%s] -> Real [%s] (%s) [Score: %.2f, Room: %s]",
+                        raw_eid, best_match.get("entity_id"), fname, best_score, context_room)
             return best_match.get("entity_id"), fname
 
         return raw_eid, raw_eid
@@ -570,7 +628,11 @@ class AIAgentRouter:
                 action = args.get("action", "turn_on")
                 domain = "climate" if action == "set_temperature" else (raw_eid.split(".")[0] if "." in raw_eid else "light")
 
-                eid, friendly_name = self._resolve_real_entity_id(raw_eid, domain)
+                eid, friendly_name = self._resolve_real_entity_id(raw_eid, domain, context_room=context_room)
+
+                # Lưu vết thiết bị thao tác gần nhất cho hội thoại đa lượt
+                if hasattr(self, "session_mgr") and hasattr(self.session_mgr, "set_last_interacted"):
+                    self.session_mgr.set_last_interacted(context_room or "global", eid, domain, context_room, friendly_name)
 
                 # Ghi nhận học hỏi thói quen & biệt danh nếu có user_text
                 if user_text and hasattr(self, "memory_mgr"):
@@ -1086,6 +1148,190 @@ class AIAgentRouter:
             logger.error("Local rule execution error for %s: %s", matched_eid, ex)
             return f"Lỗi điều khiển {matched_name}: {ex}"
 
+    async def handle_indirect_intent(self, user_text: str, context_room: str = "") -> Optional[str]:
+        """Suy luận ý định gián tiếp từ ngôn ngữ tự nhiên:
+        - "Nóng nực quá / Nóng quá": Bật hoặc hạ nhiệt độ điều hòa phòng hiện tại xuống 1-2°C.
+        - "Lạnh quá / Rét quá": Tăng nhiệt độ điều hòa phòng hiện tại lên 2°C hoặc tắt.
+        - "Phòng tối thế / Tối quá": Bật đèn chiếu sáng chính của phòng hiện tại.
+        - "Buồn ngủ rồi / Đi ngủ thôi": Kịch bản đi ngủ (tắt đèn, điều hòa 26°C).
+        - "Chuẩn bị đi làm / Ra ngoài": Master tắt toàn bộ thiết bị trong nhà.
+        """
+        if not user_text or not self.ha_bridge:
+            return None
+
+        norm = _normalize_vn(user_text)
+        norm_room = _normalize_vn(context_room) if context_room else ""
+        entities = self.ha_bridge.get_entities_list()
+
+        def find_entities_in_room(domain: str) -> List[dict]:
+            room_matched = []
+            other_matched = []
+            for e in entities:
+                d = e.get("domain") or e.get("entity_id", "").split(".")[0]
+                if d != domain:
+                    continue
+                area = _normalize_vn(e.get("area_name", ""))
+                area_id = _normalize_vn(e.get("area_id", ""))
+                eid = _normalize_vn(e.get("entity_id", ""))
+                is_room = False
+                if norm_room:
+                    if (norm_room in area or area in norm_room or
+                        norm_room in area_id or area_id in norm_room or
+                        norm_room in eid):
+                        is_room = True
+                if is_room:
+                    room_matched.append(e)
+                else:
+                    other_matched.append(e)
+            return room_matched if room_matched else other_matched
+
+        # 1. NÓNG QUÁ / NÓNG NỰC
+        if any(k in norm for k in ["nong qua", "nong nuc", "nong the", "oi buc", "nong qua di", "nong qua roi"]):
+            climates = find_entities_in_room("climate")
+            if climates:
+                c = climates[0]
+                eid = c.get("entity_id")
+                name = c.get("name") or c.get("attributes", {}).get("friendly_name") or "máy lạnh"
+                cur_temp = float(c.get("attributes", {}).get("temperature") or 26.0)
+                cur_state = c.get("state", "off")
+
+                if cur_state in ("off", "unavailable", "unknown"):
+                    target_temp = 24.0
+                    await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=eid, service_data={"hvac_mode": "cool"})
+                    await self.ha_bridge.call_service("climate", "set_temperature", entity_id=eid, service_data={"temperature": target_temp})
+                    reply = f"Em đã bật {name} 24°C cho mát rồi ạ."
+                else:
+                    target_temp = max(18.0, cur_temp - 2.0)
+                    await self.ha_bridge.call_service("climate", "set_temperature", entity_id=eid, service_data={"temperature": target_temp})
+                    t_str = int(target_temp) if target_temp.is_integer() else target_temp
+                    reply = f"Em đã hạ nhiệt độ {name} xuống {t_str}°C cho mát rồi ạ."
+
+                fans = find_entities_in_room("fan")
+                if fans and fans[0].get("state") == "off":
+                    await self.ha_bridge.call_service("fan", "turn_on", entity_id=fans[0].get("entity_id"))
+
+                self.session_mgr.set_last_interacted(context_room or "global", eid, "climate", context_room, name)
+                return reply
+
+            fans = find_entities_in_room("fan")
+            if fans:
+                f = fans[0]
+                await self.ha_bridge.call_service("fan", "turn_on", entity_id=f.get("entity_id"))
+                fname = f.get("name") or "quạt"
+                return f"Em đã bật {fname} cho mát rồi ạ."
+
+        # 2. LẠNH QUÁ / RÉT QUÁ
+        if any(k in norm for k in ["lanh qua", "lanh the", "ret qua", "lanh run", "lanh buot"]):
+            climates = find_entities_in_room("climate")
+            if climates:
+                c = climates[0]
+                eid = c.get("entity_id")
+                name = c.get("name") or c.get("attributes", {}).get("friendly_name") or "máy lạnh"
+                cur_temp = float(c.get("attributes", {}).get("temperature") or 24.0)
+
+                if cur_temp >= 28.0:
+                    await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=eid, service_data={"hvac_mode": "off"})
+                    reply = f"Em đã tắt {name} cho bạn đỡ lạnh rồi ạ."
+                else:
+                    target_temp = min(28.0, cur_temp + 2.0)
+                    await self.ha_bridge.call_service("climate", "set_temperature", entity_id=eid, service_data={"temperature": target_temp})
+                    t_str = int(target_temp) if target_temp.is_integer() else target_temp
+                    reply = f"Em đã tăng nhiệt độ {name} lên {t_str}°C cho bạn đỡ lạnh rồi ạ."
+
+                self.session_mgr.set_last_interacted(context_room or "global", eid, "climate", context_room, name)
+                return reply
+
+        # 3. TỐI QUÁ / PHÒNG TỐI THẾ
+        if any(k in norm for k in ["toi qua", "toi the", "toi om", "khong thay gi", "toi mu"]):
+            lights = find_entities_in_room("light")
+            if lights:
+                target_light = None
+                for l in lights:
+                    lname = _normalize_vn(l.get("name", ""))
+                    if "tran" in lname or "chinh" in lname or "downlight" in lname:
+                        target_light = l
+                        break
+                if not target_light:
+                    target_light = lights[0]
+
+                eid = target_light.get("entity_id")
+                name = target_light.get("name") or "đèn"
+                await self.ha_bridge.call_service("light", "turn_on", entity_id=eid)
+                self.session_mgr.set_last_interacted(context_room or "global", eid, "light", context_room, name)
+                return f"Em đã bật {name} lên cho sáng rồi ạ."
+
+        # 4. BUỒN NGỦ RỒI / ĐI NGỦ THÔI
+        if any(k in norm for k in ["buon ngu", "di ngu thoi", "di ngu day", "chuan bi di ngu", "toi di ngu", "ngu thoi"]):
+            lights = find_entities_in_room("light")
+            for l in lights:
+                lname = _normalize_vn(l.get("name", ""))
+                if not ("ngu" in lname and "nho" in lname):
+                    await self.ha_bridge.call_service("light", "turn_off", entity_id=l.get("entity_id"))
+
+            climates = find_entities_in_room("climate")
+            if climates:
+                c = climates[0]
+                eid = c.get("entity_id")
+                await self.ha_bridge.call_service("climate", "set_hvac_mode", entity_id=eid, service_data={"hvac_mode": "cool"})
+                await self.ha_bridge.call_service("climate", "set_temperature", entity_id=eid, service_data={"temperature": 26.0})
+
+            return "Dạ, chúc bạn ngủ ngon! Em đã chỉnh điều hòa 26°C và tắt đèn phòng rồi ạ."
+
+        # 5. CHUẨN BỊ ĐI LÀM / RA NGOÀI
+        if any(k in norm for k in ["chuan bi di lam", "chuan bi ra ngoai", "ra ngoai day", "di lam day", "di vang", "toi di lam", "di cong chuyen"]):
+            res = await self.ha_bridge.master_turn_off_all()
+            cnt = res.get("turned_off_count", 0)
+            return "Dạ, em đã tắt toàn bộ thiết bị trong nhà cho bạn rồi ạ. Chúc bạn một ngày tốt lành!"
+
+        return None
+
+    def detect_intercom_call_intent(self, user_text: str, available_targets: List[dict]) -> Optional[dict]:
+        """Phát hiện ý định gọi thoại liên phòng từ giọng nói:
+        Ví dụ: "Gọi cho phòng bếp", "Kết nối phòng khách", "Đàm thoại phòng ngủ"
+        Trả về target device info nếu khớp phòng hợp lệ.
+        """
+        if not user_text or not available_targets:
+            return None
+
+        norm = _normalize_vn(user_text)
+        call_patterns = [
+            r'\b(?:goi cho|goi den|goi qua|goi|ket noi|dam thoai voi|noi chuyen voi)\s+phong\s+([a-z0-9\s]+)',
+            r'\b(?:goi cho|goi den|goi qua|goi|ket noi)\s+([a-z0-9\s]+)'
+        ]
+
+        target_query = ""
+        for pat in call_patterns:
+            m = re.search(pat, norm)
+            if m:
+                target_query = m.group(1).strip()
+                # Loại bỏ các từ thừa
+                target_query = re.sub(r'\b(giup toi|ho toi|ngay|nhanh|di)\b', '', target_query).strip()
+                if target_query:
+                    break
+
+        if not target_query:
+            return None
+
+        # Đối chiếu với danh sách Intercom targets
+        best_target = None
+        best_score = 0
+        for t in available_targets:
+            t_name = _normalize_vn(t.get("name", ""))
+            t_code = _normalize_vn(str(t.get("code", "")))
+            if target_query in t_name or t_name in target_query:
+                return t
+            # Khớp từng từ
+            words = target_query.split()
+            matched_words = sum(1 for w in words if w in t_name)
+            if matched_words > best_score:
+                best_score = matched_words
+                best_target = t
+
+        if best_target and best_score >= 1:
+            return best_target
+
+        return None
+
     async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None) -> str:
         """Xử lý giọng nói người dùng, kết hợp Fast-Rule, Multi-AI Function Calling và Cơ chế Tự Động Dự Phòng (Failover/Fallback)."""
         if not user_text:
@@ -1102,10 +1348,17 @@ class AIAgentRouter:
         lower_text = user_text.lower().strip()
 
         # 1. FAST-PATH RULE BASED (<20ms) cho các lệnh thường gặp
-        if any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "đi ngủ", "ra khỏi nhà"]):
+        if any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "ra khỏi nhà"]):
             res = await self.ha_bridge.master_turn_off_all()
             cnt = res.get("turned_off_count", 0)
             return f"Đã tắt {cnt} thiết bị trong nhà cho bạn."
+
+        # 1.0 Ý ĐỊNH GIÁN TIẾP (Indirect Intent Engine: Nóng, Lạnh, Tối, Đi ngủ, Ra ngoài)
+        indirect_res = await self.handle_indirect_intent(user_text, context_room)
+        if indirect_res:
+            if device_id:
+                self.session_mgr.add_turn(device_id, user_text, indirect_res)
+            return indirect_res
 
         # 1.1 FAST-PATH TỰ THÍCH ỨNG TỪ TRÍ NHỚ ĐÃ HỌC CỦA NALA (<20ms)
         fast_match = self.memory_mgr.match_fast_path(user_text, context_room)
@@ -1141,10 +1394,14 @@ class AIAgentRouter:
                 return local_res
             return f"Tôi đã nghe: '{user_text}', nhưng hệ thống chưa được cài đặt API Key AI khả dụng."
 
-        device_ctx = self._build_device_context()
+        device_ctx = self._build_device_context(context_room)
         learned_ctx = self.memory_mgr.get_prompt_context(context_room or "", user_text)
+        last_ctx = ""
+        last_info = self.session_mgr.get_last_interacted(context_room or "global")
+        if last_info:
+            last_ctx = f"\n[THIẾT BỊ VỪA ĐIỀU KHIỂN GẦN ĐÂY]: {last_info['name']} ({last_info['entity_id']}) tại {last_info.get('room') or 'phòng'}\n"
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx + learned_ctx,
+            device_context=device_ctx + learned_ctx + last_ctx,
             current_room=context_room or "Không xác định"
         )
 
@@ -1357,13 +1614,23 @@ class AIAgentRouter:
         lower_text = user_text.lower().strip()
 
         # 1. Fast-Path Rule Based (<20ms) cho các lệnh thường gặp
-        if any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "đi ngủ", "ra khỏi nhà"]):
+        if any(w in lower_text for w in ["tắt hết", "tắt toàn bộ", "tắt cả nhà", "ra khỏi nhà"]):
             res = await self.ha_bridge.master_turn_off_all()
             cnt = res.get("turned_off_count", 0)
             msg = f"Đã tắt toàn bộ {cnt} thiết bị trong nhà cho bạn."
             for word in msg.split(" "):
                 yield word + " "
                 await asyncio.sleep(0.03)
+            return
+
+        # 1.0 Ý ĐỊNH GIÁN TIẾP (Indirect Intent Engine)
+        indirect_res = await self.handle_indirect_intent(user_text, context_room)
+        if indirect_res:
+            if device_id:
+                self.session_mgr.add_turn(device_id, user_text, indirect_res)
+            for word in indirect_res.split(" "):
+                yield word + " "
+                await asyncio.sleep(0.02)
             return
 
         # 1.1 FAST-PATH TỰ THÍCH ỨNG TỪ TRÍ NHỚ ĐÃ HỌC CỦA NALA (Stream <20ms)
@@ -1408,10 +1675,14 @@ class AIAgentRouter:
                 await asyncio.sleep(0.03)
             return
 
-        device_ctx = self._build_device_context()
+        device_ctx = self._build_device_context(context_room)
         learned_ctx = self.memory_mgr.get_prompt_context(context_room or "", user_text)
+        last_ctx = ""
+        last_info = self.session_mgr.get_last_interacted(context_room or "global")
+        if last_info:
+            last_ctx = f"\n[THIẾT BỊ VỪA ĐIỀU KHIỂN GẦN ĐÂY]: {last_info['name']} ({last_info['entity_id']}) tại {last_info.get('room') or 'phòng'}\n"
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx + learned_ctx,
+            device_context=device_ctx + learned_ctx + last_ctx,
             current_room=context_room or "Không xác định"
         )
 

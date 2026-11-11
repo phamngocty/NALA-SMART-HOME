@@ -218,6 +218,7 @@ private:
     lv_obj_t* lbl_incoming_title;
     lv_obj_t* lbl_incoming_caller;
     lv_obj_t* lbl_incoming_status;
+    lv_obj_t* btn_incoming_hangup;
 
     // Screensaver Standby Modal (Smart Clock Watchface)
     lv_obj_t* modal_screensaver;
@@ -296,7 +297,7 @@ public:
           ring_on_call_enabled(true), lbl_firmware_ver(nullptr),
           lbl_diag_result(nullptr), lbl_net_info(nullptr),
           modal_incoming_call(nullptr), lbl_incoming_title(nullptr),
-          lbl_incoming_caller(nullptr), lbl_incoming_status(nullptr),
+          lbl_incoming_caller(nullptr), lbl_incoming_status(nullptr), btn_incoming_hangup(nullptr),
           modal_screensaver(nullptr), lbl_stb_time(nullptr), lbl_stb_sec(nullptr), lbl_stb_wday(nullptr),
           lbl_stb_date(nullptr), lbl_stb_room(nullptr), lbl_stb_clim(nullptr),
           lbl_stb_hint(nullptr), screensaver_active(false),
@@ -1780,6 +1781,13 @@ private:
             return;
         }
 
+        // Incoming Call Hangup (Layer 2: Touch Hangup)
+        if (target == btn_incoming_hangup && code == LV_EVENT_CLICKED) {
+            hide_incoming_call();
+            if (action_cb) action_cb("intercom_hangup", "hangup", 0);
+            return;
+        }
+
         // Intercom Target Rooms
         for (int i = 0; i < 4; i++) {
             if (target == btn_rooms[i] && code == LV_EVENT_CLICKED) {
@@ -2453,8 +2461,8 @@ private:
 
     void build_incoming_call_modal(lv_obj_t* parent) {
         modal_incoming_call = lv_obj_create(parent);
-        lv_obj_set_size(modal_incoming_call, 230, 130);
-        lv_obj_align(modal_incoming_call, LV_ALIGN_CENTER, 0, -10);
+        lv_obj_set_size(modal_incoming_call, 230, 145);
+        lv_obj_align(modal_incoming_call, LV_ALIGN_CENTER, 0, -6);
         lv_obj_set_style_bg_color(modal_incoming_call, lv_color_hex(0x0B1326), 0);
         lv_obj_set_style_border_color(modal_incoming_call, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_border_width(modal_incoming_call, 2, 0);
@@ -2467,19 +2475,33 @@ private:
         lv_label_set_text(lbl_incoming_title, "CUỘC GỌI NỘI BỘ");
         lv_obj_set_style_text_color(lbl_incoming_title, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_text_font(lbl_incoming_title, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_incoming_title, LV_ALIGN_TOP_MID, 0, 4);
+        lv_obj_align(lbl_incoming_title, LV_ALIGN_TOP_MID, 0, 2);
 
         lbl_incoming_caller = lv_label_create(modal_incoming_call);
         lv_label_set_text(lbl_incoming_caller, "Đang kết nối...");
         lv_obj_set_style_text_color(lbl_incoming_caller, lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_text_font(lbl_incoming_caller, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_incoming_caller, LV_ALIGN_CENTER, 0, -4);
+        lv_obj_align(lbl_incoming_caller, LV_ALIGN_CENTER, 0, -18);
 
         lbl_incoming_status = lv_label_create(modal_incoming_call);
         lv_label_set_text(lbl_incoming_status, "Đang đàm thoại trực tiếp...");
         lv_obj_set_style_text_color(lbl_incoming_status, lv_color_hex(0x10B981), 0);
         lv_obj_set_style_text_font(lbl_incoming_status, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_incoming_status, LV_ALIGN_BOTTOM_MID, 0, -6);
+        lv_obj_align(lbl_incoming_status, LV_ALIGN_CENTER, 0, 6);
+
+        btn_incoming_hangup = lv_btn_create(modal_incoming_call);
+        lv_obj_set_size(btn_incoming_hangup, 130, 30);
+        lv_obj_align(btn_incoming_hangup, LV_ALIGN_BOTTOM_MID, 0, -4);
+        lv_obj_set_style_bg_color(btn_incoming_hangup, lv_color_hex(0xEF4444), 0);
+        lv_obj_set_style_radius(btn_incoming_hangup, 15, 0);
+        lv_obj_add_event_cb(btn_incoming_hangup, event_handler_trampoline, LV_EVENT_CLICKED, this);
+
+        lv_obj_t* lbl_hangup = lv_label_create(btn_incoming_hangup);
+        lv_obj_clear_flag(lbl_hangup, LV_OBJ_FLAG_CLICKABLE);
+        lv_label_set_text(lbl_hangup, "CÚP MÁY");
+        lv_obj_set_style_text_color(lbl_hangup, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_text_font(lbl_hangup, &font_vietnamese_14, 0);
+        lv_obj_center(lbl_hangup);
 
         lv_obj_add_flag(modal_incoming_call, LV_OBJ_FLAG_HIDDEN);
     }

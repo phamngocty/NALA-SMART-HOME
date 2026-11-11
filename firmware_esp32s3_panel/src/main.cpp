@@ -107,7 +107,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include <ESP32Time.h>
 ESP32Time rtc(7 * 3600); // Múi giờ Việt Nam GMT+7 (offset 25200s)
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.5.3"
+#define CURRENT_FIRMWARE_VERSION "v3.6.1"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -132,6 +132,11 @@ static uint8_t wake_ring_count = 0;
 static volatile uint8_t ptt_target_id = TARGET_ID_AI_SERVER;
 static volatile bool ptt_start_flag = false;
 static volatile uint8_t my_intercom_id = 0x01; // Dynamic Intercom ID from NAS Hub
+
+// Cờ Cuộc Gọi Đàm Thoại Rảnh Tay Liên Phòng (Hands-Free Intercom Call V2)
+static volatile bool is_intercom_call_active = false;
+static volatile uint8_t intercom_peer_id = 0x00;
+static char intercom_peer_name[48] = {0};
 
 // Cờ phiên Đánh thức Rảnh tay (Hands-Free Wake Session)
 static volatile bool is_hands_free_session = false;
@@ -753,6 +758,22 @@ void on_ui_action(const char* target, const char* action, int value) {
             rgb_led.show();
             Serial.println("[INTERCOM PTT] End call.");
         }
+    } else if (strcmp(target, "intercom_hangup") == 0) {
+        wsManager.send_text("{\"type\":\"intercom_hangup\"}");
+        is_intercom_call_active = false;
+        intercom_peer_id = 0x00;
+        is_recording_ptt = false;
+        audioEngine.mute_speaker(true);
+        rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Xanh lá
+        rgb_led.show();
+        audioEngine.play_wake_chime();
+        bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
+        if (taken) {
+            uiDashboard.hide_incoming_call();
+            uiDashboard.set_intercom_status("Đàm thoại: Sẵn sàng", 0x10B981);
+            xSemaphoreGive(lvgl_mutex);
+        }
+        Serial.println("[INTERCOM] Đã cúp máy từ nút bấm cảm ứng (Layer 2: Touch Hangup).");
     } else if (strcmp(target, "ai_model") == 0) {
         strncpy(nvsStore.get().ai_model, action, sizeof(nvsStore.get().ai_model));
         nvsStore.save_immediate();
@@ -1202,6 +1223,66 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
         if (assigned_id > 0) my_intercom_id = assigned_id;
         JsonArrayConst targets = doc["payload"]["targets"];
         if (taken) uiDashboard.sync_intercom_targets(targets);
+    } else if (type == "intercom_call_started") {
+        uint8_t target_ic_id = doc["target_intercom_id"] | (doc["payload"]["target_intercom_id"] | 0);
+        const char* t_name = doc["target_room"] | (doc["payload"]["target_room"] | "Phòng khác");
+        is_intercom_call_active = true;
+        intercom_peer_id = target_ic_id;
+        strncpy(intercom_peer_name, t_name, sizeof(intercom_peer_name) - 1);
+        ptt_target_id = target_ic_id;
+        is_recording_ptt = false; // Chờ filler TTS "Đang kết nối..." phát xong rồi mới nhả mic
+        if (taken) {
+            uiDashboard.hide_screensaver();
+            uiDashboard.show_incoming_call(t_name, false);
+            uiDashboard.set_intercom_status("Đang kết nối...", 0x38BDF8);
+        }
+        rgb_led.setPixelColor(0, rgb_led.Color(0, 100, 255)); // Xanh dương
+        rgb_led.show();
+        Serial.printf("[INTERCOM] Call started to target ID 0x%02X (%s)\n", target_ic_id, t_name);
+    } else if (type == "intercom_incoming_call") {
+        uint8_t caller_ic_id = doc["caller_intercom_id"] | (doc["payload"]["caller_intercom_id"] | 0);
+        const char* c_name = doc["caller_room"] | (doc["payload"]["caller_room"] | "Phòng khác");
+        bool auto_ans = doc["auto_answer"] | (doc["payload"]["auto_answer"] | true);
+        is_intercom_call_active = true;
+        intercom_peer_id = caller_ic_id;
+        strncpy(intercom_peer_name, c_name, sizeof(intercom_peer_name) - 1);
+        ptt_target_id = caller_ic_id;
+        if (taken) {
+            uiDashboard.hide_screensaver();
+            uiDashboard.show_incoming_call(c_name, true);
+            uiDashboard.set_intercom_status("Cuộc gọi đến...", 0xF59E0B);
+        }
+        rgb_led.setPixelColor(0, rgb_led.Color(0, 100, 255));
+        rgb_led.show();
+        audioEngine.mute_speaker(false);
+        audioEngine.set_speaker_volume(nvsStore.get().speaker_volume);
+        audioEngine.play_ringtone();
+        if (auto_ans) {
+            if (taken) {
+                uiDashboard.show_incoming_call(c_name, false);
+                uiDashboard.set_intercom_status("Đang đàm thoại: Sẵn sàng", 0x10B981);
+            }
+            audioEngine.enable_mic(true);
+            is_recording_ptt = true;
+            ptt_start_flag = true;
+            ptt_target_id = caller_ic_id;
+        }
+        Serial.printf("[INTERCOM] Incoming call from ID 0x%02X (%s) - Auto answer: %d\n", caller_ic_id, c_name, auto_ans);
+    } else if (type == "intercom_hangup") {
+        is_intercom_call_active = false;
+        intercom_peer_id = 0x00;
+        is_recording_ptt = false;
+        if (taken) {
+            uiDashboard.hide_incoming_call();
+            uiDashboard.set_intercom_status("Đàm thoại: Sẵn sàng", 0x10B981);
+        }
+        rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Xanh lá
+        rgb_led.show();
+        audioEngine.play_wake_chime();
+        Serial.println("[INTERCOM] Cuộc gọi đã kết thúc (intercom_hangup).");
+    } else if (type == "intercom_silence_warning") {
+        Serial.println("[INTERCOM] Cảnh báo im lặng 10s sắp cúp máy!");
+        audioEngine.play_wake_chime();
     } else if (type == "ha_state_change") {
         String entity_id = doc["payload"]["entity_id"] | "";
         String state = doc["payload"]["state"] | "";
@@ -1341,11 +1422,31 @@ void on_ws_binary(const uint8_t* data, size_t len) {
                         xSemaphoreGive(lvgl_mutex);
                     }
                     Serial.println("[AI] Đã phát xong câu chào 'Dạ, em nghe' -> Bắt đầu thu âm lệnh người dùng!");
-                } else {
-                    rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Trở lại xanh lá
+                } else if (is_intercom_call_active && is_ai_or_server) {
+                    // Đã phát xong câu chào "Dạ, đang kết nối với..." -> Bật mic đàm thoại rảnh tay!
+                    audioEngine.enable_mic(true);
+                    is_recording_ptt = true;
+                    ptt_start_flag = true;
+                    ptt_target_id = intercom_peer_id;
+                    rgb_led.setPixelColor(0, rgb_led.Color(0, 100, 255)); // Xanh dương Intercom
                     rgb_led.show();
+                    bool taken_ui = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(40)) == pdTRUE);
+                    if (taken_ui) {
+                        uiDashboard.show_incoming_call(intercom_peer_name, false);
+                        uiDashboard.set_intercom_status("Đang đàm thoại: Sẵn sàng", 0x10B981);
+                        xSemaphoreGive(lvgl_mutex);
+                    }
+                    Serial.printf("[INTERCOM] Caller đã sẵn sàng đàm thoại với ID 0x%02X!\n", intercom_peer_id);
+                } else {
+                    if (is_intercom_call_active) {
+                        rgb_led.setPixelColor(0, rgb_led.Color(0, 100, 255)); // Giữ xanh dương
+                        rgb_led.show();
+                    } else {
+                        rgb_led.setPixelColor(0, rgb_led.Color(0, 255, 0)); // Trở lại xanh lá
+                        rgb_led.show();
+                    }
 
-                    if (!is_ai_or_server) {
+                    if (!is_ai_or_server && !is_intercom_call_active) {
                         bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
                         if (taken) {
                             uiDashboard.hide_incoming_call();
@@ -1353,7 +1454,7 @@ void on_ws_binary(const uint8_t* data, size_t len) {
                             xSemaphoreGive(lvgl_mutex);
                         }
                         Serial.println("[INTERCOM] Kết thúc cuộc gọi.");
-                    } else {
+                    } else if (is_ai_or_server && !is_intercom_call_active) {
                         Serial.println("[AI VOICE] Đã phát xong âm thanh AI Nala.");
                         audioEngine.enable_mic(true);
                         bool taken = (xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(50)) == pdTRUE);
@@ -1390,6 +1491,51 @@ void handle_mic_streaming() {
         ptt_target_id = TARGET_ID_AI_SERVER;
         ptt_start_flag = true;
         Serial.println("[AI] Timeout chờ audio chào -> Tự mở mic thu âm fallback!");
+    }
+
+    // -------------------------------------------------------------
+    // CHẾ ĐỘ ĐÀM THOẠI RẢNH TAY LIÊN PHÒNG (HANDS-FREE INTERCOM V2)
+    // -------------------------------------------------------------
+    if (is_intercom_call_active) {
+        // Voice-Switching: Khi loa đang phát âm thanh từ phòng đối phương (+ 180ms release) -> MUTE MIC để triệt tiêu vòng lặp âm học!
+        if (millis() - last_speaker_active_ms < 180) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            return;
+        }
+
+        esp_err_t res = i2s_read(I2S_NUM_0, stereo_raw, sizeof(stereo_raw), &bytes_read, pdMS_TO_TICKS(25));
+        if (res == ESP_OK && bytes_read == sizeof(stereo_raw)) {
+            AudioPacket_t pkt;
+            pkt.magic = BINARY_MAGIC_WORD;
+            pkt.sender_id = my_intercom_id;
+            pkt.target_id = intercom_peer_id;
+            pkt.seq_num = seq++;
+            pkt.stream_flag = ptt_start_flag ? STREAM_FLAG_START : STREAM_FLAG_DATA;
+            ptt_start_flag = false;
+
+            uint8_t gain_setting = nvsStore.get_mic_gain();
+            int32_t sw_boost = (int32_t)(gain_setting * 2 + 6);
+            int64_t ssq = 0;
+
+            for (size_t s = 0; s < AUDIO_FRAME_SAMPLES; s++) {
+                int16_t sample_l = stereo_raw[s * 2];
+                int16_t sample_r = stereo_raw[s * 2 + 1];
+                int16_t raw_sample = (abs((int)sample_l) >= abs((int)sample_r)) ? sample_l : sample_r;
+                int32_t boosted = (int32_t)raw_sample * sw_boost;
+                if (boosted > 28000) boosted = 28000;
+                else if (boosted < -28000) boosted = -28000;
+                pkt.pcm_data[s] = (int16_t)boosted;
+                ssq += ((int32_t)boosted * (int32_t)boosted);
+            }
+
+            int32_t cur_rms = (int32_t)sqrt(ssq / AUDIO_FRAME_SAMPLES);
+            // Chỉ gửi gói tin âm thanh khi có người nói (RMS >= 70) để triệt tiêu tiếng ồn nền và giữ yên lặng khi không ai nói
+            if (cur_rms >= 70) {
+                pkt.crc8 = calculate_crc8((const uint8_t*)&pkt, 519);
+                wsManager.send_binary((const uint8_t*)&pkt, sizeof(AudioPacket_t));
+            }
+        }
+        return;
     }
 
     if (is_recording_ptt) {
@@ -1483,9 +1629,9 @@ void handle_mic_streaming() {
                     }
                     wsManager.send_text("{\"type\":\"listen_timeout\"}");
                 }
-                // 3. Trường hợp đã nói (hands_free_last_voice > 0), sau đó im lặng quá 750ms (hoặc max 7s) -> Ngắt thu âm, chuyển sang xử lý!
-                else if (hands_free_last_voice > 0 && ((now - hands_free_last_voice > 750 && now - hands_free_start_time > 800) || (now - hands_free_start_time > 7500))) {
-                    Serial.println("[VAD] Phat hien im lang (750ms) / het cau lenh -> Tu dong ket thuc thu am ranh tay!");
+                // 3. Trường hợp đã nói (hands_free_last_voice > 0), sau đó im lặng quá 380ms (hoặc max 7s) -> Ngắt thu âm siêu tốc, chuyển sang xử lý!
+                else if (hands_free_last_voice > 0 && ((now - hands_free_last_voice > 380 && now - hands_free_start_time > 420) || (now - hands_free_start_time > 7500))) {
+                    Serial.println("[VAD] Phat hien im lang (380ms) / het cau lenh -> Tu dong ket thuc thu am sieu toc!");
                     is_recording_ptt = false;
                     is_hands_free_session = false;
                     is_continuous_listening = false;

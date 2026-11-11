@@ -1,0 +1,40 @@
+=====================================================================
+NALA SMART PANEL (ESP32-S3) - TỰ LÀM ĐIỆN TỬ (PHẠM NGỌC TỶ)
+PHIÊN BẢN FIRMWARE: v3.6.1 STABLE (ZERO-RAM INTERCOM & VOICE AI)
+=====================================================================
+
+KÍNH CHÀO QUÝ KHÁCH HÀNG & ANH EM MAKER!
+Cảm ơn bạn đã ủng hộ sản phẩm màn hình điều khiển thông minh NALA SMART PANEL.
+Dưới đây là 2 cách cài đặt và sử dụng siêu nhanh:
+
+---------------------------------------------------------------------
+CÁCH 1: NẠP VÀ CẤU HÌNH TRỰC TUYẾN 1-CLICK QUA TRÌNH DUYỆT (KHUYÊN DÙNG)
+---------------------------------------------------------------------
+1. Dùng trình duyệt Google Chrome hoặc Microsoft Edge trên máy tính.
+2. Cắm cáp USB Type-C từ ESP32-S3 vào máy tính.
+3. Mở trang Web Flasher: https://phamngocty.github.io/nala-smart-home/huong-dan.html
+4. Nhấn nút "KẾT NỐI & NẠP FIRMWARE (1-CLICK)" và chọn cổng COM.
+5. Chờ 30 giây thanh tiến trình chạy 100% là xong!
+
+---------------------------------------------------------------------
+CÁCH 2: NẠP OFFLINE BẰNG MÁY TÍNH WINDOWS
+---------------------------------------------------------------------
+1. Cắm cáp Type-C từ màn hình ESP32-S3 vào máy tính.
+2. Mở file "flash_firmware.bat" trong thư mục này.
+3. Nhập tên cổng COM (ví dụ: COM3, COM4...) rồi bấm Enter.
+4. Tool sẽ tự động nạp toàn bộ Bootloader, Partition và Firmware v3.6.1.
+
+---------------------------------------------------------------------
+BƯỚC TIẾP THEO: KẾT NỐI WIFI & HOME ASSISTANT
+---------------------------------------------------------------------
+1. Sau khi khởi động, màn hình phát WiFi "NALA_PANEL_SETUP" (hoặc NALA_XXXX).
+2. Dùng điện thoại kết nối vào WiFi này, trình duyệt sẽ tự mở trang 192.168.4.1.
+3. Chọn WiFi nhà bạn, nhập mật khẩu và nhập IP máy chủ NAS Central Hub (ví dụ: 192.168.1.114).
+4. Màn hình tự động khởi động lại và kết nối vào hệ thống!
+
+---------------------------------------------------------------------
+KÊNH HỖ TRỢ KỸ THUẬT & BẢO HÀNH TRỰC TIẾP:
+- Kênh YouTube: TỰ LÀM ĐIỆN TỬ (Phạm Ngọc Tỷ)
+- Zalo Hỗ Trợ Kỹ Thuật: 0909.xxx.xxx (Hỗ trợ cấu hình từ xa qua Ultraview)
+- Fanpage: Tự Làm Điện Tử - DIY Electronics
+=====================================================================

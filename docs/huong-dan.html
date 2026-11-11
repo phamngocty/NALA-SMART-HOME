@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cẩm Nang Kỹ Thuật & Hướng Dẫn Tự Làm NALA Smart Panel A-Z</title>
+    <meta name="description" content="Hướng dẫn chi tiết từ A-Z cách tự ráp, nạp firmware, cấu hình WiFi và kết nối Home Assistant cho màn hình thông minh gắn tường NALA Smart Panel ESP32-S3. Tác giả: Phạm Ngọc Tỷ (TỰ LÀM ĐIỆN TỬ).">
+    <meta name="author" content="TỰ LÀM ĐIỆN TỬ (Phạm Ngọc Tỷ)">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --bg-card: #0f141f;
+            --border: rgba(255, 255, 255, 0.08);
+            --primary: #00f0ff;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #090d16;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Top Nav */
+        nav {
+            position: sticky;
+            top: 0;
+            background: rgba(7, 9, 14, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #00f0ff, #3b82f6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        /* Article Header */
+        .guide-header {
+            padding: 60px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .guide-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+            line-height: 1.25;
+        }
+
+        .guide-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 14px;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        /* Content Styling */
+        .content h2 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 40px 0 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid var(--primary);
+            padding-left: 12px;
+        }
+
+        .content h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 24px 0 12px;
+            color: #e2e8f0;
+        }
+
+        .content p {
+            margin-bottom: 16px;
+            color: #cbd5e1;
+        }
+
+        .content ul, .content ol {
+            margin: 0 0 20px 24px;
+            color: #cbd5e1;
+        }
+
+        .content li {
+            margin-bottom: 8px;
+        }
+
+        /* Code Block */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #38bdf8;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--primary);
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Callout Box */
+        .callout {
+            background: var(--bg-card);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 16px 20px;
+            margin: 24px 0;
+        }
+
+        .callout.warning {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .callout.danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .callout-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* Web Flasher Card */
+        .flasher-card {
+            background: linear-gradient(180deg, #121a2c 0%, #0f141f 100%);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            padding: 32px;
+            margin: 30px 0;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+        }
+
+        .flasher-card h3 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .flasher-card p {
+            max-width: 650px;
+            margin: 0 auto 24px;
+            color: var(--text-muted);
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            margin-top: 60px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container nav-inner">
+            <a href="index.html" class="brand">
+                <div class="brand-logo">N</div>
+                <div style="font-weight:800; font-size:16px;">NALA PANEL</div>
+            </a>
+            <div style="display:flex; gap:12px;">
+                <a href="index.html" class="btn btn-secondary">← Về Trang Chủ</a>
+                <a href="index.html#order" class="btn btn-primary">🛒 Đặt Mua Bản Lắp Sẵn</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="guide-header">
+            <span class="badge">Cẩm Nang Kỹ Thuật Chính Thức</span>
+            <h1>Hướng Dẫn Tự Làm Màn Hình Thông Minh NALA ESP32-S3 Từ A-Z</h1>
+            <div class="guide-meta">
+                <span>👤 Tác giả: <strong>Phạm Ngọc Tỷ (TỰ LÀM ĐIỆN TỬ)</strong></span>
+                <span>📅 Phiên bản: <strong>Firmware v3.6.1 Stable</strong></span>
+                <span>⏱️ Thời gian hoàn thiện: <strong>~30 phút</strong></span>
+            </div>
+        </header>
+
+        <article class="content">
+            <!-- PHẦN 1 -->
+            <h2>1. Chuẩn Bị Linh Kiện Phần Cứng Chuẩn</h2>
+            <p>
+                Để màn hình hoạt động trơn tru 24/7, không bao giờ bị hú rít âm thanh hay sụt áp khởi động lại, bạn cần chuẩn bị đúng các linh kiện sau:
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tên Linh Kiện</th>
+                        <th>Thông Số Chi Tiết</th>
+                        <th>Mục Đích Sử Dụng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Vi điều khiển</strong></td>
+                        <td>ESP32-S3 DevKitC-1 N8 (16MB Flash, 320KB SRAM)</td>
+                        <td>Xử lý chính, kết nối WiFi, máy trạng thái FreeRTOS</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Màn hình cảm ứng</strong></td>
+                        <td>2.8 inch IPS ST7789 + FT6336U/CST328 Capacitive Touch</td>
+                        <td>Hiển thị giao diện LVGL và nhận diện chạm đa điểm</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Codec Âm Thanh</strong></td>
+                        <td>Everest ES8311 (Giao tiếp I2S + I2C 0x18)</td>
+                        <td>Thu phát âm thanh chuẩn Hi-Fi 16kHz Mono chất lượng cao</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bộ Khuếch Đại (Amply)</strong></td>
+                        <td>SC8002B Smart PA (Chân PA_EN kích hoạt mức LOW)</td>
+                        <td>Khuếch đại ra loa mini 8Ω 2W, chống tiếng bụp xì</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Microphone</strong></td>
+                        <td>Micro Electret / Silicon I2S tích hợp lọc nhiễu</td>
+                        <td>Thu lệnh giọng nói và truyền đàm thoại liên phòng</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Nguồn Cấp</strong></td>
+                        <td>Nguồn 5V 2A chuẩn Type-C hoặc module 220V sang 5V</td>
+                        <td>Cấp nguồn ổn định chống sụt áp khi WiFi phát sóng mạnh</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- PHẦN 2 -->
+            <h2>2. Sơ Đồ Đấu Nối Chân GPIO (Golden Pinout 100% Thực Tế)</h2>
+            <div class="callout warning">
+                <div class="callout-title">⚠️ LƯU Ý SỐNG CÒN VỀ BỘ NHỚ & CHÂN NGOẠI VI:</div>
+                Bo mạch ESP32-S3 chạy với <strong>320KB SRAM nội bộ và KHÔNG DÙNG PSRAM NGOÀI</strong>. Tuyệt đối không thay đổi xung nhịp MCLK GPIO 4 (bắt buộc 4.096 MHz) vì sẽ khiến chip ES8311 đơ DAC/ADC. Chân điều khiển Amply SC8002B (PA_EN) là <strong>ACTIVE LOW</strong> (GPIO 1 mức 0 là Bật loa, mức 1 là Mute).
+            </div>
+
+            <pre><code>// ==============================================================
+// NALA SMART PANEL - GOLDEN PINOUT DEFINITIONS (ESP32-S3)
+// ==============================================================
+#define PIN_PA_EN         1    // Bật/Tắt Amply loa SC8002B (LOW = BẬT, HIGH = TẮT)
+#define PIN_I2S_MCLK      4    // Master Clock cho ES8311 (4.096 MHz = 256 * 16kHz)
+#define PIN_I2S_BCLK      5    // Bit Clock (512 kHz)
+#define PIN_I2S_DIN       6    // Nhận dữ liệu Micro từ ES8311
+#define PIN_I2S_LRCK      7    // Frame Sync / Word Select (16 kHz)
+#define PIN_I2S_DOUT      8    // Dữ liệu âm thanh xuất ra loa
+#define PIN_LCD_CS        10   // Chip Select màn hình ST7789
+#define PIN_LCD_MOSI      11   // SPI2 Host MOSI
+#define PIN_LCD_SCLK      12   // SPI2 Host SCLK
+#define PIN_LCD_MISO      13   // SPI2 Host MISO
+#define PIN_I2C_SCL       15   // I2C SCL (dùng chung cho ES8311 & Cảm ứng)
+#define PIN_I2C_SDA       16   // I2C SDA (trở kéo pull-up 4.7kΩ)
+#define PIN_TP_INT        17   // Ngắt cảm ứng Touch
+#define PIN_TP_RST        18   // Reset cảm ứng (Active LOW)
+#define PIN_RGB_LED       42   // Đèn LED thông minh WS2812 NeoPixel
+#define PIN_LCD_BL        45   // Đèn nền màn hình (LEDC PWM 5000Hz)
+#define PIN_LCD_DC        46   // Data/Command màn hình ST7789</code></pre>
+
+            <!-- PHẦN 3 -->
+            <h2>3. Nạp Firmware Trực Tuyến 1-Click (Web Serial Flasher)</h2>
+            <p>
+                Không cần cài đặt PlatformIO hay Python phức tạp. Bạn chỉ cần dùng trình duyệt <strong>Google Chrome</strong> hoặc <strong>Microsoft Edge</strong> trên máy tính, cắm cáp USB Type-C nối ESP32-S3 vào cổng USB và nhấn nút bên dưới:
+            </p>
+
+            <div class="flasher-card">
+                <h3>🚀 Công Cụ Nạp Firmware NALA Web Flasher</h3>
+                <p>Nạp trực tiếp Firmware phiên bản <strong>v3.6.1 Stable</strong> có hỗ trợ Đàm Thoại Rảnh Tay Chống Hú và Trợ Lý Giọng Nói NALA.</p>
+                
+                <esp-web-install-button manifest="manifest.json">
+                    <button slot="activate" class="btn btn-primary" style="padding:14px 28px; font-size:16px;">
+                        ⚡ KẾT NỐI & NẠP FIRMWARE (1-CLICK)
+                    </button>
+                    <span slot="unsupported">Trình duyệt của bạn chưa hỗ trợ Web Serial. Vui lòng mở trang này trên Google Chrome hoặc Microsoft Edge!</span>
+                </esp-web-install-button>
+
+                <p style="margin-top:20px; font-size:12px; color:#64748b;">
+                    * Lưu ý: Nếu chip không nhận diện, hãy nhấn giữ nút <strong>BOOT (IO0)</strong>, cắm cáp Type-C rồi nhả ra để vào chế độ nạp Bootloader.
+                </p>
+            </div>
+
+            <!-- PHẦN 4 -->
+            <h2>4. Cấu Hình WiFi Lần Đầu (Captive Portal)</h2>
+            <ol>
+                <li>Sau khi nạp firmware, màn hình sẽ phát ra mạng WiFi có tên dạng <code>NALA_PANEL_SETUP</code> hoặc <code>NALA_XXXX</code>.</li>
+                <li>Dùng điện thoại hoặc laptop kết nối vào WiFi này. Trình duyệt sẽ tự động bật trang cấu hình tại địa chỉ <code>http://192.168.4.1</code>.</li>
+                <li>Chọn tên WiFi gia đình bạn (băng tần 2.4GHz), nhập mật khẩu và nhập địa chỉ máy chủ NAS Hub (ví dụ: <code>192.168.1.114</code>).</li>
+                <li>Nhấn <strong>Lưu & Khởi Động Lại</strong>. Màn hình sẽ tự động kết nối và hiển thị đồng hồ thời gian thực cùng các nút bấm điều khiển.</li>
+            </ol>
+
+            <!-- PHẦN 5 -->
+            <h2>5. Ghép Nối Với Home Assistant & Central NAS Hub</h2>
+            <p>
+                Hệ thống NALA Panel kết nối với Home Assistant hoàn toàn tự động thông qua Central Hub:
+            </p>
+            <ul>
+                <li>Mở trình duyệt truy cập Web Admin của NAS Hub tại <code>http://[IP_NAS_CUA_BAN]:8765/admin</code>.</li>
+                <li>Tại mục <strong>Quản Lý Màn Hình</strong>, bạn sẽ thấy mã ghép nối (Pairing Code) của màn hình hiển thị (ví dụ: <code>881C</code>).</li>
+                <li>Gán màn hình vào phòng tương ứng (ví dụ: <em>Phòng khách, Phòng ngủ bố mẹ, Phòng ngủ con</em>).</li>
+                <li>Chọn các công tắc, đèn, máy lạnh muốn hiển thị lên 6 nút bấm nhanh trên màn hình. Mọi thay đổi sẽ được đồng bộ tức thì không cần khởi động lại màn hình!</li>
+            </ul>
+
+            <!-- PHẦN 6 -->
+            <h2>6. Sử Dụng Tính Năng Đàm Thoại Rảnh Tay Chống Hú (Hands-Free Intercom)</h2>
+            <p>
+                Để đàm thoại giữa 2 phòng bất kỳ:
+            </p>
+            <ul>
+                <li><strong>Cách 1 (Bằng giọng nói):</strong> Đứng trong phòng gọi câu lệnh: <em>"Nala ơi, gọi cho phòng ngủ mẹ"</em>. Màn hình sẽ phản hồi <em>"Dạ, đang kết nối với phòng ngủ mẹ..."</em> và tự động mở đàm thoại 2 chiều.</li>
+                <li><strong>Cách 2 (Bằng nút cảm ứng):</strong> Nhấn vào biểu tượng kênh liên phòng trên màn hình để kết nối ngay lập tức.</li>
+                <li><strong>3 Cách Cúp Máy Cực Tiện:</strong>
+                    <ul>
+                        <li>Nói: <em>"Cúp máy"</em> hoặc <em>"Nala cúp máy"</em> (Nhận diện tức thì &lt;100ms).</li>
+                        <li>Chạm nút màu đỏ <strong>"🛑 CÚP MÁY"</strong> ngay trên màn hình.</li>
+                        <li>Cơ chế tự động: Nếu 2 bên im lặng quá 10 giây, chuông bíp cảnh báo sẽ vang lên trong 3 giây và tự động ngắt máy an toàn.</li>
+                    </ul>
+                </li>
+            </ul>
+        </article>
+
+        <footer>
+            <p>
+                Biên soạn bởi <strong>TỰ LÀM ĐIỆN TỬ (Phạm Ngọc Tỷ)</strong> — Dự án NALA SMART PANEL v3.6.1.
+            </p>
+            <p style="margin-top:6px;">
+                Mọi thắc mắc kỹ thuật hoặc nhu cầu đặt mua linh kiện / bản hoàn thiện sẵn vỏ, vui lòng liên hệ <a href="index.html#order" style="color:var(--primary); font-weight:700;">kênh phân phối chính thức</a>.
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

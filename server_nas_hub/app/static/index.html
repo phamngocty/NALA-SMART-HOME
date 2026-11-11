@@ -1229,6 +1229,10 @@
                 <button class="btn-intercom-header" onclick="openIntercomModal()">
                     🎙️ Đàm Thoại Intercom
                 </button>
+                <span id="headerActiveCallPill" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 8px; cursor: pointer; align-items: center; gap: 6px; animation: pulse 1.5s infinite;" onclick="openIntercomModal()">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
+                    <span id="headerActiveCallText">Đàm Thoại Rảnh Tay</span>
+                </span>
                 <button class="btn-ai-header" onclick="openAIConfigModal()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.35);">
                     🤖 Cấu Hình Voice AI & STT/TTS
                 </button>
@@ -1676,6 +1680,20 @@
             </div>
 
             <div class="modal-body" style="padding: 24px;">
+                <!-- Cuộc Gọi Đàm Thoại Rảnh Tay Đang Diễn Ra (Active Calls Banner) -->
+                <div id="activeIntercomCallsContainer" style="display: none; background: rgba(220, 38, 38, 0.15); border: 1px solid #ef4444; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: inline-block;"></span>
+                            <span style="font-weight: 700; font-size: 13px; color: #fca5a5;">📞 ĐANG ĐÀM THOẠI RẢNH TAY:</span>
+                            <span id="activeCallInfoLabel" style="font-size: 13px; font-weight: 700; color: #fff;">[Phòng] ⇄ [Phòng]</span>
+                        </div>
+                        <button onclick="hangupCurrentCall()" style="padding: 6px 14px; background: #dc2626; color: #fff; border: none; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.2s;">
+                            🛑 Ngắt Máy Từ Xa
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Trạng thái Loa Web Admin & Giám sát -->
                 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
@@ -3438,6 +3456,11 @@
         function handleWSMessage(data) {
             const type = data.type;
 
+            if (type === 'intercom_active_calls') {
+                updateActiveIntercomCallsUI(data.calls || []);
+                return;
+            }
+
             if (type === 'wake_score_tick') {
                 handleWakeScoreTick(data);
                 return;
@@ -4764,8 +4787,61 @@
         let isWebPttActive = false;
         let webPttSeq = 0;
 
+        function updateActiveIntercomCallsUI(calls) {
+            const container = document.getElementById('activeIntercomCallsContainer');
+            const label = document.getElementById('activeCallInfoLabel');
+            const headerPill = document.getElementById('headerActiveCallPill');
+            const headerText = document.getElementById('headerActiveCallText');
+
+            if (!calls || calls.length === 0) {
+                if (container) container.style.display = 'none';
+                if (headerPill) headerPill.style.display = 'none';
+                return;
+            }
+
+            const c = calls[0];
+            const infoStr = `[${c.caller_room || c.caller_key}] ⇄ [${c.target_room || c.target_key}] (${Math.floor(c.duration || 0)}s)`;
+            if (label) label.textContent = infoStr;
+            if (container) container.style.display = 'block';
+            if (headerText) headerText.textContent = infoStr;
+            if (headerPill) headerPill.style.display = 'inline-flex';
+        }
+
+        async function fetchActiveIntercomCalls() {
+            try {
+                const res = await fetch('/api/intercom/active_calls');
+                if (res.ok) {
+                    const data = await res.json();
+                    updateActiveIntercomCallsUI(data.active_calls || []);
+                }
+            } catch (e) {
+                console.error("Error fetching active intercom calls:", e);
+            }
+        }
+
+        async function hangupCurrentCall(sessionId) {
+            try {
+                const res = await fetch('/api/intercom/hangup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId || null })
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    showToast('Đã ngắt cuộc gọi thành công.');
+                    fetchActiveIntercomCalls();
+                } else {
+                    showToast(data.message || 'Lỗi ngắt cuộc gọi.');
+                }
+            } catch (e) {
+                console.error("Hangup error:", e);
+                showToast('Lỗi kết nối khi ngắt máy.');
+            }
+        }
+
         function openIntercomModal() {
             renderIntercomTargets();
+            fetchActiveIntercomCalls();
             document.getElementById('intercomModal').classList.add('active');
             attachPttEvents();
         }
@@ -5689,6 +5765,7 @@
             fetchInitialData();
             initWebSocket();
             startHeaderClock();
+            fetchActiveIntercomCalls();
         });
     </script>
 <script>

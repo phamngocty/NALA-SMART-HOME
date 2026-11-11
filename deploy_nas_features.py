@@ -11,9 +11,12 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 files_to_upload = [
     ("server_nas_hub/app/adaptive_memory_manager.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/adaptive_memory_manager.py"),
     ("server_nas_hub/app/groq_failover_client.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/groq_failover_client.py"),
+    ("server_nas_hub/app/stt_tts_pipeline.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/stt_tts_pipeline.py"),
+    ("server_nas_hub/app/intercom_router.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/intercom_router.py"),
     ("server_nas_hub/app/ai_agent_router.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/ai_agent_router.py"),
     ("server_nas_hub/app/main_ws_server.py", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/main_ws_server.py"),
     ("server_nas_hub/app/static/index.html", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/static/index.html"),
+    ("server_nas_hub/app/firmware/firmware_es3c28p.bin", "/home/nas152/nala-voice-intercom-system/server_nas_hub/app/firmware/firmware_es3c28p.bin"),
 ]
 
 try:
@@ -62,6 +65,12 @@ try:
     # Check API endpoints
     r_mem = httpx.get("http://192.168.1.114:8765/api/memory", timeout=10.0)
     print(f"API /api/memory status: {r_mem.status_code}, response: {r_mem.json().get('status')}")
+
+    r_ic = httpx.get("http://192.168.1.114:8765/api/intercom/active_calls", timeout=10.0)
+    print(f"API /api/intercom/active_calls status: {r_ic.status_code}, response: {r_ic.json().get('status')}")
+
+    r_targets = httpx.get("http://192.168.1.114:8765/api/intercom/targets", timeout=10.0)
+    print(f"API /api/intercom/targets status: {r_targets.status_code}, total targets: {len(r_targets.json().get('targets', []))}")
 
     print("\nDEPLOYMENT & VERIFICATION COMPLETED SUCCESSFULLY!")
 

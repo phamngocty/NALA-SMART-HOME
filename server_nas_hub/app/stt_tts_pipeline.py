@@ -29,6 +29,13 @@ WHISPER_HALLUCINATIONS = [
     "nhấn chuông để nhận thông báo", "theo dõi kênh", "hãy like", "chia sẻ video"
 ]
 
+DEFAULT_SMART_HOME_WHISPER_PROMPT = (
+    "Nala ơi, đèn hắt, đèn chùm, downlight, đèn bàn, đèn ngủ, đèn ban công, "
+    "quạt trần, quạt hút, điều hòa, máy lạnh, rèm cửa, cổng, bình nóng lạnh, công tắc, "
+    "phòng khách, phòng ngủ, phòng bếp, phòng làm việc, ban công, nhà xe, "
+    "bật, tắt, mở, đóng, cúp máy, gọi cho phòng, dừng lại."
+)
+
 def is_whisper_hallucination(text: str) -> bool:
     if not text:
         return True
@@ -56,14 +63,22 @@ class AudioPipeline:
             "Dạ, em nghe!",
             "Dạ,",
             "Vâng ạ,",
+            "Dạ vâng,",
+            "Em làm ngay,",
             "Đã bật.",
             "Đã tắt.",
+            "Đã mở.",
+            "Đã đóng.",
             "Đã bật đèn.",
             "Đã tắt đèn.",
             "Đã bật quạt.",
             "Đã tắt quạt.",
             "Đã bật điều hòa.",
             "Đã tắt điều hòa.",
+            "Đã chỉnh xong.",
+            "Dạ, đang kết nối...",
+            "Đang kết nối đàm thoại...",
+            "Đã cúp máy.",
             "Đã tắt toàn bộ thiết bị.",
             "Đã tắt toàn bộ thiết bị trong nhà cho bạn.",
             "Đã bật thiết bị thành công.",
@@ -81,8 +96,10 @@ class AudioPipeline:
                     pass
         logger.info("⚡ Prewarmed %d instant audio phrases in RAM cache.", len(self._pcm_cache))
 
-    async def groq_whisper_stt(self, wav_bytes: bytes, api_key: str, model: str = "whisper-large-v3-turbo") -> str:
-        """Nhận diện giọng nói tiếng Việt siêu tốc qua Groq Cloud LPU Whisper (~0.15s, miễn phí 2000 req/ngày)."""
+    async def groq_whisper_stt(self, wav_bytes: bytes, api_key: str, model: str = "whisper-large-v3-turbo", prompt: Optional[str] = None) -> str:
+        """Nhận diện giọng nói tiếng Việt siêu tốc qua Groq Cloud LPU Whisper (~0.15s, miễn phí 2000 req/ngày).
+        Hỗ trợ tham số prompt (Vocabulary Bias) ép chuẩn từ vựng thiết bị và phòng tiếng Việt, triệt tiêu nghe nhầm.
+        """
         if not api_key:
             return ""
         url = "https://api.groq.com/openai/v1/audio/transcriptions"
@@ -96,6 +113,7 @@ class AudioPipeline:
         data.add_field('language', 'vi')
         data.add_field('response_format', 'json')
         data.add_field('temperature', '0.0')
+        data.add_field('prompt', prompt or DEFAULT_SMART_HOME_WHISPER_PROMPT)
 
         t0 = time.time()
         try:
@@ -114,9 +132,10 @@ class AudioPipeline:
             logger.warning("Groq Whisper STT request failed: %s", e)
         return ""
 
-    async def pcm_to_text(self, pcm_data: bytes, groq_api_key: Optional[str] = None, stt_provider: str = "auto", groq_model: str = "whisper-large-v3-turbo") -> str:
+    async def pcm_to_text(self, pcm_data: bytes, groq_api_key: Optional[str] = None, stt_provider: str = "auto", groq_model: str = "whisper-large-v3-turbo", prompt: Optional[str] = None) -> str:
         """Chuyển đổi Raw PCM 16kHz 16-bit Mono sang Text.
         Tự động ưu tiên Groq Cloud LPU Whisper (~0.15s, 0% GPU) và fallback Faster-Whisper Local GPU.
+        Hỗ trợ tham số prompt (Vocabulary Bias) ép từ điển Smart Home tiếng Việt.
         """
         if not pcm_data or len(pcm_data) < 3200:  # < 100ms
             logger.warning("PCM data too short (%d bytes), skipping STT", len(pcm_data) if pcm_data else 0)
@@ -144,7 +163,7 @@ class AudioPipeline:
 
         # 1. Thử qua Groq Cloud Whisper nếu provider là 'groq' hoặc 'auto' (khi có api_key)
         if stt_provider in ("groq", "auto") and groq_api_key:
-            groq_text = await self.groq_whisper_stt(wav_bytes, groq_api_key, model=groq_model)
+            groq_text = await self.groq_whisper_stt(wav_bytes, groq_api_key, model=groq_model, prompt=prompt)
             if groq_text:
                 if is_whisper_hallucination(groq_text):
                     logger.warning("Phát hiện ảo giác Whisper từ Groq: '%s' -> Loại bỏ!", groq_text)
