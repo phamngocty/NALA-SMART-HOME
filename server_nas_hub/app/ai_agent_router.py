@@ -28,6 +28,11 @@ try:
 except ImportError:
     from adaptive_memory_manager import AdaptiveMemoryManager
 
+try:
+    from .extension_mcp_service import ExtensionMCPService
+except ImportError:
+    from extension_mcp_service import ExtensionMCPService
+
 logger = logging.getLogger("AIRouter")
 
 SYSTEM_PROMPT_TEMPLATE = """Bạn là Nala - Trợ lý giọng nói và quản gia AI của hệ thống NALA Smart Home.
@@ -218,6 +223,7 @@ class AIAgentRouter:
             default_preferred_model=groq_cfg.get("model", "llama-3.3-70b-versatile")
         )
         self.memory_mgr = AdaptiveMemoryManager(data_dir=self.data_dir)
+        self.extension_service = ExtensionMCPService(self.config.get("extensions", {}))
 
     def _load_initial_config(self, default_gemini: str, default_deepseek: str) -> Dict[str, Any]:
         default_cfg = {
@@ -239,13 +245,27 @@ class AIAgentRouter:
             },
             "openrouter": {
                 "api_key": os.getenv("OPENROUTER_API_KEY", ""),
-                "model": "google/gemini-2.0-flash-exp:free",
+                "model": "qwen/qwen-2.5-72b-instruct:free",
                 "base_url": "https://openrouter.ai/api/v1"
+            },
+            "siliconflow": {
+                "api_key": os.getenv("SILICONFLOW_API_KEY", ""),
+                "model": "Qwen/Qwen2.5-7B-Instruct",
+                "base_url": "https://api.siliconflow.cn/v1"
             },
             "custom": {
                 "api_key": "",
                 "model": "",
                 "base_url": "http://localhost:11434/v1"
+            },
+            "extensions": {
+                "weather_enabled": True,
+                "weather_location": "Hà Nội",
+                "search_enabled": True,
+                "music_enabled": True,
+                "music_default_player": "",
+                "mcp_enabled": False,
+                "mcp_endpoint": ""
             },
             "tts_voice": "google_fast",
             "stt_service_url": os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions"),
@@ -279,6 +299,10 @@ class AIAgentRouter:
         safe = {
             "active_provider": self.config.get("active_provider", "gemini"),
             "tts_voice": self.config.get("tts_voice", "vi-VN-HoaiMyNeural"),
+            "tts_rate": self.config.get("tts_rate", "+0%"),
+            "tts_pitch": self.config.get("tts_pitch", "+0Hz"),
+            "vad_speed": self.config.get("vad_speed", "normal"),
+            "voice_persona": self.config.get("voice_persona", "Xin chào! Mình là Nala, trợ lý nhà thông minh của bạn.\n\nMục tiêu chính: Hỗ trợ điều khiển thiết bị, theo dõi an ninh và giải đáp câu hỏi tự nhiên.\n\nGiọng điệu/Tính cách: Thân thiện, chu đáo, súc tích (1-2 câu ngắn gọn)."),
             "stt_service_url": self.config.get("stt_service_url", "http://127.0.0.1:8095/v1/audio/transcriptions"),
             "stt_provider": self.config.get("stt_provider", "auto"),
             "stt_groq_model": self.config.get("stt_groq_model", "whisper-large-v3-turbo"),
@@ -286,6 +310,15 @@ class AIAgentRouter:
             "continuous_conversation": self.config.get("continuous_conversation", True),
             "continuous_timeout_ms": self.config.get("continuous_timeout_ms", 8000),
             "session_timeout_seconds": self.config.get("session_timeout_seconds", 120),
+            "extensions": self.config.get("extensions", {
+                "weather_enabled": True,
+                "weather_location": "Hà Nội",
+                "search_enabled": True,
+                "music_enabled": True,
+                "music_default_player": "",
+                "mcp_enabled": False,
+                "mcp_endpoint": ""
+            }),
             "gemini": {
                 "api_key_masked": mask_key(self.config["gemini"].get("api_key")),
                 "has_key": bool(self.config["gemini"].get("api_key")),
@@ -305,10 +338,16 @@ class AIAgentRouter:
                 "base_url": self.config.get("groq", {}).get("base_url", "https://api.groq.com/openai/v1")
             },
             "openrouter": {
-                "api_key_masked": mask_key(self.config["openrouter"].get("api_key")),
-                "has_key": bool(self.config["openrouter"].get("api_key")),
-                "model": self.config["openrouter"].get("model", "google/gemini-2.0-flash-exp:free"),
-                "base_url": self.config["openrouter"].get("base_url", "https://openrouter.ai/api/v1")
+                "api_key_masked": mask_key(self.config.get("openrouter", {}).get("api_key")),
+                "has_key": bool(self.config.get("openrouter", {}).get("api_key")),
+                "model": self.config.get("openrouter", {}).get("model", "qwen/qwen-2.5-72b-instruct:free"),
+                "base_url": self.config.get("openrouter", {}).get("base_url", "https://openrouter.ai/api/v1")
+            },
+            "siliconflow": {
+                "api_key_masked": mask_key(self.config.get("siliconflow", {}).get("api_key")),
+                "has_key": bool(self.config.get("siliconflow", {}).get("api_key")),
+                "model": self.config.get("siliconflow", {}).get("model", "Qwen/Qwen2.5-7B-Instruct"),
+                "base_url": self.config.get("siliconflow", {}).get("base_url", "https://api.siliconflow.cn/v1")
             },
             "custom": {
                 "api_key_masked": mask_key(self.config["custom"].get("api_key")),
@@ -326,6 +365,14 @@ class AIAgentRouter:
                 self.config["active_provider"] = new_data["active_provider"]
             if "tts_voice" in new_data:
                 self.config["tts_voice"] = new_data["tts_voice"]
+            if "tts_rate" in new_data:
+                self.config["tts_rate"] = new_data["tts_rate"]
+            if "tts_pitch" in new_data:
+                self.config["tts_pitch"] = new_data["tts_pitch"]
+            if "vad_speed" in new_data:
+                self.config["vad_speed"] = new_data["vad_speed"]
+            if "voice_persona" in new_data:
+                self.config["voice_persona"] = new_data["voice_persona"]
             if "stt_service_url" in new_data:
                 self.config["stt_service_url"] = new_data["stt_service_url"]
             if "stt_provider" in new_data:
@@ -334,6 +381,11 @@ class AIAgentRouter:
                 self.config["stt_groq_model"] = new_data["stt_groq_model"]
             if "auto_fallback" in new_data:
                 self.config["auto_fallback"] = bool(new_data["auto_fallback"])
+            if "extensions" in new_data and isinstance(new_data["extensions"], dict):
+                cur_ext = self.config.setdefault("extensions", {})
+                cur_ext.update(new_data["extensions"])
+                if hasattr(self, "extension_service"):
+                    self.extension_service.config = cur_ext
             if "continuous_conversation" in new_data:
                 self.config["continuous_conversation"] = bool(new_data["continuous_conversation"])
             if "continuous_timeout_ms" in new_data:
@@ -342,7 +394,7 @@ class AIAgentRouter:
                 self.config["session_timeout_seconds"] = int(new_data["session_timeout_seconds"])
                 self.session_mgr.session_timeout = self.config["session_timeout_seconds"]
 
-            for prov in ["gemini", "deepseek", "groq", "openrouter", "custom"]:
+            for prov in ["gemini", "deepseek", "groq", "openrouter", "siliconflow", "custom"]:
                 if prov in new_data and isinstance(new_data[prov], dict):
                     p_data = new_data[prov]
                     if prov not in self.config:
@@ -379,7 +431,7 @@ class AIAgentRouter:
 
     def _get_ha_tools_schema_openai(self) -> List[Dict[str, Any]]:
         """Khai báo function calling tools theo chuẩn OpenAI (cho DeepSeek, OpenRouter)."""
-        return [
+        ha_tools = [
             {
                 "type": "function",
                 "function": {
@@ -441,10 +493,14 @@ class AIAgentRouter:
                 }
             }
         ]
+        if hasattr(self, "extension_service"):
+            ext_tools = self.extension_service.get_extension_tools_openai()
+            ha_tools.extend(ext_tools)
+        return ha_tools
 
     def _get_ha_tools_schema_gemini(self) -> List[Dict[str, Any]]:
         """Khai báo function declarations theo chuẩn Google Gemini REST."""
-        return [
+        gemini_tools = [
             {
                 "name": "control_home_device",
                 "description": "Bật, tắt thiết bị hoặc điều chỉnh nhiệt độ máy lạnh trong nhà.",
@@ -497,6 +553,10 @@ class AIAgentRouter:
                 }
             }
         ]
+        if hasattr(self, "extension_service"):
+            ext_tools = self.extension_service.get_extension_tools_gemini()
+            gemini_tools.extend(ext_tools)
+        return gemini_tools
 
     def _build_device_context(self, context_room: str = "") -> str:
         """Tóm tắt danh sách thiết bị có trong Home Assistant để đưa vào context của AI.
@@ -668,6 +728,30 @@ class AIAgentRouter:
                 await self.ha_bridge.call_service("scene", "turn_on", sid)
                 return f"Đã kích hoạt ngữ cảnh {sid}."
 
+            elif name == "get_weather":
+                loc = args.get("location", "")
+                return await self.extension_service.get_weather(loc)
+
+            elif name == "web_search":
+                query = args.get("query", "")
+                return await self.extension_service.web_search(query)
+
+            elif name == "play_music":
+                song = args.get("song_name", "")
+                artist = args.get("artist", "")
+                room = args.get("room", "") or context_room
+                return await self.extension_service.play_music(song, artist, room, ha_bridge=self.ha_bridge)
+
+            elif name == "control_media":
+                action = args.get("action", "play")
+                room = args.get("room", "") or context_room
+                return await self.extension_service.control_media(action, room, ha_bridge=self.ha_bridge)
+
+            elif hasattr(self, "extension_service") and self.config.get("extensions", {}).get("mcp_enabled"):
+                mcp_url = self.config.get("extensions", {}).get("mcp_endpoint", "")
+                if mcp_url:
+                    return await self.extension_service.call_mcp_tool(mcp_url, name, args)
+
         except Exception as e:
             logger.error("Error executing tool %s: %s", name, e)
             return f"Lỗi khi điều khiển thiết bị: {str(e)}"
@@ -791,7 +875,35 @@ class AIAgentRouter:
                     else:
                         return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
 
-                # 4. OPENROUTER (9 Router) API (openrouter.ai/api/v1/chat/completions)
+                # 4. SILICONCLOUD (SILICONFLOW - XIAOZHI BACKEND)
+                elif provider == "siliconflow":
+                    norm_mod = mod or "Qwen/Qwen2.5-7B-Instruct"
+                    base = url or "https://api.siliconflow.cn/v1"
+                    endpoint = f"{base.rstrip('/')}/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "model": norm_mod,
+                        "messages": [
+                            {"role": "user", "content": "Trả lời 'OK' nếu bạn nhận được tin này."}
+                        ],
+                        "max_tokens": 10,
+                        "temperature": 0.2
+                    }
+                    res = await client.post(endpoint, headers=headers, json=payload)
+                    elapsed = int((time.time() - t0) * 1000)
+                    if res.status_code == 200:
+                        data = res.json()
+                        reply = data["choices"][0]["message"]["content"].strip()
+                        return {"status": "success", "latency_ms": elapsed, "reply": reply, "model": norm_mod, "provider": provider}
+                    elif res.status_code == 401:
+                        return {"status": "error", "http_code": 401, "message": "API Key SiliconCloud (sk-...) không hợp lệ. Vui lòng lấy key tại cloud.siliconflow.cn/account/ak", "latency_ms": elapsed}
+                    else:
+                        return {"status": "error", "http_code": res.status_code, "message": res.text[:250], "latency_ms": elapsed}
+
+                # 5. OPENROUTER (9 Router) API (openrouter.ai/api/v1/chat/completions)
                 elif provider == "openrouter":
                     norm_mod = mod or "google/gemini-2.0-flash-exp:free"
                     endpoint = "https://openrouter.ai/api/v1/chat/completions"
@@ -854,30 +966,73 @@ class AIAgentRouter:
         url = base_url or prov_cfg.get("base_url", "")
         models: List[Dict[str, str]] = []
 
+        top_gemini = [
+            {"id": "gemini-flash-lite-latest", "name": "gemini-flash-lite-latest (Khuyên dùng - Miễn phí tốc độ cao)"},
+            {"id": "gemini-3.5-flash", "name": "gemini-3.5-flash (Bản 3.5 Flash ổn định)"},
+            {"id": "gemini-3.5-flash-lite", "name": "gemini-3.5-flash-lite (Bản 3.5 Lite nhẹ)"},
+            {"id": "gemini-flash-latest", "name": "gemini-flash-latest (Google trỏ 3.8 - Giới hạn 20 req/ngày)"},
+            {"id": "gemini-3.8-flash", "name": "gemini-3.8-flash (Bản 3.8 - Giới hạn 20 req/ngày)"},
+            {"id": "gemini-pro-latest", "name": "gemini-pro-latest (Bản Pro mới nhất)"}
+        ]
+
+        default_groq = [
+            {"id": "llama-3.3-70b-versatile", "name": "llama-3.3-70b-versatile (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"},
+            {"id": "llama-3.1-8b-instant", "name": "llama-3.1-8b-instant (8B Siêu nhẹ ~800 tokens/s)"},
+            {"id": "llama-3.2-3b-preview", "name": "llama-3.2-3b-preview (3B Nhẹ gọn)"},
+            {"id": "llama-3.2-11b-vision-preview", "name": "llama-3.2-11b-vision-preview (11B Đa phương tiện)"},
+            {"id": "deepseek-r1-distill-llama-70b", "name": "deepseek-r1-distill-llama-70b (Suy luận R1)"},
+            {"id": "qwen-2.5-32b", "name": "qwen-2.5-32b (Qwen 32B Cân bằng)"},
+            {"id": "mixtral-8x7b-32768", "name": "mixtral-8x7b-32768 (MoE 32k Context)"},
+            {"id": "gemma2-9b-it", "name": "gemma2-9b-it (Google Gemma 2)"}
+        ]
+
+        default_deepseek = [
+            {"id": "deepseek-flash", "name": "deepseek-flash (Khuyên dùng - V4 Flash)"},
+            {"id": "deepseek-chat", "name": "deepseek-chat (V3 Cân bằng)"},
+            {"id": "deepseek-reasoner", "name": "deepseek-reasoner (R1 Suy luận sâu)"}
+        ]
+
+        default_openrouter = [
+            {"id": "qwen/qwen-2.5-72b-instruct:free", "name": "qwen/qwen-2.5-72b-instruct:free [Miễn phí · Qwen 72B]"},
+            {"id": "deepseek/deepseek-r1:free", "name": "deepseek/deepseek-r1:free [Miễn phí · Suy luận R1]"},
+            {"id": "google/gemini-2.0-flash-exp:free", "name": "google/gemini-2.0-flash-exp:free [Miễn phí · Google Flash]"},
+            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "meta-llama/llama-3.3-70b-instruct:free [Miễn phí · Llama 70B]"},
+            {"id": "deepseek/deepseek-chat", "name": "deepseek/deepseek-chat (DeepSeek V3 Chính thức)"},
+            {"id": "meta-llama/llama-3.3-70b-instruct", "name": "meta-llama/llama-3.3-70b-instruct"}
+        ]
+
+        default_siliconflow = [
+            {"id": "Qwen/Qwen2.5-7B-Instruct", "name": "Qwen/Qwen2.5-7B-Instruct [Miễn phí 100% · Siêu tốc]"},
+            {"id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", "name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B [Miễn phí 100% · Suy luận R1]"},
+            {"id": "Qwen/Qwen2.5-Coder-7B-Instruct", "name": "Qwen/Qwen2.5-Coder-7B-Instruct [Miễn phí 100% · Coder]"},
+            {"id": "THUDM/glm-4-9b-chat", "name": "THUDM/glm-4-9b-chat [Miễn phí 100% · GLM-4]"},
+            {"id": "internlm/internlm2_5-7b-chat", "name": "internlm/internlm2_5-7b-chat [Miễn phí 100%]"},
+            {"id": "Qwen/Qwen2.5-32B-Instruct", "name": "Qwen/Qwen2.5-32B-Instruct (Qwen 32B Cân bằng cao cấp)"},
+            {"id": "Qwen/Qwen2.5-72B-Instruct", "name": "Qwen/Qwen2.5-72B-Instruct (Qwen 72B Đỉnh cao ngôn ngữ)"},
+            {"id": "deepseek-ai/DeepSeek-V3", "name": "deepseek-ai/DeepSeek-V3 (DeepSeek V3 Đàm thoại xuất sắc)"},
+            {"id": "deepseek-ai/DeepSeek-R1", "name": "deepseek-ai/DeepSeek-R1 (DeepSeek R1 Suy luận sâu)"},
+            {"id": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", "name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B (R1 Llama 70B)"}
+        ]
+
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 # 1. GOOGLE GEMINI
                 if provider == "gemini":
                     if key:
-                        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
-                        res = await client.get(endpoint)
-                        if res.status_code == 200:
-                            data = res.json()
-                            for m in data.get("models", []):
-                                methods = m.get("supportedGenerationMethods", [])
-                                if "generateContent" in methods:
-                                    m_id = m.get("name", "").replace("models/", "")
-                                    disp = m.get("displayName") or m_id
-                                    models.append({"id": m_id, "name": f"{m_id} ({disp})"})
+                        try:
+                            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
+                            res = await client.get(endpoint)
+                            if res.status_code == 200:
+                                data = res.json()
+                                for m in data.get("models", []):
+                                    methods = m.get("supportedGenerationMethods", [])
+                                    if "generateContent" in methods:
+                                        m_id = m.get("name", "").replace("models/", "")
+                                        disp = m.get("displayName") or m_id
+                                        models.append({"id": m_id, "name": f"{m_id} ({disp})"})
+                        except Exception as e:
+                            logger.warning("Gemini live scan failed (%s), using defaults", e)
 
-                    top_gemini = [
-                        {"id": "gemini-flash-lite-latest", "name": "gemini-flash-lite-latest (Khuyên dùng - Miễn phí tốc độ cao)"},
-                        {"id": "gemini-3.5-flash", "name": "gemini-3.5-flash (Bản 3.5 Flash ổn định)"},
-                        {"id": "gemini-3.5-flash-lite", "name": "gemini-3.5-flash-lite (Bản 3.5 Lite nhẹ)"},
-                        {"id": "gemini-flash-latest", "name": "gemini-flash-latest (Google trỏ 3.8 - Giới hạn 20 req/ngày)"},
-                        {"id": "gemini-3.8-flash", "name": "gemini-3.8-flash (Bản 3.8 - Giới hạn 20 req/ngày)"},
-                        {"id": "gemini-pro-latest", "name": "gemini-pro-latest (Bản Pro mới nhất)"}
-                    ]
                     if not models:
                         return top_gemini
                     existing_ids = {m["id"] for m in models}
@@ -890,38 +1045,31 @@ class AIAgentRouter:
                 # 2. GROQ CLOUD
                 elif provider == "groq":
                     if key:
-                        endpoint = "https://api.groq.com/openai/v1/models"
-                        headers = {"Authorization": f"Bearer {key}"}
-                        res = await client.get(endpoint, headers=headers)
-                        if res.status_code == 200:
-                            data = res.json()
-                            for m in data.get("data", []):
-                                m_id = m.get("id", "")
-                                if "whisper" in m_id.lower() or "guard" in m_id.lower():
-                                    continue
-                                desc = ""
-                                if "llama-3.3-70b" in m_id:
-                                    desc = " (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"
-                                elif "llama-3.1-8b" in m_id:
-                                    desc = " (8B Siêu nhẹ ~800 tokens/s)"
-                                elif "mixtral" in m_id:
-                                    desc = " (MoE 32k Context)"
-                                elif "deepseek" in m_id:
-                                    desc = " (DeepSeek R1 Distill)"
-                                elif "qwen" in m_id:
-                                    desc = " (Qwen 2.5)"
-                                models.append({"id": m_id, "name": f"{m_id}{desc}"})
+                        try:
+                            endpoint = "https://api.groq.com/openai/v1/models"
+                            headers = {"Authorization": f"Bearer {key}"}
+                            res = await client.get(endpoint, headers=headers)
+                            if res.status_code == 200:
+                                data = res.json()
+                                for m in data.get("data", []):
+                                    m_id = m.get("id", "")
+                                    if "whisper" in m_id.lower() or "guard" in m_id.lower():
+                                        continue
+                                    desc = ""
+                                    if "llama-3.3-70b" in m_id:
+                                        desc = " (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"
+                                    elif "llama-3.1-8b" in m_id:
+                                        desc = " (8B Siêu nhẹ ~800 tokens/s)"
+                                    elif "mixtral" in m_id:
+                                        desc = " (MoE 32k Context)"
+                                    elif "deepseek" in m_id:
+                                        desc = " (DeepSeek R1 Distill)"
+                                    elif "qwen" in m_id:
+                                        desc = " (Qwen 2.5)"
+                                    models.append({"id": m_id, "name": f"{m_id}{desc}"})
+                        except Exception as e:
+                            logger.warning("Groq live scan failed (%s), using defaults", e)
 
-                    default_groq = [
-                        {"id": "llama-3.3-70b-versatile", "name": "llama-3.3-70b-versatile (Khuyên dùng - 70B Đỉnh cao Siêu tốc)"},
-                        {"id": "llama-3.1-8b-instant", "name": "llama-3.1-8b-instant (8B Siêu nhẹ ~800 tokens/s)"},
-                        {"id": "llama-3.2-3b-preview", "name": "llama-3.2-3b-preview (3B Nhẹ gọn)"},
-                        {"id": "llama-3.2-11b-vision-preview", "name": "llama-3.2-11b-vision-preview (11B Đa phương tiện)"},
-                        {"id": "deepseek-r1-distill-llama-70b", "name": "deepseek-r1-distill-llama-70b (Suy luận R1)"},
-                        {"id": "qwen-2.5-32b", "name": "qwen-2.5-32b (Qwen 32B Cân bằng)"},
-                        {"id": "mixtral-8x7b-32768", "name": "mixtral-8x7b-32768 (MoE 32k Context)"},
-                        {"id": "gemma2-9b-it", "name": "gemma2-9b-it (Google Gemma 2)"}
-                    ]
                     if not models:
                         return default_groq
                     existing = {m["id"] for m in models}
@@ -934,65 +1082,111 @@ class AIAgentRouter:
                 # 3. DEEPSEEK
                 elif provider == "deepseek":
                     if key:
-                        endpoint = "https://api.deepseek.com/models"
-                        headers = {"Authorization": f"Bearer {key}"}
-                        res = await client.get(endpoint, headers=headers)
-                        if res.status_code == 200:
-                            data = res.json()
-                            for m in data.get("data", []):
-                                m_id = m.get("id", "")
-                                models.append({"id": m_id, "name": m_id})
+                        try:
+                            endpoint = "https://api.deepseek.com/models"
+                            headers = {"Authorization": f"Bearer {key}"}
+                            res = await client.get(endpoint, headers=headers)
+                            if res.status_code == 200:
+                                data = res.json()
+                                for m in data.get("data", []):
+                                    m_id = m.get("id", "")
+                                    models.append({"id": m_id, "name": m_id})
+                        except Exception as e:
+                            logger.warning("DeepSeek live scan failed (%s), using defaults", e)
                     if not models:
-                        return [
-                            {"id": "deepseek-flash", "name": "deepseek-flash (Khuyên dùng - V4 Flash)"},
-                            {"id": "deepseek-chat", "name": "deepseek-chat (V3 Cân bằng)"},
-                            {"id": "deepseek-reasoner", "name": "deepseek-reasoner (R1 Suy luận sâu)"}
-                        ]
+                        return default_deepseek
                     return models
 
-                # 4. OPENROUTER
-                elif provider == "openrouter":
-                    endpoint = "https://openrouter.ai/api/v1/models"
-                    headers = {"Authorization": f"Bearer {key}"} if key else {}
-                    res = await client.get(endpoint, headers=headers)
-                    if res.status_code == 200:
-                        data = res.json()
-                        raw_list = data.get("data", [])
-                        free_models = []
-                        top_models = []
-                        for m in raw_list:
-                            m_id = m.get("id", "")
-                            m_name = m.get("name", m_id)
-                            if ":free" in m_id:
-                                free_models.append({"id": m_id, "name": f"{m_id} [Miễn phí]"})
-                            elif any(k in m_id for k in ["gemini-2.0-flash", "llama-3.3-70b", "deepseek/deepseek-chat", "claude-3.5-haiku"]):
-                                top_models.append({"id": m_id, "name": f"{m_id} ({m_name})"})
-                        return free_models + top_models
-                    return [
-                        {"id": "google/gemini-2.0-flash-exp:free", "name": "google/gemini-2.0-flash-exp:free [Miễn phí]"},
-                        {"id": "deepseek/deepseek-chat", "name": "deepseek/deepseek-chat (DeepSeek V3)"},
-                        {"id": "meta-llama/llama-3.3-70b-instruct", "name": "meta-llama/llama-3.3-70b-instruct"}
-                    ]
+                # 4. SILICONCLOUD (SILICONFLOW - XIAOZHI BACKEND)
+                elif provider == "siliconflow":
+                    if key:
+                        try:
+                            endpoint = "https://api.siliconflow.cn/v1/models"
+                            headers = {"Authorization": f"Bearer {key}"}
+                            res = await client.get(endpoint, headers=headers)
+                            if res.status_code == 200:
+                                data = res.json()
+                                for m in data.get("data", []):
+                                    m_id = m.get("id", "")
+                                    if any(ign in m_id.lower() for ign in ["embedding", "rerank", "bge", "tts", "stt", "whisper", "flux", "stable-diffusion"]):
+                                        continue
+                                    desc = ""
+                                    if any(f in m_id for f in ["Qwen2.5-7B", "Distill-Qwen-7B", "glm-4-9b", "internlm2_5-7b"]):
+                                        desc = " [Miễn phí 100%]"
+                                    elif "Qwen2.5-72B" in m_id:
+                                        desc = " (Qwen 72B Đỉnh cao)"
+                                    elif "DeepSeek-V3" in m_id:
+                                        desc = " (DeepSeek V3)"
+                                    elif "DeepSeek-R1" in m_id:
+                                        desc = " (DeepSeek R1)"
+                                    models.append({"id": m_id, "name": f"{m_id}{desc}"})
+                        except Exception as e:
+                            logger.warning("SiliconFlow live scan failed (%s), using defaults", e)
+                    if not models:
+                        return default_siliconflow
+                    existing = {m["id"] for m in models}
+                    ordered = [m for m in default_siliconflow if m["id"] in existing]
+                    for m in models:
+                        if m["id"] not in {x["id"] for x in ordered}:
+                            ordered.append(m)
+                    return ordered
 
-                # 5. CUSTOM / OLLAMA / LOCAL
-                else:
-                    if url:
-                        base = url.rstrip('/')
-                        if not base.endswith('/v1'):
-                            base += '/v1'
-                        endpoint = f"{base}/models"
+                # 5. OPENROUTER
+                elif provider == "openrouter":
+                    try:
+                        endpoint = "https://openrouter.ai/api/v1/models"
                         headers = {"Authorization": f"Bearer {key}"} if key else {}
                         res = await client.get(endpoint, headers=headers)
                         if res.status_code == 200:
                             data = res.json()
-                            for m in data.get("data", []):
+                            raw_list = data.get("data", [])
+                            free_models = []
+                            top_models = []
+                            for m in raw_list:
                                 m_id = m.get("id", "")
-                                models.append({"id": m_id, "name": m_id})
+                                m_name = m.get("name", m_id)
+                                if ":free" in m_id:
+                                    free_models.append({"id": m_id, "name": f"{m_id} [Miễn phí]"})
+                                elif any(k in m_id for k in ["gemini-2.0-flash", "llama-3.3-70b", "deepseek/deepseek-chat", "claude-3.5-haiku"]):
+                                    top_models.append({"id": m_id, "name": f"{m_id} ({m_name})"})
+                            if free_models or top_models:
+                                return free_models + top_models
+                    except Exception as e:
+                        logger.warning("OpenRouter live scan failed (%s), using defaults", e)
+                    return default_openrouter
+
+                # 5. CUSTOM / OLLAMA / LOCAL
+                else:
+                    if url:
+                        try:
+                            base = url.rstrip('/')
+                            if not base.endswith('/v1'):
+                                base += '/v1'
+                            endpoint = f"{base}/models"
+                            headers = {"Authorization": f"Bearer {key}"} if key else {}
+                            res = await client.get(endpoint, headers=headers)
+                            if res.status_code == 200:
+                                data = res.json()
+                                for m in data.get("data", []):
+                                    m_id = m.get("id", "")
+                                    models.append({"id": m_id, "name": m_id})
+                        except Exception as e:
+                            logger.warning("Custom/Ollama scan failed (%s)", e)
                     return models or [{"id": "qwen2.5:3b", "name": "qwen2.5:3b (Ollama Default)"}]
 
         except Exception as e:
-            logger.error("Error fetching models for %s: %s", provider, e)
-            return []
+            logger.error("Error in list_available_models for %s: %s", provider, e)
+            if provider == "gemini":
+                return top_gemini
+            elif provider == "groq":
+                return default_groq
+            elif provider == "deepseek":
+                return default_deepseek
+            elif provider == "openrouter":
+                return default_openrouter
+            elif provider == "siliconflow":
+                return default_siliconflow
+            return [{"id": "qwen2.5:3b", "name": "qwen2.5:3b (Ollama Default)"}]
 
 
 
@@ -1332,7 +1526,7 @@ class AIAgentRouter:
 
         return None
 
-    async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None) -> str:
+    async def process_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None, speaker_name: Optional[str] = None) -> str:
         """Xử lý giọng nói người dùng, kết hợp Fast-Rule, Multi-AI Function Calling và Cơ chế Tự Động Dự Phòng (Failover/Fallback)."""
         if not user_text:
             return "Tôi không nghe thấy gì cả."
@@ -1400,8 +1594,11 @@ class AIAgentRouter:
         last_info = self.session_mgr.get_last_interacted(context_room or "global")
         if last_info:
             last_ctx = f"\n[THIẾT BỊ VỪA ĐIỀU KHIỂN GẦN ĐÂY]: {last_info['name']} ({last_info['entity_id']}) tại {last_info.get('room') or 'phòng'}\n"
+        speaker_ctx = f"\n[NGƯỜI ĐANG NÓI]: {speaker_name} (Đã xác thực danh tính qua vân giọng. Hãy xưng hô đúng mực, thân mật và phù hợp với người này, ưu tiên thói quen của người này)\n" if speaker_name else ""
+        persona_val = self.config.get("voice_persona", "").strip()
+        persona_ctx = f"\n[VAI TRÒ & PHONG CÁCH PHẢN HỒI]:\n{persona_val}\n" if persona_val else ""
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx + learned_ctx + last_ctx,
+            device_context=device_ctx + learned_ctx + last_ctx + speaker_ctx + persona_ctx,
             current_room=context_room or "Không xác định"
         )
 
@@ -1526,7 +1723,15 @@ class AIAgentRouter:
                                 "HTTP-Referer": "https://nalasmarthome.local",
                                 "X-Title": "NALA Smart Home Hub"
                             }
-                            use_model = model or "google/gemini-2.0-flash-exp:free"
+                            use_model = model or "qwen/qwen-2.5-72b-instruct:free"
+                        elif prov == "siliconflow":
+                            base = base_url or "https://api.siliconflow.cn/v1"
+                            endpoint = f"{base.rstrip('/')}/chat/completions"
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json"
+                            }
+                            use_model = model or "Qwen/Qwen2.5-7B-Instruct"
                         else:
                             endpoint = f"{base_url.rstrip('/')}/chat/completions"
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -1593,7 +1798,7 @@ class AIAgentRouter:
 
         return f"Xin lỗi, các máy chủ AI đều đang bận ({last_error_desc}). Vui lòng thử lại sau ít giây."
 
-    async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None) -> AsyncGenerator[str, None]:
+    async def stream_intent(self, user_text: str, context_room: str = "", model_preference: Optional[str] = None, device_id: Optional[str] = None, speaker_name: Optional[str] = None) -> AsyncGenerator[str, None]:
         """Stream kết quả đối thoại thời gian thực từng token với cơ chế Tự Động Dự Phòng (Failover / Fallback)."""
         if not user_text or not user_text.strip():
             yield "Tôi không nghe thấy gì cả."
@@ -1681,8 +1886,11 @@ class AIAgentRouter:
         last_info = self.session_mgr.get_last_interacted(context_room or "global")
         if last_info:
             last_ctx = f"\n[THIẾT BỊ VỪA ĐIỀU KHIỂN GẦN ĐÂY]: {last_info['name']} ({last_info['entity_id']}) tại {last_info.get('room') or 'phòng'}\n"
+        speaker_ctx = f"\n[NGƯỜI ĐANG NÓI]: {speaker_name} (Đã xác thực danh tính qua vân giọng. Hãy xưng hô đúng mực, thân mật và phù hợp với người này, ưu tiên thói quen của người này)\n" if speaker_name else ""
+        persona_val = self.config.get("voice_persona", "").strip()
+        persona_ctx = f"\n[VAI TRÒ & PHONG CÁCH PHẢN HỒI]:\n{persona_val}\n" if persona_val else ""
         system_instruction = SYSTEM_PROMPT_TEMPLATE.format(
-            device_context=device_ctx + learned_ctx + last_ctx,
+            device_context=device_ctx + learned_ctx + last_ctx + speaker_ctx + persona_ctx,
             current_room=context_room or "Không xác định"
         )
 
@@ -1827,7 +2035,15 @@ class AIAgentRouter:
                                 "HTTP-Referer": "https://nalasmarthome.local",
                                 "X-Title": "NALA Smart Home Hub"
                             }
-                            use_model = model or "google/gemini-2.0-flash-exp:free"
+                            use_model = model or "qwen/qwen-2.5-72b-instruct:free"
+                        elif prov == "siliconflow":
+                            base = base_url or "https://api.siliconflow.cn/v1"
+                            endpoint = f"{base.rstrip('/')}/chat/completions"
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json"
+                            }
+                            use_model = model or "Qwen/Qwen2.5-7B-Instruct"
                         else:
                             endpoint = f"{base_url.rstrip('/')}/chat/completions"
                             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}

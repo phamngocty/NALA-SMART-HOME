@@ -52,9 +52,21 @@ class AudioPipeline:
         self.stt_url = stt_url or os.getenv("STT_SERVICE_URL", "http://127.0.0.1:8095/v1/audio/transcriptions")
         self.tts_url = tts_url or os.getenv("TTS_SERVICE_URL", "http://localhost:5000/api/tts")
         self.default_voice = os.getenv("TTS_VOICE", "vi-VN-HoaiMyNeural")
+        self.default_rate = "+0%"
+        self.default_pitch = "+0Hz"
         
         # In-memory audio cache for common prompt confirmations (<1ms latency)
         self._pcm_cache: Dict[str, bytes] = {}
+
+    def set_voice_settings(self, voice: Optional[str] = None, rate: Optional[str] = None, pitch: Optional[str] = None):
+        """Cập nhật cấu hình giọng nói XiaoZhi (Voice, Rate, Pitch) theo thời gian thực."""
+        if voice:
+            self.default_voice = voice
+        if rate:
+            self.default_rate = rate
+        if pitch:
+            self.default_pitch = pitch
+        logger.info("[AudioPipeline] Updated voice settings: voice=%s, rate=%s, pitch=%s", self.default_voice, self.default_rate, self.default_pitch)
 
     async def prewarm_common_cache(self):
         """Khởi tạo trước các mẫu âm thanh phản xạ tức thì (<1ms) vào RAM."""
@@ -257,8 +269,8 @@ class AudioPipeline:
             logger.warning("Google TTS error for '%s': %s", clean_text[:30], e)
         return b""
 
-    async def text_to_pcm(self, text: str, voice: Optional[str] = None) -> bytes:
-        """Tạo audio giọng nói tiếng Việt kết hợp Google TTS Ultra-Fast (0.3s) & Edge-TTS Neural."""
+    async def text_to_pcm(self, text: str, voice: Optional[str] = None, rate: Optional[str] = None, pitch: Optional[str] = None) -> bytes:
+        """Tạo audio giọng nói tiếng Việt kết hợp Google TTS Ultra-Fast (0.3s) & Edge-TTS Neural chuẩn XiaoZhi."""
         if not text or not text.strip():
             return b""
 
@@ -274,8 +286,10 @@ class AudioPipeline:
                 clean_text = clean_text[:350]
 
         selected_voice = voice or self.default_voice
+        selected_rate = rate or self.default_rate or "+0%"
+        selected_pitch = pitch or self.default_pitch or "+0Hz"
 
-        cache_key = f"{selected_voice}:{clean_text}"
+        cache_key = f"{selected_voice}:{selected_rate}:{selected_pitch}:{clean_text}"
         if cache_key in self._pcm_cache:
             return self._pcm_cache[cache_key]
 
@@ -306,7 +320,7 @@ class AudioPipeline:
         # 1. Thử qua Edge-TTS Neural với timeout ngắn (1.8s)
         try:
             async def _synthesize_edge():
-                comm = edge_tts.Communicate(clean_text, selected_voice)
+                comm = edge_tts.Communicate(clean_text, selected_voice, rate=selected_rate, pitch=selected_pitch)
                 mp3_buf = bytearray()
                 async for chunk in comm.stream():
                     if chunk["type"] == "audio":

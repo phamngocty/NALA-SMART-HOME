@@ -1,0 +1,62 @@
+id="haConfigModal">
+        <div class="modal-box" style="max-width: 620px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⚙️ Cấu Hình Kết Nối Home Assistant (Pi 5)</span>
+                </div>
+                <button class="btn-close" onclick="closeHAConfigModal()">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 700; color: #60a5fa; font-size: 13px;">TRẠNG THÁI HIỆN TẠI:</span>
+                        <span id="haModalStatusBadge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700;">Đang kiểm tra...</span>
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;" id="haModalStatsSummary">
+                        Số tầng: <strong id="haModalFloorsCount" style="color: #fff;">-</strong> &nbsp;|&nbsp; 
+                        Số phòng: <strong id="haModalAreasCount" style="color: #fff;">-</strong> &nbsp;|&nbsp; 
+                        Số thực thể điều khiển: <strong id="haModalEntitiesCount" style="color: #fff;">-</strong>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="color: #e2e8f0; font-weight: 600; margin-bottom: 6px; display: block;">Home Assistant WebSocket / API URL:</label>
+                    <input type="text" id="haWsUrlInput" placeholder="ws://192.168.1.27:8123/api/websocket" style="font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+                    <span class="hint" style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">Ví dụ: ws://192.168.1.27:8123/api/websocket hoặc wss://...</span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label style="color: #e2e8f0; font-weight: 600; margin-bottom: 0;">Long-Lived Access Token:</label>
+                        <a href="http://192.168.1.27:8123/profile" target="_blank" style="color: #38bdf8; font-size: 11px; text-decoration: underline;">Lấy token tại HA Profile ↗</a>
+                    </div>
+                    <div style="position: relative;">
+                        <input type="password" id="haTokenInput" placeholder="Nhập token dài hạn từ Home Assistant..." style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding-right: 40px;">
+                        <button type="button" onclick="toggleTokenVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;">👁️</button>
+                    </div>
+                    <span class="hint" style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">Token bảo mật trên Pi 5 dùng để truy vấn Area, Floor và điều khiển thiết bị tức thời.</span>
+                </div>
+
+                <!-- Live Test Result Banner -->
+                <div id="haTestResultBanner" style="display: none; padding: 12px; border-radius: 8px; font-size: 12px; margin-top: 16px;"></div>
+            </div>
+
+            <div class="modal-footer" style="padding: 16px 24px; background: #182234; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn-cancel" onclick="testHAConnectionFromModal()" style="border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; background: rgba(56, 189, 248, 0.1);">
+                    🔍 Kiểm Tra Kết Nối (Test Live)
+                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-cancel" onclick="closeHAConfigModal()">Đóng</button>
+                    <button type="button" class="btn-save-all" onclick="saveHAConfigFromModal()">
+                        💾 Lưu & Kết Nối Lại
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- QUẢN LÝ CẬP NHẬT FIRMWARE OTA (OTA MANAGER MODAL)                       -->
+    <!-- ======================================================================= -->
+    <div class="modal-overlay" 

@@ -1,0 +1,67 @@
+id="otaManagerModal">
+        <div class="modal-box" style="max-width: 680px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>🚀 Quản Lý Cập Nhật Firmware OTA Màn Hình</span>
+                </div>
+                <button class="btn-close" onclick="closeOTAManagerModal()">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+                <!-- 1. Tải Lên Firmware Mới -->
+                <div style="background: rgba(168, 85, 247, 0.08); border: 1px dashed rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #c084fc; font-size: 14px; margin-bottom: 6px;">
+                        📤 Tải Lên Bản Firmware (.bin) Mới
+                    </div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
+                        Chọn file <code>firmware.bin</code> xuất từ PlatformIO (thư mục <code>.pio/build/esp32s3_panel/firmware.bin</code>).
+                    </div>
+
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                        <input type="file" id="otaFileInput" accept=".bin" style="flex: 1; font-size: 12px; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: #fff;">
+                        <input type="text" id="otaVersionInput" placeholder="Phiên bản (vd: v2.5.1)" style="width: 150px; font-size: 12px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid var(--border-color); color: #fff;">
+                    </div>
+
+                    <button type="button" class="btn-save-all" onclick="uploadFirmwareFile()" style="background: linear-gradient(135deg, #9333ea, #a855f7); width: 100%; border-radius: 8px; font-size: 13px; font-weight: 700;">
+                        ⬆️ TẢI LÊN NAS HUB & SẴN SÀNG OTA
+                    </button>
+                    <div id="otaUploadProgressText" style="display: none; font-size: 12px; color: #38bdf8; margin-top: 8px; text-align: center;"></div>
+                </div>
+
+                <!-- 2. Thông Tin Bản Firmware Hiện Tại Trên NAS Hub -->
+                <div id="otaCurrentFirmwareBox" style="background: #182234; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; color: #38bdf8; font-size: 13px;">BẢN FIRMWARE TRÊN NAS HUB:</span>
+                        <span id="otaMetaStatusBadge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700;">Đang kiểm tra...</span>
+                    </div>
+                    <div id="otaMetaDetails" style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                        Chưa có bản firmware nào được tải lên.
+                    </div>
+                </div>
+
+                <!-- 3. Nút Nâng Cấp Hàng Loạt -->
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="font-weight: 700; color: #f87171; font-size: 13px; margin-bottom: 6px;">⚡ NÂNG CẤP HÀNG LOẠT (BROADCAST OTA):</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">Lệnh này sẽ phát qua WebSocket tới <strong>TOÀN BỘ</strong> màn hình đang Online. Màn hình sẽ tự động tải stream qua mạng nội bộ, nạp vào Flash và khởi động lại sau 15-30 giây.</div>
+                    <button type="button" onclick="startBroadcastOTA()" style="background: #dc2626; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; width: 100%;">
+                        🚀 NÂNG CẤP TẤT CẢ MÀN HÌNH ĐANG ONLINE
+                    </button>
+                </div>
+
+                <!-- 4. Danh Sách Tiến Độ OTA Của Các Màn Hình -->
+                <div style="font-weight: 700; font-size: 13px; color: #e2e8f0; margin-bottom: 8px;">📊 TIẾN ĐỘ OTA TRỰC TIẾP TỪNG MÀN HÌNH:</div>
+                <div id="otaTrackerList" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+                    <div style="font-size: 12px; color: #64748b; font-style: italic;">Chưa có tác vụ OTA nào đang chạy.</div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding: 16px 24px; background: #182234; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-cancel" onclick="closeOTAManagerModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- TRUNG TÂM ĐÀM THOẠI INTERCOM (WEB PTT & REALTIME MONITOR)             -->
+    <!-- ======================================================================= -->
+    <div class="modal-overlay" 

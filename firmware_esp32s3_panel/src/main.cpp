@@ -28,6 +28,7 @@
 #include "wifi_captive_portal.h"
 #include "ui_lvgl_dashboard.h"
 #include "FontMaker.h"
+#include "radar_ld2410_engine.h"
 
 // -----------------------------------------------------------------------------
 // 1. LGFX HARDWARE DISPLAY DRIVER (ILI9341V SPI 40MHz)
@@ -99,6 +100,7 @@ ES8311AudioEngine audioEngine;
 WSClientManager wsManager;
 WiFiCaptivePortal captivePortal;
 UILVGLDashboard uiDashboard;
+RadarLD2410Engine radarEngine;
 SemaphoreHandle_t lvgl_mutex = NULL;
 SemaphoreHandle_t i2c_mutex = NULL;
 
@@ -107,7 +109,7 @@ SemaphoreHandle_t i2c_mutex = NULL;
 #include <ESP32Time.h>
 ESP32Time rtc(7 * 3600); // Múi giờ Việt Nam GMT+7 (offset 25200s)
 volatile bool is_ota_running = false;
-#define CURRENT_FIRMWARE_VERSION "v3.6.1"
+#define CURRENT_FIRMWARE_VERSION "v3.6.9"
 
 // Trạng thái hệ thống
 enum PanelState {
@@ -863,6 +865,9 @@ void notify_settings_changed() {
     doc["payload"]["settings"]["mic_gain"] = nvsStore.get_mic_gain();
     doc["payload"]["settings"]["ring_on_call"] = nvsStore.get().ring_on_call;
     doc["payload"]["settings"]["ai_model"] = nvsStore.get().ai_model;
+    doc["payload"]["settings"]["radar_enabled"] = nvsStore.get().radar_enabled;
+    doc["payload"]["settings"]["radar_wake_dist"] = nvsStore.get().radar_wake_dist;
+    doc["payload"]["settings"]["radar_wave_hangup"] = nvsStore.get().radar_wave_hangup;
     String out;
     serializeJson(doc, out);
     wsManager.send_text(out);
@@ -883,6 +888,9 @@ void send_device_registration() {
     doc["payload"]["settings"]["mic_gain"] = nvsStore.get_mic_gain();
     doc["payload"]["settings"]["ring_on_call"] = nvsStore.get().ring_on_call;
     doc["payload"]["settings"]["ai_model"] = nvsStore.get().ai_model;
+    doc["payload"]["settings"]["radar_enabled"] = nvsStore.get().radar_enabled;
+    doc["payload"]["settings"]["radar_wake_dist"] = nvsStore.get().radar_wake_dist;
+    doc["payload"]["settings"]["radar_wave_hangup"] = nvsStore.get().radar_wave_hangup;
     String out;
     serializeJson(doc, out);
     wsManager.send_text(out);
@@ -1202,6 +1210,27 @@ void on_ws_text(const String& type, const JsonDocument& doc) {
                 uint16_t sto = st["standby_timeout"] | 30;
                 if (sto != nvsStore.get().standby_timeout) {
                     nvsStore.get().standby_timeout = sto;
+                    changed = true;
+                }
+            }
+            if (st.containsKey("radar_enabled")) {
+                bool re = st["radar_enabled"];
+                if (re != nvsStore.get().radar_enabled) {
+                    nvsStore.get().radar_enabled = re;
+                    changed = true;
+                }
+            }
+            if (st.containsKey("radar_wake_dist")) {
+                uint16_t rwd = st["radar_wake_dist"] | 150;
+                if (rwd != nvsStore.get().radar_wake_dist) {
+                    nvsStore.get().radar_wake_dist = rwd;
+                    changed = true;
+                }
+            }
+            if (st.containsKey("radar_wave_hangup")) {
+                bool rwh = st["radar_wave_hangup"];
+                if (rwh != nvsStore.get().radar_wave_hangup) {
+                    nvsStore.get().radar_wave_hangup = rwh;
                     changed = true;
                 }
             }
@@ -1798,10 +1827,53 @@ void Task_LVGL_UI(void *p) {
                     }
                 }
 
-                // Cập nhật đồng hồ mỗi giây khi màn hình chờ đang hiển thị
+                // Cập nhật đồng hồ & radar telemetry mỗi giây cho Header và Screensaver
                 static unsigned long last_stb_sec = 0;
                 if (millis() - last_stb_sec >= 1000) {
                     last_stb_sec = millis();
+
+                    // 1. Chuỗi Giờ & Ngày cho Header: e.g. "22:30 • 17/11" (Góc dưới bên trái: Bottom-Left)
+                    String header_time_date = rtc.getTime("%H:%M • %d/%m");
+
+                    // 2. Chuỗi Radar Telemetry: Cự ly & Trạng thái/Nhịp thở (Góc dưới bên phải: Bottom-Right)
+                    const RadarStatus_t& r_stat = radarEngine.get_status();
+                    char r_buf[32];
+                    char light_buf[24];
+                    char stb_r_buf[64];
+                    uint32_t r_color = 0x64748B; // Slate gray khi phòng vắng
+
+                    // Chuỗi độ sáng môi trường hiển thị ở góc trên bên phải (Top-Right)
+                    snprintf(light_buf, sizeof(light_buf), "Sáng: %d lx", r_stat.light_level);
+
+                    if (r_stat.has_presence) {
+                        uint16_t dist = radarEngine.get_distance_cm();
+                        if (r_stat.is_approaching) {
+                            snprintf(r_buf, sizeof(r_buf), "%dcm • Đến gần", dist);
+                            snprintf(stb_r_buf, sizeof(stb_r_buf), "Radar: %dcm • Tiến lại gần • Sáng: %d lx", dist, r_stat.light_level);
+                            r_color = 0x06B6D4; // Cyan
+                        } else if (r_stat.target_state == RADAR_TARGET_STATIONARY || (r_stat.static_energy > 0 && r_stat.moving_energy == 0)) {
+                            snprintf(r_buf, sizeof(r_buf), "%dcm • Thở %d%%", dist, r_stat.static_energy);
+                            snprintf(stb_r_buf, sizeof(stb_r_buf), "Radar: %dcm • Thở: %d%% • Sáng: %d lx", dist, r_stat.static_energy, r_stat.light_level);
+                            r_color = 0x10B981; // Emerald Green (Tĩnh/Ngủ/Thở)
+                        } else if (r_stat.target_state == RADAR_TARGET_MOVING) {
+                            snprintf(r_buf, sizeof(r_buf), "%dcm • Động %d%%", dist, r_stat.moving_energy);
+                            snprintf(stb_r_buf, sizeof(stb_r_buf), "Radar: %dcm • Động: %d%% • Sáng: %d lx", dist, r_stat.moving_energy, r_stat.light_level);
+                            r_color = 0xF59E0B; // Amber (Hoạt động)
+                        } else { // Combined
+                            snprintf(r_buf, sizeof(r_buf), "%dcm • Thở %d%%", dist, r_stat.static_energy);
+                            snprintf(stb_r_buf, sizeof(stb_r_buf), "Radar: %dcm • Thở: %d%% • Sáng: %d lx", dist, r_stat.static_energy, r_stat.light_level);
+                            r_color = 0x10B981; // Green
+                        }
+                    } else {
+                        snprintf(r_buf, sizeof(r_buf), "Phòng vắng");
+                        snprintf(stb_r_buf, sizeof(stb_r_buf), "Radar: Phòng vắng • Sáng: %d lx", r_stat.light_level);
+                        r_color = 0x64748B;
+                    }
+
+                    // Cập nhật Header thanh trên cùng (4 góc độc lập - không bao giờ chồng lấn)
+                    uiDashboard.update_header_telemetry(header_time_date.c_str(), r_buf, r_color, light_buf);
+
+                    // Cập nhật Standby Screensaver nếu đang kích hoạt
                     if (uiDashboard.is_screensaver_active()) {
                         String time_str = rtc.getTime("%H:%M");
                         String sec_str = rtc.getTime(":%S");
@@ -1809,7 +1881,7 @@ void Task_LVGL_UI(void *p) {
                         const char* wday_names[7] = {"CHỦ NHẬT", "THỨ HAI", "THỨ BA", "THỨ TƯ", "THỨ NĂM", "THỨ SÁU", "THỨ BẢY"};
                         const char* wday_name = (wday >= 0 && wday < 7) ? wday_names[wday] : "HÔM NAY";
                         String date_str = rtc.getTime("%d/%m/%Y");
-                        uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), wday_name, date_str.c_str());
+                        uiDashboard.update_standby_clock(time_str.c_str(), sec_str.c_str(), wday_name, date_str.c_str(), stb_r_buf, r_color);
                     }
                 }
 
@@ -2029,6 +2101,9 @@ void setup() {
             wsManager.set_callbacks(on_ws_text, on_ws_binary, on_ws_connected, on_ws_disconnected);
             wsManager.begin(nvsStore.get().nas_ws_url);
 
+            // Khởi tạo Radar mmWave HLK-LD2410C (UART1: RX GPIO 21, TX GPIO 14)
+            radarEngine.begin();
+
             // Khởi chạy 2 FreeRTOS Tasks trên 2 Core
             xTaskCreatePinnedToCore(Task_Net_Audio, "NetAudio", 16384, NULL, 5, NULL, 0);
             xTaskCreatePinnedToCore(Task_LVGL_UI, "LVGL_UI", 12288, NULL, 3, NULL, 1);
@@ -2117,6 +2192,15 @@ void loop() {
                 uint8_t b = Wire.read();
                 Serial.printf("    Byte %d = 0x%02X\n", i, b);
             }
+        } else if (ch == 'r') {
+            const RadarStatus_t& st = radarEngine.get_status();
+            Serial.printf("[RADAR STATUS] Presence: %s | State: %u | Dist: %u cm | MvEng: %u | StEng: %u | Approach: %s\n",
+                          st.has_presence ? "YES" : "NO",
+                          st.target_state,
+                          st.detect_distance_cm,
+                          st.moving_energy,
+                          st.static_energy,
+                          st.is_approaching ? "YES" : "NO");
         }
     }
 
@@ -2126,6 +2210,67 @@ void loop() {
         return;
     }
 
-    // Các tác vụ chính đã chạy trong FreeRTOS Tasks trên Core 0 và Core 1
-    delay(50);
+    // -------------------------------------------------------------------------
+    // RADAR HLK-LD2410C MMWAVE ENGINE (UART1: RX GPIO 21, TX GPIO 14)
+    // -------------------------------------------------------------------------
+    if (nvsStore.get().radar_enabled) {
+        radarEngine.loop();
+
+        // 1. Radar Touchless HMI: Đánh thức màn hình khi phát hiện người tiếp cận/đứng gần theo cấu hình
+        uint16_t wake_dist = nvsStore.get().radar_wake_dist;
+        if (wake_dist == 0) wake_dist = 150;
+        uint16_t target_dist = radarEngine.get_distance_cm();
+
+        // Đánh thức nếu: Có người và khoảng cách mục tiêu <= wake_dist (HOẶC đang tiếp cận trong phạm vi wake_dist + 30cm)
+        bool should_wake = radarEngine.has_presence() && (
+            (target_dist > 0 && target_dist <= wake_dist) ||
+            (radarEngine.is_approaching() && target_dist > 0 && target_dist <= (wake_dist + 30))
+        );
+
+        if (should_wake) {
+            if (lvgl_mutex != NULL && xSemaphoreTake(lvgl_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                if (uiDashboard.is_screensaver_active()) {
+                    Serial.printf("[RADAR-WAKE] Phat hien nguoi toi gan (cur=%u cm, wake_dist=%u cm) -> Danh thuc man hinh!\n",
+                                  target_dist, wake_dist);
+                    uiDashboard.hide_screensaver();
+                    tft.setBrightness(nvsStore.get().lcd_brightness);
+                }
+                lv_disp_trig_activity(NULL); // Reset bộ đếm thời gian không hoạt động của LVGL
+                xSemaphoreGive(lvgl_mutex);
+            }
+        }
+
+        // 2. Radar Hand-Wave Gesture: Vẫy tay trước mặt màn hình (< 30cm) để cúp máy Intercom
+        if (nvsStore.get().radar_wave_hangup && radarEngine.check_and_clear_wave_gesture()) {
+            if (is_intercom_call_active) {
+                Serial.println("[RADAR] Phat hien cu chi gat tay -> Tu dong cup may dam thoai Intercom!");
+                on_ui_action("intercom_hangup", "hangup", 0);
+            }
+        }
+
+        // 3. Truyền Telemetry Radar & Ánh sáng môi trường lên NAS Hub mỗi 2 giây
+        static unsigned long last_radar_telemetry_tx = 0;
+        if (millis() - last_radar_telemetry_tx >= 2000) {
+            last_radar_telemetry_tx = millis();
+            if (wsManager.is_connected()) {
+                const RadarStatus_t& r_stat = radarEngine.get_status();
+                JsonDocument r_doc;
+                r_doc["type"] = "radar_event";
+                r_doc["source"] = device_mac;
+                r_doc["payload"]["presence"] = r_stat.has_presence;
+                r_doc["payload"]["dist_cm"] = radarEngine.get_distance_cm();
+                r_doc["payload"]["state"] = (uint8_t)r_stat.target_state;
+                r_doc["payload"]["st_eng"] = r_stat.static_energy;
+                r_doc["payload"]["mv_eng"] = r_stat.moving_energy;
+                r_doc["payload"]["light"] = r_stat.light_level;
+                r_doc["payload"]["is_approaching"] = r_stat.is_approaching;
+                String r_out;
+                serializeJson(r_doc, r_out);
+                wsManager.send_text(r_out);
+            }
+        }
+    }
+
+    // Giảm độ trễ từ 50ms xuống 10ms để tránh tràn FIFO UART 256,000 baud
+    vTaskDelay(pdMS_TO_TICKS(10));
 }

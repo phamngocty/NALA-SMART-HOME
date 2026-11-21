@@ -1,6 +1,6 @@
 {
   "name": "NALA Smart Panel ESP32-S3 (TỰ LÀM ĐIỆN TỬ)",
-  "version": "v3.6.1",
+  "version": "v3.6.2",
   "home_assistant_domain": "esphome",
   "funding_url": "https://github.com",
   "builds": [

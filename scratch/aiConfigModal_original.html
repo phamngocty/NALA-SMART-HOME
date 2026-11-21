@@ -1,0 +1,617 @@
+id="aiConfigModal" onclick="if(event.target===this) closeAIConfigModal()" style="display: none; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="modal-box" style="max-width: 820px; width: 95%; max-height: 90vh; overflow-y: auto; background: #0b1120; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 18px 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: #0f172a;">
+            <div class="modal-title" style="display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #f8fafc;">
+                <span style="font-size: 24px;">🤖</span>
+                <span>Cấu Hình Voice AI Đa Nguồn & Pipeline STT / TTS</span>
+            </div>
+            <button class="btn-close" onclick="closeAIConfigModal()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer;">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 18px;">
+            <!-- STT Mode Selection Card (Speech to Text) -->
+            <div id="sttCardContainer" style="background: #182234; border: 2px solid #38bdf8; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: border-color 0.3s ease;">
+                <!-- Header with Dynamic Glowing LED Lamp -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <!-- Glowing LED Indicator -->
+                        <div style="position: relative; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <div id="sttLedHalo" style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #38bdf8; opacity: 0.4; animation: sttPulse 2s infinite;"></div>
+                            <div id="sttLedDot" style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8; transition: all 0.3s ease;"></div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 14px; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                <span>🎙️ Chế Độ Nhận Dạng Giọng Nói (STT - Speech to Text)</span>
+                            </div>
+                            <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-top: 2px; transition: color 0.3s ease;" id="sttStatusBadge">
+                                ĐANG BẬT: 🔄 Tự động (Ưu tiên Groq Whisper Turbo ~0.15s ➔ Fallback GPU NAS)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STT Select Dropdown as Quick Selector -->
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 12px; color: #94a3b8; font-weight: 600;">Chế độ STT:</label>
+                        <select id="cfgSTTProvider" style="background: #0f172a; border: 1px solid #3b82f6; color: white; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onchange="updateSTTModeFromSelect()">
+                            <option value="auto" selected>🔄 Tự động (Ưu tiên Groq Whisper Turbo 0.15s -&gt; GPU NAS)</option>
+                            <option value="groq">⚡ Groq Cloud Whisper Turbo (~0.15s, 0% GPU NAS)</option>
+                            <option value="local">🖥️ Faster-Whisper Local GPU (GTX :8095 Offline)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3 Interactive STT Mode Option Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+                    <!-- Card 1: Auto -->
+                    <div class="stt-option-card" id="sttCard_auto" onclick="selectSTTMode('auto')" style="background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; padding: 12px; cursor: pointer; box-shadow: 0 0 14px rgba(56, 189, 248, 0.25); transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                                <span>🔄 Tự Động</span>
+                            </div>
+                            <span style="background: #0284c7; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">Khuyên Dùng</span>
+                        </div>
+                        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4;">
+                            Ưu tiên Groq Whisper ~0.15s. Tự động chuyển GPU NAS khi mạng chậm hoặc hết hạn mức.
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Groq Cloud -->
+                    <div class="stt-option-card" id="sttCard_groq" onclick="selectSTTMode('groq')" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #f97316; display: flex; align-items: center; gap: 6px;">
+                                <span>⚡ Groq Whisper Turbo</span>
+                            </div>
+                            <span style="background: #ea580c; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">2,000 req/ngày</span>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                            Tốc độ cực nhanh ~0.15s, chính xác 100% tiếng Việt, 0% CPU/GPU NAS.
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Local GPU -->
+                    <div class="stt-option-card" id="sttCard_local" onclick="selectSTTMode('local')" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13px; color: #10b981; display: flex; align-items: center; gap: 6px;">
+                                <span>🖥️ Faster-Whisper Local</span>
+                            </div>
+                            <span style="background: #059669; color: white; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700;">100% Offline</span>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                            Chạy hoàn toàn nội bộ trên NAS (GTX 1660 Ti :8095), hoạt động ngay cả khi đứt mạng.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline TTS Info Line -->
+            <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🗣️</span>
+                    <div>
+                        <span style="font-size: 12px; font-weight: 700; color: #f8fafc;">TTS Giọng Đọc:</span>
+                        <span style="font-size: 12px; color: #38bdf8; font-weight: 600;"> Edge-TTS Neural Tiếng Việt (Hoài My / Nam Minh)</span>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; font-style: italic;">
+                    * Tốc độ phản xạ: Giải mã STT ~0.15s ➔ Loa phát ngay &lt; 0.3s
+                </div>
+            </div>
+
+            <!-- AI Provider Selector -->
+            <div>
+                <label style="font-size: 13px; font-weight: 700; color: #f1f5f9; display: block; margin-bottom: 8px;">
+                    🌟 Chọn AI Provider Mặc Định Điều Khiển Nhà:
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="gemini" checked onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #60a5fa;">Google Gemini</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Phản xạ cực nhanh, Tool calling</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="deepseek" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #38bdf8;">DeepSeek Chat</div>
+                            <div style="font-size: 11px; color: #94a3b8;">DeepSeek V3 thông minh</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="groq" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #f97316;">⚡ Groq Cloud LPU</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Siêu tốc ~800 tokens/s (Llama 3.3)</div>
+                        </div>
+                    </label>
+                    <label style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="aiProviderRadio" value="openrouter" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #c084fc;">OpenRouter (9 Router)</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Tự do chọn Claude, Llama, Qwen...</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Auto Failover / Fallback (Rollback) Banner & Toggle -->
+                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; margin-top: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="cfgAutoFallback" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;" onchange="updateAIProviderUI()">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #60a5fa; display: flex; align-items: center; gap: 6px;">
+                                <span>🛡️ Cơ Chế Tự Động Dự Phòng (Auto Failover / Rollback)</span>
+                                <span style="background: #1e3a8a; color: #93c5fd; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;">Zero-Downtime</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                                Khi AI chính gặp sự cố (Rate Limit 429, Google quá tải, rớt mạng), hệ thống tự động gọi lần lượt các AI dự phòng hoặc chuyển về <b>Luật nội bộ Home Assistant</b> để lệnh không bao giờ bị đứt đoạn.
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fallbackChainBadge" style="font-size: 11px; color: #38bdf8; background: #0f172a; border: 1px dashed #38bdf8; padding: 5px 10px; border-radius: 6px; font-family: monospace;">
+                        Chuỗi: Gemini ➔ Groq ➔ DeepSeek ➔ HA Offline
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Settings Cards -->
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Gemini Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #60a5fa; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🔷</span> Google Gemini API
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('gemini')" style="background: #1e293b; color: #60a5fa; border: 1px solid #3b82f6; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('gemini')" style="background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (bắt đầu bằng AIza... hoặc AQ...):</label>
+                            <input type="password" id="cfgGeminiKey" placeholder="Nhập Gemini API Key hoặc giữ nguyên..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <select id="cfgGeminiModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Khuyên dùng - Miễn phí tốc độ cao)</option>
+                                <option value="gemini-3.5-flash">gemini-3.5-flash (Bản 3.5 Flash ổn định)</option>
+                                <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Bản 3.5 Lite nhẹ)</option>
+                                <option value="gemini-flash-latest">gemini-flash-latest (Google trỏ ngầm về 3.8-flash - Giới hạn 20 req/ngày)</option>
+                                <option value="gemini-3.8-flash">gemini-3.8-flash (Bản 3.8 - Giới hạn 20 req/ngày)</option>
+                                <option value="gemini-pro-latest">gemini-pro-latest (Bản Pro mới nhất)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
+                        * <i>Lưu ý:</i> Google tự động trỏ <code>gemini-flash-latest</code> sang <code>gemini-3.8-flash</code> (Free Tier bị giới hạn 20 lượt/ngày). Chọn <code>gemini-flash-lite-latest</code> để dùng thả ga!
+                    </div>
+                    <div id="testRes_gemini" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- DeepSeek Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #38bdf8; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🐋</span> DeepSeek API
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('deepseek')" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('deepseek')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (sk-...):</label>
+                            <input type="password" id="cfgDeepseekKey" placeholder="Nhập DeepSeek API Key..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <select id="cfgDeepseekModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="deepseek-flash" selected>deepseek-flash (V4.1 Flash - Khuyên dùng)</option>
+                                <option value="deepseek-v4-pro">deepseek-v4-pro (Bản Pro cao cấp)</option>
+                                <option value="deepseek-chat">deepseek-chat (Tương thích chuẩn)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="testRes_deepseek" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                                <!-- Groq Cloud Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #f97316; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>⚡</span> Groq Cloud LPU (Llama 3.3 70B / 8B Siêu Tốc)
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('groq')" style="background: #1e293b; color: #f97316; border: 1px solid #f97316; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('groq')" style="background: #ea580c; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1.5fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key (gsk_...):</label>
+                            <input type="password" id="cfgGroqKey" placeholder="Nhập Groq API Key..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model:</label>
+                            <select id="cfgGroqModel" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="llama-3.3-70b-versatile" selected>llama-3.3-70b-versatile (Khuyên dùng - 70B Siêu tốc)</option>
+                                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Bản 8B Siêu nhẹ ~800 tokens/s)</option>
+                                <option value="llama-3.2-3b-preview">llama-3.2-3b-preview (3B Nhẹ gọn)</option>
+                                <option value="llama-3.2-11b-vision-preview">llama-3.2-11b-vision-preview (11B Đa phương tiện)</option>
+                                <option value="deepseek-r1-distill-llama-70b">deepseek-r1-distill-llama-70b (DeepSeek R1 Suy luận)</option>
+                                <option value="qwen-2.5-32b">qwen-2.5-32b (Qwen 2.5 32B Cân bằng)</option>
+                                <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (MoE 32k Context)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
+                        * <i>Ghi chú:</i> Bấm nút <b>🔄 Quét Model</b> để hệ thống tự động tải danh sách model chat.
+                    </div>
+                    <div style="font-size: 11px; color: #f97316; margin-top: 6px; background: rgba(249, 115, 22, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(249, 115, 22, 0.25); line-height: 1.5;">
+                        🎁 <b>Tích hợp sẵn STT Miễn Phí:</b> Groq cấp <b>whisper-large-v3-turbo</b> (2,000 req/ngày, 28,800 giây nói/ngày). Khi lưu API Key này, hệ thống sẽ tự động dùng Groq Whisper giải mã giọng nói ESP32 trong ~0.15s mà <b>không tốn 1% GPU trên NAS</b>!
+                    </div>
+                    <div id="testRes_groq" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- OpenRouter (9 Router) Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #c084fc; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <span>🌐</span> OpenRouter (9 Router) API
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="fetchModelsForProvider('openrouter')" style="background: #1e293b; color: #c084fc; border: 1px solid #c084fc; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                🔄 Quét Model
+                            </button>
+                            <button type="button" onclick="testAIConn('openrouter')" style="background: #9333ea; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                ⚡ Thử Kết Nối
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1.5fr; gap: 10px; margin-bottom: 8px;">
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">API Key OpenRouter:</label>
+                            <input type="password" id="cfgOpenrouterKey" placeholder="sk-or-v1-..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: #94a3b8;">Model ID (tuỳ ý bất kỳ model nào):</label>
+                            <input type="text" id="cfgOpenrouterModel" value="google/gemini-2.0-flash-exp:free" placeholder="e.g. anthropic/claude-3.5-haiku" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b;">
+                        * Gợi ý model miễn phí / tốc độ cao: <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code>, <code>meta-llama/llama-3.3-70b-instruct</code>
+                    </div>
+                    <div id="testRes_openrouter" style="font-size: 11px; margin-top: 6px;"></div>
+                </div>
+
+                <!-- Voice Selection -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700; color: #f8fafc; font-size: 13px;">Giọng Đọc Tiếng Việt Trợ Lý Nala (TTS):</div>
+                        <div style="font-size: 11px; color: #94a3b8;">Giọng đọc Microsoft Neural tự nhiên truyền cảm</div>
+                    </div>
+                    <select id="cfgTtsVoice" style="background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                        <option value="google_fast">⚡ Google TTS Siêu Tốc (~0.3s - Khuyên dùng)</option>
+                        <option value="vi-VN-HoaiMyNeural">👩 Hoài My (Nữ - Truyền cảm, ~1.8s)</option>
+                        <option value="vi-VN-NamMinhNeural">👨 Nam Minh (Nam - Rõ ràng, ~1.8s)</option>
+                    </select>
+                </div>
+
+                <!-- Xiaozhi-style Continuous Conversation & Context Memory Card -->
+                <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-weight: 700; color: #a855f7; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                                <span>💬</span> Trò Chuyện Liên Tục & Nhớ Ngữ Cảnh (Xiaozhi Continuous Dialogue)
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8;">
+                                Tự động mở lại mic sau khi AI nói xong, nhớ câu hỏi trước đó và tự ngắt khi hết thời gian chờ (Timeout).
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 12px; color: #f1f5f9; font-weight: 600;">Kích hoạt:</label>
+                            <input type="checkbox" id="cfgContinuousEnabled" checked style="width: 20px; height: 20px; accent-color: #a855f7; cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                            <label style="font-size: 11px; font-weight: 600; color: #c084fc; display: block; margin-bottom: 6px;">
+                                ⏱️ Thời Gian Chờ Câu Tiếp (Inactivity Timeout):
+                            </label>
+                            <select id="cfgContinuousTimeoutMs" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="5000">5 giây (Nhanh gọn, tiết kiệm)</option>
+                                <option value="8000" selected>8 giây (Chuẩn Xiaozhi - Khuyên dùng)</option>
+                                <option value="12000">12 giây (Thoải mái suy nghĩ)</option>
+                                <option value="15000">15 giây (Nhà có người lớn tuổi)</option>
+                            </select>
+                            <div style="font-size: 10px; color: #94a3b8; margin-top: 6px;">
+                                Sau khi AI nói xong, nếu không ai nói gì trong thời gian này, mic sẽ tự động tắt và về IDLE.
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="font-size: 11px; font-weight: 600; color: #c084fc;">
+                                    🧠 Thời Gian Lưu Ngữ Cảnh:
+                                </label>
+                                <button type="button" onclick="clearAIContextMemory()" style="background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;">
+                                    🧹 Xóa ngữ cảnh
+                                </button>
+                            </div>
+                            <select id="cfgSessionTimeoutSeconds" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                                <option value="60">60 giây (1 phút)</option>
+                                <option value="120" selected>120 giây (2 phút - Khuyên dùng)</option>
+                                <option value="300">300 giây (5 phút)</option>
+                            </select>
+                            <div id="clearContextStatus" style="font-size: 10px; color: #10b981; margin-top: 6px;">
+                                AI tự động liên kết các câu: 'bật máy lạnh' ➔ 'hạ xuống 24 độ' ➔ 'thôi tắt đi'.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Room Wake Word & Spatial Arbitration -->
+            <div style="background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 700; color: #10b981; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                            <span>🎯</span> Wake Word Rảnh Tay & Phân Xử Không Gian (Spatial Arbitration)
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8;">
+                            Hỗ trợ 6+ màn hình: Tự động chọn phòng gần nhất khi gọi từ khóa. Chống dội âm đa phòng (Echo Prevention).
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 12px; color: #f1f5f9; font-weight: 600;">Bật Toàn Nhà:</label>
+                        <input type="checkbox" id="cfgWakeGlobalEnabled" checked style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- Wake Word Model & Window -->
+                <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 16px;">
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="font-size: 11px; font-weight: 600; color: #38bdf8;">🎙️ Từ Khóa Đánh Thức Áp Dụng:</label>
+                            <span id="wakeCheckedCountBadge" style="font-size: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;">Đang áp dụng: 0 mô hình</span>
+                        </div>
+                        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 8px; line-height: 1.4;">
+                            Tích chọn các mô hình bạn muốn máy chủ nhận diện. Hệ thống chỉ nạp vào RAM đúng các mô hình được chọn:
+                        </div>
+                        <div id="cfgWakeModelsCheckboxContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow-y: auto; padding-right: 4px; margin-bottom: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Đang tải danh sách mô hình...</div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px dashed #475569;">
+                            <span style="font-size: 11px; color: #cbd5e1;">Mô hình riêng:</span>
+                            <label for="wakeModelUploadInput" style="display: inline-flex; align-items: center; gap: 5px; background: #0284c7; color: white; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                                📤 Tải lên file (.onnx / .tflite)
+                            </label>
+                            <input type="file" id="wakeModelUploadInput" accept=".onnx,.tflite" style="display: none;" onchange="uploadCustomWakeModel(this)">
+                        </div>
+                        <div id="wakeModelUploadStatus" style="font-size: 10px; margin-top: 4px; color: #94a3b8; text-align: right;"></div>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                        <label style="font-size: 11px; font-weight: 600; color: #38bdf8; display: block; margin-bottom: 6px;">⏱️ Cửa Sổ Phân Xử Không Gian:</label>
+                        <select id="cfgWakeWindowMs" style="width: 100%; background: #1e293b; border: 1px solid #475569; color: white; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                            <option value="300">300ms (Tối ưu nhất cho gia đình)</option>
+                            <option value="500">500ms (Nhà rộng / thông tầng)</option>
+                            <option value="200">200ms (Phản xạ siêu tốc)</option>
+                        </select>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.4;">
+                            Hệ thống tự động so sánh âm lượng RMS trong cửa sổ thời gian này và chỉ kích hoạt màn hình gần bạn nhất!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table of Panels & Per-Room Toggles -->
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+                        🏢 Danh Sách Màn Hình Các Phòng (Bật / Tắt Theo Từng Vị Trí):
+                    </div>
+                    <div id="wakeRoomsContainer" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; max-height: 180px; overflow-y: auto; padding: 8px;">
+                        <div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">Đang tải danh sách phòng...</div>
+                    </div>
+                </div>
+
+                <!-- Live Wake Word Event Alert -->
+                <div id="wakeLiveEventAlert" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;">
+                </div>
+
+                <!-- Live Wake Word Test & Real-time Matching Score Gauge -->
+                <div style="margin-top: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 10px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">🎙️</span>
+                            <div>
+                                <div style="font-size: 12px; font-weight: 700; color: #38bdf8;">Kiểm Thử Micro & Đo Điểm Độ Khớp Wake Word</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Thử giọng thật của các thành viên gia đình trực tiếp qua Màn hình ESP32 hoặc Micro PC</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="wakeTestStatusBadge" style="font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;">
+                                🟢 Đang lắng nghe ESP32
+                            </span>
+                            <button id="btnTogglePCMic" type="button" onclick="togglePCMicTest()" style="display: none; align-items: center; gap: 5px; background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                ▶ Bật Kiểm Thử Micro PC
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HỘP CHỌN THIẾT BỊ / NGUỒN THU ÂM (Màn hình ESP32 hoặc PC) -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; background: rgba(30, 41, 59, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 13px;">🎯</span>
+                            <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Nguồn Thu Âm / Thiết Bị Kiểm Thử:</label>
+                        </div>
+                        <select id="wakeTestSourceSelect" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onchange="onWakeTestSourceChange()">
+                            <option value="all">🌐 Tự động (Mọi màn hình ESP32 & PC)</option>
+                            <option value="pc">🖥️ Micro Máy Tính (PC Browser)</option>
+                        </select>
+                    </div>
+
+                    <!-- Hướng dẫn nguồn thu âm -->
+                    <div id="wakeSourceGuideBox" style="margin-bottom: 12px; padding: 8px 12px; border-radius: 6px; font-size: 11px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); color: #93c5fd; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                        <span id="wakeSourceGuideText">
+                            ✨ Bạn đang đứng gần màn hình ESP32. Hãy nói "Nala ơi" hoặc "Hey Nala" trước màn hình, thanh đo điểm bên dưới sẽ nhảy trực tiếp!
+                        </span>
+                        <button id="btnResetPeakScore" type="button" onclick="resetWakePeakScore()" style="background: rgba(148, 163, 184, 0.15); border: 1px solid #475569; color: #cbd5e1; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer;">
+                            🔄 Xóa Đỉnh
+                        </button>
+                    </div>
+
+                    <!-- Hướng dẫn bảo mật cờ Chrome nếu chọn Micro PC mà bị chặn -->
+                    <div id="pcMicHttpHelpBox" style="display: none; margin-bottom: 12px; padding: 12px; border-radius: 8px; font-size: 11px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; color: #fde68a;">
+                        <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: #fbbf24;">
+                            <span>⚠️</span> Hướng Dẫn Mở Khóa Micro PC Trên Trình Duyệt (Chrome / Edge):
+                        </div>
+                        <div style="margin-bottom: 8px; line-height: 1.5; color: #fef3c7;">
+                            Trình duyệt Chrome/Edge mặc định chặn quyền truy cập Micro trên IP mạng LAN HTTP (192.168.1.114:8765) vì chính sách bảo mật WebRTC.<br>
+                            Bạn chỉ cần bật cờ bảo mật 1 lần theo 3 bước sau:
+                        </div>
+                        <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border: 1px dashed #f59e0b; margin-bottom: 8px; font-size: 11px; color: #e2e8f0; line-height: 1.6;">
+                            <b>1.</b> Mở tab mới trong Chrome/Edge và dán: <span style="color: #38bdf8; font-family: monospace;">chrome://flags/#unsafely-treat-insecure-origin-as-secure</span><br>
+                            <b>2.</b> Tại ô <i>"Insecure origins treated as secure"</i>, nhập: <span style="color: #4ade80; font-family: monospace;">http://192.168.1.114:8765</span> và đổi sang <b>Enabled</b>.<br>
+                            <b>3.</b> Bấm nút màu xanh <b>Relaunch</b> (Khởi động lại trình duyệt) ở góc dưới bên phải.
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button type="button" onclick="copyChromeFlag()" style="background: #f59e0b; color: #0b0f14; border: none; padding: 5px 12px; border-radius: 5px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                                📋 Copy Link Cờ Chrome
+                            </button>
+                            <button type="button" onclick="copyOriginUrl()" style="background: #0284c7; color: white; border: none; padding: 5px 12px; border-radius: 5px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                                📋 Copy URL Hub (http://192.168.1.114:8765)
+                            </button>
+                            <span id="copyFlagStatus" style="font-size: 11px; color: #4ade80; font-weight: 600;"></span>
+                        </div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(245, 158, 11, 0.3); font-size: 10px; color: #cbd5e1;">
+                            💡 <b>Mẹo tiện lợi:</b> Bạn cũng có thể chọn nguồn <strong>"📱 Màn hình ESP32"</strong> ở trên để đứng thử giọng trực tiếp trước màn hình trong phòng mà không cần mở cờ trình duyệt!
+                        </div>
+                    </div>
+
+                    <!-- Cài đặt Ngưỡng kích hoạt (Threshold Slider) -->
+                    <div style="background: rgba(30, 41, 59, 0.6); padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="font-size: 11px; font-weight: 600; color: #cbd5e1;">🎯 Ngưỡng Kích Hoạt (Threshold):</label>
+                            <span id="wakeThresholdVal" style="font-family: Consolas, monospace; font-size: 12px; font-weight: 700; color: #10b981; background: #0f172a; padding: 2px 8px; border-radius: 4px; border: 1px solid #334155;">
+                                45% (0.45)
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="wakeThresholdSlider" min="0.10" max="0.95" step="0.05" value="0.45" 
+                                   style="flex: 1; accent-color: #10b981; cursor: pointer;" 
+                                   oninput="onWakeThresholdChange(this.value)">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-top: 4px;">
+                            <span>10% (Rất nhạy)</span>
+                            <span id="wakeThresholdHint" style="color: #38bdf8; font-weight: 600;">Khuyến nghị tiêu chuẩn cho gia đình</span>
+                            <span>95% (Nghiêm ngặt)</span>
+                        </div>
+                    </div>
+
+                    <!-- Thanh đo Âm lượng Micro (VU Meter) -->
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #cbd5e1;">🔊 Âm lượng Micro:</span>
+                            <span id="wakeVolText" style="font-family: Consolas, monospace; color: #94a3b8; font-size: 11px;">0% [░░░░░░░░░░] (-∞ dB)</span>
+                        </div>
+                        <div style="background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
+                            <div id="wakeVolBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981 60%, #f59e0b 85%, #ef4444 100%); transition: width 0.08s ease-out; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Thanh đo Điểm số Độ khớp (% Match Score Gauge) -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #cbd5e1;">
+                                🎯 Độ khớp từ khóa (<strong id="wakeModelLabelTest" style="color: #38bdf8;">Nala Ơi</strong>):
+                            </span>
+                            <span id="wakeScoreDisplay" style="font-family: Consolas, monospace; font-size: 14px; font-weight: 700; color: #38bdf8;">
+                                0% [░░░░░░░░░░]
+                            </span>
+                        </div>
+                        <div style="background: #1e293b; height: 18px; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid #334155;">
+                            <!-- Thanh điểm số chuyển động mượt mà -->
+                            <div id="wakeScoreBar" style="width: 0%; height: 100%; background: #38bdf8; transition: width 0.08s ease-out, background-color 0.15s; border-radius: 5px;"></div>
+                            <!-- Vạch chỉ thị Ngưỡng kích hoạt (Threshold Line Marker) -->
+                            <div id="wakeThresholdMarker" style="position: absolute; top: 0; bottom: 0; left: 45%; width: 2px; background: #ef4444; box-shadow: 0 0 5px #ef4444; z-index: 2;" title="Ngưỡng kích hoạt"></div>
+                        </div>
+                    </div>
+
+                    <!-- Nguồn âm thanh hiện tại đang phản hồi -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; margin-top: 6px;">
+                        <span id="wakeActiveSourceInfo">Nguồn: <em>Chờ âm thanh từ Micro PC hoặc ESP32...</em></span>
+                        <span id="wakeLastPeakInfo" style="font-family: Consolas, monospace; font-size: 10px; color: #64748b;">Đỉnh cao nhất: 0%</span>
+                    </div>
+
+                    <!-- Banner Thông báo Đánh thức thành công (Live Alert) -->
+                    <div id="wakeDetectedBanner" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 700; font-size: 12px; text-align: center;">
+                        🎉 [WAKE DETECTED] Đã kích hoạt thành công từ khóa! Giọng nói đạt chuẩn!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Streaming Real-time Dialogue (Xiaozhi & Gemini Live Style) -->
+            <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: #38bdf8; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        <span>🎙️</span> Đối Thoại Trực Tiếp (Xiaozhi & Gemini Live Stream):
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="aiLiveStreamStatus" style="font-size: 11px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; display: inline-block;"></span> Sẵn sàng
+                        </span>
+                        <button type="button" onclick="clearAIChatLogs()" style="background: #1e293b; border: 1px solid #334155; color: #94a3b8; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">
+                            🗑️ Xoá
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Messages Scroll Box -->
+                <div id="aiLiveChatLogs" style="height: 220px; overflow-y: auto; background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; scroll-behavior: smooth;">
+                    <div style="text-align: center; color: #64748b; font-size: 11px; margin: auto;">
+                        💬 Gõ lệnh hoặc trò chuyện bên dưới để xem Nala đánh máy từng chữ thời gian thực!
+                    </div>
+                </div>
+
+                <!-- Quick Suggestions -->
+                <div style="display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px;">
+                    <button type="button" onclick="quickSendAI('Bật đèn phòng khách')" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">💡 Bật đèn phòng khách</button>
+                    <button type="button" onclick="quickSendAI('Giới thiệu bản thân')" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">🤖 Giới thiệu bản thân</button>
+                    <button type="button" onclick="quickSendAI('Tắt hết toàn nhà')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;">🛑 Tắt hết toàn nhà</button>
+                </div>
+
+                <!-- Input Box -->
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="aiTestInput" placeholder="Ví dụ: 'Nala ơi, bạn làm được gì?', 'Mở quạt phòng ngủ'..." style="flex: 1; background: #1e293b; border: 1px solid #475569; color: white; padding: 9px 12px; border-radius: 8px; font-size: 13px;" onkeydown="if(event.key==='Enter') sendAIChatTest()">
+                    <button type="button" onclick="sendAIChatTest()" id="btnSendAIChat" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none; color: white; font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <span>🚀</span> Gửi
+                    </button>
+                </div>
+
+                <!-- Hidden audio player for instant playback -->
+                <audio id="aiTestAudioPlayer" style="display: none;"></audio>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #1e293b; display: flex; justify-content: flex-end; gap: 12px; background: #0f172a;">
+            <button type="button" class="btn-cancel" onclick="closeAIConfigModal()" style="padding: 9px 18px; border-radius: 8px; background: #334155; border: none; color: #f1f5f9; cursor: pointer; font-size: 13px;">Đóng</button>
+            <button type="button" class="btn-primary" onclick="saveAIConfig()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none; color: white; padding: 9px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;">💾 Lưu Cấu Hình AI</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" 

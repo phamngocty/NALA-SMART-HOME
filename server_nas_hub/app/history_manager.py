@@ -93,8 +93,9 @@ class HistoryManager:
                    pcm_data: Optional[bytes] = None,
                    session_id: Optional[str] = None,
                    turn_index: int = 1,
-                   ai_model: Optional[str] = None) -> Dict:
-        """Thêm một bản ghi lịch sử đàm thoại / giọng nói mới (hỗ trợ nhóm theo phiên đối thoại Xiaozhi)."""
+                   ai_model: Optional[str] = None,
+                   speaker: Optional[str] = None) -> Dict:
+        """Thêm một bản ghi lịch sử đàm thoại / giọng nói mới (hỗ trợ nhóm theo phiên đối thoại Xiaozhi và nhận diện vân giọng)."""
         now_ts = time.time()
         record_id = f"hist_{int(now_ts)}_{uuid.uuid4().hex[:6]}"
         dt_str = datetime.fromtimestamp(now_ts).strftime("%d/%m/%Y %H:%M:%S")
@@ -110,6 +111,7 @@ class HistoryManager:
             "session_id": session_id or f"sess_{int(now_ts)}_{device_code}",
             "turn_index": turn_index,
             "ai_model": ai_model or "",
+            "speaker": speaker or "",
             "timestamp": now_ts,
             "datetime": dt_str,
             "device_code": device_code,

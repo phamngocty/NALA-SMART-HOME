@@ -305,7 +305,7 @@
             <h1>Hướng Dẫn Tự Làm Màn Hình Thông Minh NALA ESP32-S3 Từ A-Z</h1>
             <div class="guide-meta">
                 <span>👤 Tác giả: <strong>Phạm Ngọc Tỷ (TỰ LÀM ĐIỆN TỬ)</strong></span>
-                <span>📅 Phiên bản: <strong>Firmware v3.6.1 Stable</strong></span>
+                <span>📅 Phiên bản: <strong>Firmware v3.6.2 Stable (Radar & Intercom)</strong></span>
                 <span>⏱️ Thời gian hoàn thiện: <strong>~30 phút</strong></span>
             </div>
         </header>
@@ -384,7 +384,12 @@
 #define PIN_TP_RST        18   // Reset cảm ứng (Active LOW)
 #define PIN_RGB_LED       42   // Đèn LED thông minh WS2812 NeoPixel
 #define PIN_LCD_BL        45   // Đèn nền màn hình (LEDC PWM 5000Hz)
-#define PIN_LCD_DC        46   // Data/Command màn hình ST7789</code></pre>
+#define PIN_LCD_DC        46   // Data/Command màn hình ST7789
+
+// Chân Radar mmWave 24GHz HLK-LD2410C (Chân mở rộng cắm socket)
+#define RADAR_RX_PIN      21   // Nối chân TX của HLK-LD2410C
+#define RADAR_TX_PIN      14   // Nối chân RX của HLK-LD2410C
+#define RADAR_OUT_PIN     3    // Nối chân OUT tín hiệu logic của Radar (tuỳ chọn)</code></pre>
 
             <!-- PHẦN 3 -->
             <h2>3. Nạp Firmware Trực Tuyến 1-Click (Web Serial Flasher)</h2>
@@ -394,7 +399,7 @@
 
             <div class="flasher-card">
                 <h3>🚀 Công Cụ Nạp Firmware NALA Web Flasher</h3>
-                <p>Nạp trực tiếp Firmware phiên bản <strong>v3.6.1 Stable</strong> có hỗ trợ Đàm Thoại Rảnh Tay Chống Hú và Trợ Lý Giọng Nói NALA.</p>
+                <p>Nạp trực tiếp Firmware phiên bản <strong>v3.6.2 Stable</strong> có hỗ trợ Đàm Thoại Rảnh Tay Chống Hú, Cảm biến Radar HLK-LD2410C và Trợ Lý Giọng Nói NALA.</p>
                 
                 <esp-web-install-button manifest="manifest.json">
                     <button slot="activate" class="btn btn-primary" style="padding:14px 28px; font-size:16px;">
@@ -445,11 +450,60 @@
                     </ul>
                 </li>
             </ul>
+            <!-- PHẦN 7 -->
+            <h2>7. Nối Dây & Sử Dụng Radar mmWave HLK-LD2410C (Tính Năng Mới v3.6.2)</h2>
+            <p>
+                Module radar 24GHz HLK-LD2410C giúp màn hình phát hiện người siêu nhạy (bắt được cả vi dao động lồng ngực khi ngủ) và điều khiển không cần chạm:
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Chân HLK-LD2410C</th>
+                        <th>Chân Bo Mạch ES3C28P</th>
+                        <th>Chức Năng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>VCC (5V)</strong></td>
+                        <td>Chân 5V (hoặc VBUS)</td>
+                        <td>Nguồn nuôi radar (tiêu thụ ~80mA)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GND</strong></td>
+                        <td>GND bo mạch</td>
+                        <td>Mass chung</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TX</strong></td>
+                        <td><strong>GPIO 21 (UART1 RX)</strong></td>
+                        <td>Truyền telemetry nhị phân 256,000 bps về ESP32-S3</td>
+                    </tr>
+                    <tr>
+                        <td><strong>RX</strong></td>
+                        <td><strong>GPIO 14 (UART1 TX)</strong></td>
+                        <td>ESP32-S3 gửi lệnh cấu hình các Gate năng lượng</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OUT</strong></td>
+                        <td><strong>GPIO 3</strong> (tùy chọn)</td>
+                        <td>Tín hiệu kích hoạt logic tức thì khi có người</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="callout success">
+                <div class="callout-title">✨ CÁC TRẢI NGHIỆM THỰC TẾ SAU KHI NỐI RADAR:</div>
+                <ul>
+                    <li><strong>Đánh thức không chạm:</strong> Khi bạn bước vào phòng và tiến lại gần màn hình (&lt;1.5 mét), màn hình lập tức sáng đèn nền 100% và thoát khỏi màn hình chờ đồng hồ.</li>
+                    <li><strong>Vẫy tay cúp máy Intercom:</strong> Khi chuông gọi liên phòng reo hoặc đang đàm thoại, chỉ cần vẫy tay nhẹ qua mặt màn hình ở cự ly &lt;30cm để cúp máy ngay lập tức mà không cần chạm tay vào màn hình!</li>
+                    <li><strong>Đồng bộ Home Assistant:</strong> Dữ liệu khoảng cách, năng lượng vi động nhịp thở tự động truyền qua WebSocket về NAS Hub và Home Assistant để điều khiển máy lạnh/đèn phòng ngủ chính xác 100%.</li>
+                </ul>
+            </div>
         </article>
 
         <footer>
             <p>
-                Biên soạn bởi <strong>TỰ LÀM ĐIỆN TỬ (Phạm Ngọc Tỷ)</strong> — Dự án NALA SMART PANEL v3.6.1.
+                Biên soạn bởi <strong>TỰ LÀM ĐIỆN TỬ (Phạm Ngọc Tỷ)</strong> — Dự án NALA SMART PANEL v3.6.2.
             </p>
             <p style="margin-top:6px;">
                 Mọi thắc mắc kỹ thuật hoặc nhu cầu đặt mua linh kiện / bản hoàn thiện sẵn vỏ, vui lòng liên hệ <a href="index.html#order" style="color:var(--primary); font-weight:700;">kênh phân phối chính thức</a>.

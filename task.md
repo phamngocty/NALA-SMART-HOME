@@ -1,0 +1,58 @@
+# 📋 Tiến Độ Triển Khai Kế Hoạch Tối Ưu NALA Smart Home
+
+- [x] **Giai đoạn 1: STT Prompt Bias & Fast-Path Semantic Engine**
+  - [x] Ghim từ điển Smart Home vào Groq Whisper STT API (`DEFAULT_SMART_HOME_WHISPER_PROMPT` và tham số `prompt` động theo phòng).
+  - [x] Tích hợp Adaptive Memory Fast-Path Matching (<15ms) vào Cấp độ 1 của `handle_ai_voice_flow`.
+  - [x] Nạp âm thanh đệm tự nhiên (Pre-warmed Audio Fillers) vào RAM Cache ("Dạ vâng,", "Em làm ngay,", "Đã chỉnh xong.", "Đang kết nối đàm thoại...", "Đã cúp máy.").
+  - [x] Đồng bộ múi giờ GMT+7 và lịch trình đồng bộ RTC 30 phút/lần cho các bảng điều khiển ESP32.
+- [x] **Giai đoạn 2: Định Vị Không Gian Tuyệt Đối (Scoped Room Context) & Chống Ảo Giác**
+  - [x] Nâng cấp `_build_device_context(self, context_room)`: Phân tách danh sách thiết bị phòng hiện tại lên đầu prompt với chỉ dẫn ngữ cảnh mạnh mẽ.
+  - [x] Truyền `context_room` từ `process_intent` và `stream_intent` vào `_build_device_context`.
+  - [x] Nâng cấp `_resolve_real_entity_id(raw_eid, target_domain, context_room)` với SequenceMatcher/Levenshtein và trọng số ưu tiên phòng hiện tại (+1.5 điểm).
+- [x] **Giai đoạn 3: Động Cơ Suy Luận Ngôn Ngữ Gián Tiếp (Indirect Intent) & Hội Thoại Đa Lượt**
+  - [x] Xây dựng bộ nhận diện ý định gián tiếp (`handle_indirect_intent`):
+    - *"Nóng quá / Nóng nực"* ➔ Tự động bật/hạ nhiệt độ máy lạnh trong phòng hiện tại (nếu tắt thì bật 24°C, nếu bật thì giảm 1-2°C) + bật quạt.
+    - *"Lạnh quá / Rét quá"* ➔ Tăng nhiệt độ máy lạnh lên 2°C (hoặc tắt nếu >= 28°C).
+    - *"Tối quá / Tối thế"* ➔ Bật đèn chiếu sáng chính của phòng hiện tại.
+    - *"Buồn ngủ rồi / Đi ngủ thôi"* ➔ Kịch bản đi ngủ (tắt đèn trần, chỉnh máy lạnh 26°C).
+    - *"Chuẩn bị đi làm / Ra ngoài"* ➔ Kịch bản ra khỏi nhà (Master turn off all).
+  - [x] Kế thừa ngữ cảnh nhiều lượt (Multi-turn Context Memory): Lưu trữ `set_last_interacted` trong `ConversationSessionManager` và đưa `[THIẾT BỊ VỪA ĐIỀU KHIỂN GẦN ĐÂY]` vào system prompt.
+- [x] **Phần IV: Đàm Thoại Rảnh Tay Liên Phòng (Hands-Free Intercom V2)**
+  - [x] Nhận diện câu gọi thoại: *"Gọi cho phòng [tên phòng]"*, *"Kết nối phòng [tên phòng]"* ➔ `detect_intercom_call_intent` tự động tạo kết nối giữa 2 phòng.
+  - [x] Cơ chế Smart Voice-Switching: Triệt tiêu 100% hiện tượng hú rít vòng lặp (Receiver mic suppressed during speaker playback + 150ms release).
+  - [x] Cơ chế 3 Lớp Ngắt Cuộc Gọi (Triple-Layer Hangup):
+    - Lớp 1: Giọng nói ("Cúp máy", "Tắt gọi", "Ngắt máy", "Nala cúp máy" ➔ ngắt trong < 100ms).
+    - Lớp 2: Chạm nút cảm ứng ("🛑 Cúp Máy" ➔ `intercom_hangup`).
+    - Lớp 3: Tự động ngắt khi im lặng 10s (Silence Watchdog 10s báo bíp đếm ngược 3s ➔ cúp máy an toàn sau 13s).
+  - [x] Thêm trạng thái cuộc gọi trực tiếp, thanh thông báo header và nút ngắt từ xa trên Web Admin Hub (`index.html`).
+- [x] **Sửa Lỗi: 'Lỗi xử lý âm thanh' khi ra lệnh thoại (Systematic Debugging)**
+  - [x] Sửa thiếu import `_normalize_vn` trong `main_ws_server.py`.
+  - [x] Chạy kiểm thử hồi quy `test_voice_flow_regression.py` đạt PASS 100%.
+- [x] **Sửa Lỗi: Ra lệnh 'Gọi cho phòng ngủ mẹ' chỉ phản hồi đang kết nối rồi im lặng (Systematic Debugging)**
+  - [x] Khắc phục triệt để và nạp OTA Firmware `v3.6.1` lên các panel.
+- [x] **Tối Ưu Giao Diện Màn Hình & Kích Hoạt Cảm Biến Ánh Sáng (Firmware v3.6.7 - v3.6.8)**
+- [x] **Kế Hoạch Nâng Cấp NALA AI: Nhận Diện Vân Giọng & Tự Động Hóa Ngữ Cảnh (v1.0)**
+  - [x] Động cơ Nhận diện Vân giọng CAM++ (Speaker Voiceprint) trên NAS Hub.
+  - [x] Bộ máy Sensor Fusion Nhận thức Ngữ cảnh (Living Context FSM).
+  - [x] AI Lập trình Kịch bản Tự nhiên & Cá nhân hóa sâu (Rule Engine).
+- [x] **Nâng Cấp Cơ Chế Vân Giọng Chuẩn XiaoZhi (Đa Mẫu Trực Tiếp & Trích Xuất Từ Lịch Sử)**.
+- [x] **Tái Cấu Trúc Toàn Diện Giao Diện Web Admin (Quy Hoạch Chuẩn 4 Trung Tâm)**:
+  - [x] **Trung tâm 1: `👤 Hồ Sơ & Trí Nhớ` (`userProfileMemoryModal`)**.
+  - [x] **Trung tâm 2: `🌙 Tự Động Hóa Ngữ Cảnh` (`livingContextAutomationModal`)**.
+  - [x] **Trung tâm 3: `🎙️ Giao Tiếp & Lịch Sử` (`communicationModal`)**.
+  - [x] **Trung tâm 4: `⚙️ Cài Đặt Kỹ Thuật` (`systemSettingsModal`)**.
+- [x] **Khắc Phục Toàn Diện Lỗi Hiển Thị & Đóng Mở Của 4 Trung Tâm (Systematic Debugging)**:
+  - [x] **Lỗi 1 (Cấu trúc HTML lồng nhau & unclosed divs)**:
+    - Trong `userProfileMemoryModal`: Khôi phục đầy đủ 3 cột (`memoryAliasesList`, `memoryHabitsList`, `memoryFactsList`) trong Tab Trí nhớ tự học.
+    - Đóng đúng các thẻ `<div>` của `tab_upm_memory` để Tab Thử nghiệm (`tab_upm_test`) không bị nuốt vào bên trong.
+    - Xóa khối HTML mồ côi thừa (`memoryFactsList` cũ ở dòng 3450-3467).
+  - [x] **Lỗi 2 (Khung đóng của `systemSettingsModal`)**:
+    - Bổ sung `</div>` đóng `modal-body` trước `modal-footer` và `</div>` đóng `systemSettingsModal`, tách rời hoàn toàn với các modal tiếp theo.
+  - [x] **Lỗi 3 (Tab Thử nghiệm vân giọng bị ẩn)**:
+    - Chuyển `tab_vp_test` thành `display: block;`.
+  - [x] **Lỗi 4 (Đồng bộ hàm cập nhật đàm thoại)**:
+    - Đổi `updateActiveIntercomCallsBanner` thành `updateActiveIntercomCallsUI`.
+  - [x] **Lỗi 5 (Tái hiện 100% giao diện Vai trò giọng nói chuẩn XiaoZhi Console)**:
+    - Bố cục 2 cột (Trái: Giới thiệu vai trò / Phải: Bộ chọn ngôn ngữ & giọng nói với ô tìm kiếm và nghe thử).
+    - 3 thanh trượt âm thanh chuẩn: Tốc độ nhận dạng (VAD), Tốc độ trả lời (Rate), Cao độ trả lời (Pitch).
+  - [x] **Nghiệm thu Node.js & Triển khai NAS**: Đạt 100% PASS, tất cả 8 API cốt lõi phản hồi HTTP 200 OK.

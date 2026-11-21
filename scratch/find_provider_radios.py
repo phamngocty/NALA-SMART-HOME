@@ -1,0 +1,12 @@
+with open('server_nas_hub/app/static/index.html', 'r', encoding='utf-8') as f:
+    html = f.read()
+
+import re
+matches = re.findall(r'name=["\']aiProviderRadio["\'][^>]*', html)
+for m in matches:
+    print(m)
+
+# Find onchange on radio
+matches2 = re.findall(r'<input[^>]*aiProviderRadio[^>]*>', html)
+for m in matches2:
+    print(m)

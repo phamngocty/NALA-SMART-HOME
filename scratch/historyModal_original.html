@@ -1,0 +1,75 @@
+id="historyModal">
+        <div class="modal-box" style="max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>📜 Lịch Sử Nhận Dạng Giọng Nói & Đàm Thoại Nội Bộ</span>
+                </div>
+                <button class="btn-close" onclick="closeHistoryModal()">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px; overflow-y: auto;">
+                <!-- Hàng Cài Đặt Tự Động Xóa Theo Lịch & Thống Kê -->
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 13px; font-weight: 600; color: #cbd5e1;">⏳ Tự Động Xóa Sau:</span>
+                        <select id="selHistoryRetention" style="background: #0f172a; color: #fff; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 12px; font-size: 13px;">
+                            <option value="1">1 Ngày</option>
+                            <option value="3">3 Ngày</option>
+                            <option value="7" selected>7 Ngày (Mặc định)</option>
+                            <option value="14">14 Ngày</option>
+                            <option value="30">30 Ngày (1 Tháng)</option>
+                            <option value="0">Không bao giờ xóa</option>
+                        </select>
+                        <button onclick="saveHistorySettings()" style="background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                            Lưu Lịch
+                        </button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span id="historyStatsLabel" style="font-size: 12px; color: #94a3b8;">Tổng: 0 bản ghi (0.0 MB)</span>
+                        <button onclick="confirmClearAllHistory()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                            🗑️ Xóa Tất Cả
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bộ lọc & Chế độ xem -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="hist-filter-btn active" id="filterAll" onclick="setHistoryFilter('')">Tất Cả</button>
+                        <button class="hist-filter-btn" id="filterAI" onclick="setHistoryFilter('voice_ai')">🤖 AI Giọng Nói</button>
+                        <button class="hist-filter-btn" id="filterIntercom" onclick="setHistoryFilter('intercom')">🎙️ Đàm Thoại</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <!-- Nút chuyển đổi giao diện Xiaozhi Chat vs Bảng -->
+                        <div style="display: inline-flex; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 2px;">
+                            <button id="btnViewChat" class="hist-filter-btn active" onclick="setHistoryViewMode('chat')" style="border: none; padding: 5px 12px; font-size: 12px; border-radius: 6px;">
+                                💬 Đoạn Chat (Xiaozhi)
+                            </button>
+                            <button id="btnViewTable" class="hist-filter-btn" onclick="setHistoryViewMode('table')" style="border: none; padding: 5px 12px; font-size: 12px; background: transparent; color: #94a3b8; border-radius: 6px;">
+                                📋 Dạng Bảng
+                            </button>
+                        </div>
+                        <button onclick="loadHistoryData()" style="background: transparent; border: 1px solid var(--border-color); color: #94a3b8; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer;">
+                            🔄 Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng Danh Sách Lịch Sử -->
+                <div id="historyTableContainer" style="max-height: 420px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0f172a;">
+                    <div id="historyListContent">
+                        <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 13px;">Đang tải lịch sử...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding: 16px 24px; background: #182234; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-cancel" onclick="closeHistoryModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- ======================================================================= -->
+    <!-- BẢNG ĐIỀU KHIỂN MÁY LẠNH / ĐIỀU HÒA MIDEA (CLIMATE CONTROL MODAL)       -->
+    <!-- ======================================================================= -->
+    <div class="modal-overlay" 

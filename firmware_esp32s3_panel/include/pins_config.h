@@ -83,3 +83,13 @@
 #define EXPAND_PIN_IO3          3
 #define EXPAND_PIN_IO14         14
 #define EXPAND_PIN_IO21         21
+
+// -----------------------------------------------------------------------------
+// 7. HLK-LD2410C MMWAVE RADAR (UART1 TRÊN CHÂN MỞ RỘNG AN TOÀN)
+// -----------------------------------------------------------------------------
+#define RADAR_UART_NUM          1
+#define RADAR_RX_PIN            21      // Nối chân TX của Radar (EXPAND_PIN_IO21)
+#define RADAR_TX_PIN            14      // Nối chân RX của Radar (EXPAND_PIN_IO14)
+#define RADAR_OUT_PIN           3       // Nối chân OUT của Radar (EXPAND_PIN_IO3, Hardware Interrupt)
+#define RADAR_BAUD_RATE         256000  // Baudrate chuẩn nhà sản xuất Hi-Link
+

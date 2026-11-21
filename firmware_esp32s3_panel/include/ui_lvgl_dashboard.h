@@ -79,7 +79,8 @@ private:
     // Header Info (Top 38px)
     lv_obj_t* header_obj;
     lv_obj_t* lbl_header_title;
-    lv_obj_t* lbl_header_info;
+    lv_obj_t* lbl_header_clock;
+    lv_obj_t* lbl_header_radar;
     lv_obj_t* lbl_ws_status;
 
     // Tab 0 Elements: Thiết Bị
@@ -228,8 +229,10 @@ private:
     lv_obj_t* lbl_stb_date;
     lv_obj_t* lbl_stb_room;
     lv_obj_t* lbl_stb_clim;
+    lv_obj_t* lbl_stb_radar;
     lv_obj_t* lbl_stb_hint;
     bool screensaver_active;
+    bool is_ws_connected_state;
 
     // Climate Dialog Modal (Tessera Glass)
     lv_obj_t* dialog_climate;
@@ -266,7 +269,7 @@ private:
 public:
     UILVGLDashboard()
         : tabview(nullptr), tab_devices(nullptr), tab_ai(nullptr), tab_intercom(nullptr), tab_settings(nullptr),
-          header_obj(nullptr), lbl_header_title(nullptr), lbl_header_info(nullptr), lbl_ws_status(nullptr),
+          header_obj(nullptr), lbl_header_title(nullptr), lbl_header_clock(nullptr), lbl_header_radar(nullptr), lbl_ws_status(nullptr),
           active_buttons_count(0),
           cont_room_chips(nullptr), chip_all(nullptr), lbl_chip_all(nullptr),
           active_room_chips_count(0), current_room_filter("ALL"),
@@ -299,8 +302,8 @@ public:
           modal_incoming_call(nullptr), lbl_incoming_title(nullptr),
           lbl_incoming_caller(nullptr), lbl_incoming_status(nullptr), btn_incoming_hangup(nullptr),
           modal_screensaver(nullptr), lbl_stb_time(nullptr), lbl_stb_sec(nullptr), lbl_stb_wday(nullptr),
-          lbl_stb_date(nullptr), lbl_stb_room(nullptr), lbl_stb_clim(nullptr),
-          lbl_stb_hint(nullptr), screensaver_active(false),
+          lbl_stb_date(nullptr), lbl_stb_room(nullptr), lbl_stb_clim(nullptr), lbl_stb_radar(nullptr),
+          lbl_stb_hint(nullptr), screensaver_active(false), is_ws_connected_state(false),
           dialog_climate(nullptr), lbl_clim_title(nullptr), btn_clim_close(nullptr),
           lbl_clim_temp(nullptr), lbl_clim_status(nullptr),
           btn_clim_minus(nullptr), btn_clim_plus(nullptr),
@@ -386,7 +389,7 @@ public:
         lv_obj_add_event_cb(header_obj, event_handler_trampoline, LV_EVENT_LONG_PRESSED, this);
 
         lbl_header_title = lv_label_create(header_obj);
-        lv_label_set_text_fmt(lbl_header_title, "NALA: %s", room_name && strlen(room_name) > 0 ? room_name : "Thiết Bị");
+        lv_label_set_text(lbl_header_title, room_name && strlen(room_name) > 0 ? room_name : "Thiết Bị");
         lv_obj_set_style_text_color(lbl_header_title, lv_color_hex(0x38BDF8), 0);
         lv_obj_set_style_text_font(lbl_header_title, &font_vietnamese_14, 0);
         lv_obj_align(lbl_header_title, LV_ALIGN_TOP_LEFT, 4, -1);
@@ -397,11 +400,17 @@ public:
         lv_obj_set_style_text_font(lbl_ws_status, &font_vietnamese_14, 0);
         lv_obj_align(lbl_ws_status, LV_ALIGN_TOP_RIGHT, -4, -1);
 
-        lbl_header_info = lv_label_create(header_obj);
-        lv_label_set_text_fmt(lbl_header_info, "IP: %s | Mã: [%s]", ip_str ? ip_str : "192.168.1.x", pair_code ? pair_code : "881C");
-        lv_obj_set_style_text_color(lbl_header_info, lv_color_hex(0x94A3B8), 0);
-        lv_obj_set_style_text_font(lbl_header_info, &font_vietnamese_14, 0);
-        lv_obj_align(lbl_header_info, LV_ALIGN_BOTTOM_LEFT, 4, 1);
+        lbl_header_clock = lv_label_create(header_obj);
+        lv_label_set_text(lbl_header_clock, "--:-- • --/--");
+        lv_obj_set_style_text_color(lbl_header_clock, lv_color_hex(0xE2E8F0), 0);
+        lv_obj_set_style_text_font(lbl_header_clock, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_header_clock, LV_ALIGN_BOTTOM_LEFT, 4, 1);
+
+        lbl_header_radar = lv_label_create(header_obj);
+        lv_label_set_text(lbl_header_radar, "Radar: --");
+        lv_obj_set_style_text_color(lbl_header_radar, lv_color_hex(0x64748B), 0);
+        lv_obj_set_style_text_font(lbl_header_radar, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_header_radar, LV_ALIGN_BOTTOM_RIGHT, -4, 1);
 
         // TabView (Dưới Header, Cao 282px, Rộng 240px, 4 Tab đáy)
         tabview = lv_tabview_create(scr, LV_DIR_BOTTOM, 36);
@@ -434,6 +443,7 @@ public:
     }
 
     void set_ws_connected(bool connected) {
+        is_ws_connected_state = connected;
         if (lbl_ws_status) {
             if (connected) {
                 lv_label_set_text(lbl_ws_status, "Online");
@@ -441,6 +451,30 @@ public:
             } else {
                 lv_label_set_text(lbl_ws_status, "Offline");
                 lv_obj_set_style_text_color(lbl_ws_status, lv_color_hex(0xEF4444), 0);
+            }
+        }
+    }
+
+    void update_header_telemetry(const char* time_date_str, const char* radar_str, uint32_t radar_color, const char* light_str = nullptr) {
+        if (lbl_header_clock && time_date_str) {
+            lv_label_set_text(lbl_header_clock, time_date_str);
+        }
+        if (lbl_header_radar && radar_str) {
+            lv_label_set_text(lbl_header_radar, radar_str);
+            lv_obj_set_style_text_color(lbl_header_radar, lv_color_hex(radar_color), 0);
+        }
+        if (lbl_ws_status) {
+            if (is_ws_connected_state) {
+                if (light_str && light_str[0] != '\0') {
+                    lv_label_set_text(lbl_ws_status, light_str);
+                    lv_obj_set_style_text_color(lbl_ws_status, lv_color_hex(0x38BDF8), 0); // Cyan sáng
+                } else {
+                    lv_label_set_text(lbl_ws_status, "Online");
+                    lv_obj_set_style_text_color(lbl_ws_status, lv_color_hex(0x10B981), 0); // Xanh lá
+                }
+            } else {
+                lv_label_set_text(lbl_ws_status, "Offline");
+                lv_obj_set_style_text_color(lbl_ws_status, lv_color_hex(0xEF4444), 0); // Đỏ
             }
         }
     }
@@ -499,7 +533,7 @@ public:
             }
 
             if (lbl_header_title) {
-                lv_label_set_text_fmt(lbl_header_title, "NALA: %s", home_room_name);
+                lv_label_set_text(lbl_header_title, home_room_name);
             }
 
             for (int i = 0; i < MAX_DASHBOARD_BUTTONS; i++) {
@@ -541,7 +575,7 @@ public:
             }
 
             if (lbl_header_title) {
-                lv_label_set_text(lbl_header_title, "NALA: TOÀN BỘ NHÀ");
+                lv_label_set_text(lbl_header_title, "Toàn Bộ Nhà");
             }
 
             if (lbl_house_alert) {
@@ -593,7 +627,7 @@ public:
             }
 
             if (lbl_header_title) {
-                lv_label_set_text_fmt(lbl_header_title, "NALA: %s (Từ xa)", cached_rooms[active_remote_room_idx].name);
+                lv_label_set_text_fmt(lbl_header_title, "%s (Từ xa)", cached_rooms[active_remote_room_idx].name);
             }
 
             if (lbl_house_alert) {
@@ -914,7 +948,7 @@ public:
             strncpy(home_room_name, room_name, sizeof(home_room_name) - 1);
             home_room_name[sizeof(home_room_name) - 1] = '\0';
             if (current_view_mode == VIEW_HOME_ROOM && lbl_header_title) {
-                lv_label_set_text_fmt(lbl_header_title, "NALA: %s", home_room_name);
+                lv_label_set_text(lbl_header_title, home_room_name);
             }
         }
     }
@@ -1385,7 +1419,7 @@ public:
         lv_obj_align(dot_online, LV_ALIGN_LEFT_MID, 0, 0);
 
         lbl_stb_room = lv_label_create(badge_room);
-        lv_label_set_text(lbl_stb_room, home_room_name && strlen(home_room_name) > 0 ? home_room_name : "Nala Panel");
+        lv_label_set_text(lbl_stb_room, home_room_name && strlen(home_room_name) > 0 ? home_room_name : "Thiết Bị");
         lv_obj_set_style_text_color(lbl_stb_room, lv_color_hex(0xE2E8F0), 0);
         lv_obj_set_style_text_font(lbl_stb_room, &font_vietnamese_14, 0);
         lv_obj_align(lbl_stb_room, LV_ALIGN_LEFT_MID, 12, 0);
@@ -1491,7 +1525,14 @@ public:
         lv_obj_set_style_text_font(lbl_stb_clim, &font_vietnamese_14, 0);
         lv_obj_align(lbl_stb_clim, LV_ALIGN_LEFT_MID, 14, 0);
 
-        // 5. Gợi ý chạm mở bảng điều khiển
+        // 5. Trạng thái Radar mmWave HLK-LD2410
+        lbl_stb_radar = lv_label_create(modal_screensaver);
+        lv_label_set_text(lbl_stb_radar, "Radar: Sẵn sàng");
+        lv_obj_set_style_text_color(lbl_stb_radar, lv_color_hex(0x10B981), 0);
+        lv_obj_set_style_text_font(lbl_stb_radar, &font_vietnamese_14, 0);
+        lv_obj_align(lbl_stb_radar, LV_ALIGN_CENTER, 0, 108);
+
+        // 6. Gợi ý chạm mở bảng điều khiển
         lbl_stb_hint = lv_label_create(modal_screensaver);
         lv_label_set_text(lbl_stb_hint, "Chạm màn hình để mở");
         lv_obj_set_style_text_color(lbl_stb_hint, lv_color_hex(0x475569), 0);
@@ -1519,12 +1560,16 @@ public:
         return screensaver_active;
     }
 
-    void update_standby_clock(const char* time_str, const char* sec_str, const char* wday_str, const char* date_str) {
+    void update_standby_clock(const char* time_str, const char* sec_str, const char* wday_str, const char* date_str, const char* radar_str = nullptr, uint32_t radar_color = 0x10B981) {
         if (!modal_screensaver || !screensaver_active) return;
         if (lbl_stb_time && time_str) lv_label_set_text(lbl_stb_time, time_str);
         if (lbl_stb_sec && sec_str) lv_label_set_text(lbl_stb_sec, sec_str);
         if (lbl_stb_wday && wday_str) lv_label_set_text(lbl_stb_wday, wday_str);
         if (lbl_stb_date && date_str) lv_label_set_text(lbl_stb_date, date_str);
+        if (lbl_stb_radar && radar_str) {
+            lv_label_set_text(lbl_stb_radar, radar_str);
+            lv_obj_set_style_text_color(lbl_stb_radar, lv_color_hex(radar_color), 0);
+        }
 
         // Tự động quét thông tin máy lạnh nếu có trong các nút thiết bị
         if (lbl_stb_clim) {

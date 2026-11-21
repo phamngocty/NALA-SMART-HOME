@@ -140,6 +140,22 @@ private:
                 <label>3. Địa chỉ máy chủ NAS Hub</label>
                 <input type="text" name="nas_url" value=")rawliteral" + String(pNvs->get().nas_ws_url) + R"rawliteral(">
             </div>
+            <div class="form-group" style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin:0; cursor:pointer;">
+                    <span style="font-size:12px; font-weight:700; color:#38bdf8;">📡 BẬT RADAR HLK-LD2410</span>
+                    <input type="checkbox" name="radar_en" value="1" )rawliteral" + String(pNvs->get().radar_enabled ? "checked" : "") + R"rawliteral( style="width:20px; height:20px; accent-color:#06b6d4; cursor:pointer;">
+                </label>
+            </div>
+            <div class="form-group">
+                <label>4. Cự ly đánh thức màn hình (cm)</label>
+                <input type="number" name="radar_wake_dist" value=")rawliteral" + String(pNvs->get().radar_wake_dist) + R"rawliteral(" min="30" max="400">
+            </div>
+            <div class="form-group" style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 8px; border: 1px solid #334155;">
+                <label style="display:flex; justify-content:space-between; align-items:center; margin:0; cursor:pointer;">
+                    <span style="font-size:12px; font-weight:700; color:#a78bfa;">👋 VẪY TAY CÚP MÁY INTERCOM</span>
+                    <input type="checkbox" name="radar_wave" value="1" )rawliteral" + String(pNvs->get().radar_wave_hangup ? "checked" : "") + R"rawliteral( style="width:20px; height:20px; accent-color:#a855f7; cursor:pointer;">
+                </label>
+            </div>
             <button type="submit" class="btn">LƯU & KẾT NỐI</button>
         </form>
         <div class="footer">Sau khi lưu, màn hình sẽ tự động kết nối vào WiFi nhà bạn.</div>
@@ -178,6 +194,14 @@ private:
             if (nas_url.length() > 0) {
                 strncpy(pNvs->get().nas_ws_url, nas_url.c_str(), sizeof(pNvs->get().nas_ws_url));
             }
+
+            pNvs->get().radar_enabled = server.hasArg("radar_en");
+            if (server.hasArg("radar_wake_dist")) {
+                uint16_t d = (uint16_t)server.arg("radar_wake_dist").toInt();
+                pNvs->get().radar_wake_dist = (d > 0) ? d : 150;
+            }
+            pNvs->get().radar_wave_hangup = server.hasArg("radar_wave");
+
             pNvs->save_immediate();
 
             String success_html = R"rawliteral(

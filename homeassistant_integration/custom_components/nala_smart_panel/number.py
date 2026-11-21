@@ -22,6 +22,7 @@ async def async_setup_entry(
         code = dev.get("pairing_code", "UNKNOWN")
         entities.append(NalaPanelBrightnessNumber(coordinator, code))
         entities.append(NalaPanelVolumeNumber(coordinator, code))
+        entities.append(NalaPanelRadarWakeDistNumber(coordinator, code))
 
     async_add_entities(entities)
 
@@ -94,4 +95,29 @@ class NalaPanelVolumeNumber(NalaPanelBaseNumber):
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_update_panel_settings(
             self.pairing_code, {"volume": int(value)}
+        )
+
+class NalaPanelRadarWakeDistNumber(NalaPanelBaseNumber):
+    """Điều chỉnh khoảng cách tiếp cận để bật sáng màn hình Radar (30 - 350cm)."""
+
+    def __init__(self, coordinator: NalaHubCoordinator, pairing_code: str) -> None:
+        super().__init__(coordinator, pairing_code)
+        self._attr_unique_id = f"{DOMAIN}_{pairing_code}_radar_wake_dist"
+        self._attr_name = "Khoảng Cách Bật Màn Hình Radar"
+        self._attr_icon = "mdi:map-marker-distance"
+        self._attr_native_min_value = 30
+        self._attr_native_max_value = 350
+        self._attr_native_step = 10
+        self._attr_native_unit_of_measurement = "cm"
+        self._attr_mode = NumberMode.SLIDER
+
+    @property
+    def native_value(self) -> float:
+        dev = self._get_dev()
+        settings = dev.get("settings", {})
+        return float(settings.get("radar_wake_dist", 150))
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self.coordinator.async_update_panel_settings(
+            self.pairing_code, {"radar_wake_dist": int(value)}
         )

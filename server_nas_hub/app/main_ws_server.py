@@ -10,12 +10,14 @@ import asyncio
 import time
 import logging
 import hashlib
+import io
+import wave
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, StreamingResponse, Response
 from pydantic import BaseModel
 import uvicorn
 
@@ -61,6 +63,20 @@ from app.stt_tts_pipeline import AudioPipeline, DEFAULT_SMART_HOME_WHISPER_PROMP
 from app.ai_agent_router import AIAgentRouter, _normalize_vn
 from app.wake_word_manager import WakeWordManager
 from app.history_manager import HistoryManager
+try:
+    from app.voiceprint_manager import voiceprintManager
+except ImportError:
+    from voiceprint_manager import voiceprintManager
+
+try:
+    from app.living_context_engine import livingContextEngine
+except ImportError:
+    from living_context_engine import livingContextEngine
+
+try:
+    from app.automation_engine import automationEngine
+except ImportError:
+    from automation_engine import automationEngine
 
 for env_candidate in [
     os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
@@ -99,7 +115,17 @@ ha_bridge = HomeAssistantBridge(HA_WS_URL, HA_TOKEN)
 intercom = IntercomRouter()
 audio_pipeline = AudioPipeline(STT_URL, TTS_URL)
 ai_router = AIAgentRouter(GEMINI_API_KEY, DEEPSEEK_API_KEY, ha_bridge)
+if hasattr(ai_router, 'config'):
+    audio_pipeline.set_voice_settings(
+        voice=ai_router.config.get("tts_voice"),
+        rate=ai_router.config.get("tts_rate", "+0%"),
+        pitch=ai_router.config.get("tts_pitch", "+0Hz")
+    )
 history_mgr = HistoryManager()
+if automationEngine:
+    automationEngine.ha_bridge = ha_bridge
+if livingContextEngine:
+    livingContextEngine.ha_bridge = ha_bridge
 
 async def send_audio_chunks(ws: WebSocket, pcm_data: bytes, is_opus: bool, start_seq: int = 0, encoder: Any = None) -> int:
     """Helper gửi các chunk âm thanh (Opus hoặc PCM) qua WebSocket."""
@@ -1433,16 +1459,88 @@ async def get_ai_config():
 
 @app.post("/api/ai/config")
 async def save_ai_config(req: Request):
-    """Lưu cấu hình AI mới (Provider, API Key, Model, Task Routing)."""
+    """Lưu cấu hình AI mới (Provider, API Key, Model, Task Routing, Voice Persona, Rate, Pitch)."""
     try:
         data = await req.json()
         success = ai_router.save_config(data)
         if success:
-            return JSONResponse({"status": "success", "message": "Đã lưu cấu hình AI Router thành công!"})
+            audio_pipeline.set_voice_settings(
+                voice=data.get("tts_voice"),
+                rate=data.get("tts_rate"),
+                pitch=data.get("tts_pitch")
+            )
+            return JSONResponse({"status": "success", "message": "Đã lưu cấu hình AI & Vai trò giọng nói thành công!"})
         else:
             return JSONResponse({"status": "error", "message": "Lưu cấu hình thất bại"}, status_code=500)
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=400)
+
+class TTSPreviewRequest(BaseModel):
+    text: Optional[str] = "Xin chào! Mình là Nala, trợ lý nhà thông minh của bạn."
+    voice: Optional[str] = "vi-VN-HoaiMyNeural"
+    rate: Optional[str] = "+0%"
+    pitch: Optional[str] = "+0Hz"
+
+@app.post("/api/tts/preview")
+async def tts_preview(req: TTSPreviewRequest):
+    """Tạo audio preview MP3/WAV trực tiếp cho trình duyệt nghe thử (XiaoZhi style)."""
+    text = (req.text or "").strip() or "Xin chào! Mình là Nala, trợ lý nhà thông minh của bạn."
+    voice = req.voice or "vi-VN-HoaiMyNeural"
+    rate = req.rate or "+0%"
+    pitch = req.pitch or "+0Hz"
+
+    if voice in ("google_fast", "google", "fast") or voice.startswith("google"):
+        pcm = await audio_pipeline.google_tts_to_pcm(text)
+        if pcm:
+            wav_buf = io.BytesIO()
+            with wave.open(wav_buf, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(16000)
+                wf.writeframes(pcm)
+            return Response(content=wav_buf.getvalue(), media_type="audio/wav")
+    else:
+        # 1. Thử qua Edge-TTS với rate & pitch tùy chỉnh
+        try:
+            import edge_tts
+            comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+            buf = bytearray()
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    buf.extend(chunk["data"])
+            if buf:
+                return Response(content=bytes(buf), media_type="audio/mpeg")
+        except Exception as e:
+            logger.warning("Edge-TTS preview error (%s): %s", voice, e)
+
+        # 2. Thử lại Edge-TTS mặc định (không rate/pitch) phòng khi thông số bị server từ chối
+        try:
+            import edge_tts
+            comm = edge_tts.Communicate(text, voice)
+            buf = bytearray()
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    buf.extend(chunk["data"])
+            if buf:
+                return Response(content=bytes(buf), media_type="audio/mpeg")
+        except Exception as e:
+            logger.warning("Edge-TTS default preview error (%s): %s", voice, e)
+
+        # 3. Fallback tức thì qua Google Fast TTS (WAV 16kHz)
+        try:
+            pcm = await audio_pipeline.google_tts_to_pcm(text)
+            if pcm:
+                wav_buf = io.BytesIO()
+                with wave.open(wav_buf, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    wf.writeframes(pcm)
+                return Response(content=wav_buf.getvalue(), media_type="audio/wav")
+        except Exception as e:
+            logger.error("Google TTS preview error: %s", e)
+
+    return JSONResponse({"status": "error", "message": "Không thể tạo âm thanh nghe thử"}, status_code=500)
 
 @app.post("/api/ai/test")
 async def test_ai_provider(req: AITestRequest):
@@ -1460,6 +1558,54 @@ async def get_ai_models(req: AIModelsRequest):
     """Lấy danh sách các model khả dụng trực tiếp từ API của từng hãng."""
     models = await ai_router.list_available_models(req.provider, req.api_key, req.base_url)
     return JSONResponse({"status": "success", "provider": req.provider, "models": models})
+
+class WeatherTestRequest(BaseModel):
+    location: Optional[str] = "Hà Nội"
+
+@app.post("/api/extensions/test_weather")
+async def test_weather_endpoint(req: WeatherTestRequest):
+    """Test trực tiếp dịch vụ thời tiết Open-Meteo."""
+    loc = (req.location or "Hà Nội").strip()
+    if hasattr(ai_router, "extension_service"):
+        res = await ai_router.extension_service.get_weather(loc)
+        return JSONResponse({"status": "success", "result": res})
+    return JSONResponse({"status": "error", "message": "Extension service chưa khởi tạo"}, status_code=500)
+
+class SearchTestRequest(BaseModel):
+    query: str
+
+@app.post("/api/extensions/test_search")
+async def test_search_endpoint(req: SearchTestRequest):
+    """Test trực tiếp tìm kiếm DuckDuckGo / Wikipedia."""
+    q = (req.query or "").strip()
+    if hasattr(ai_router, "extension_service"):
+        res = await ai_router.extension_service.web_search(q)
+        return JSONResponse({"status": "success", "result": res})
+    return JSONResponse({"status": "error", "message": "Extension service chưa khởi tạo"}, status_code=500)
+
+class MCPTestRequest(BaseModel):
+    endpoint_url: str
+
+@app.post("/api/extensions/test_mcp")
+async def test_mcp_endpoint(req: MCPTestRequest):
+    """Test kết nối và quét tools từ MCP Server endpoint."""
+    url = (req.endpoint_url or "").strip()
+    if hasattr(ai_router, "extension_service"):
+        res = await ai_router.extension_service.test_mcp_server(url)
+        return JSONResponse(res)
+    return JSONResponse({"status": "error", "message": "Extension service chưa khởi tạo"}, status_code=500)
+
+@app.get("/api/extensions/media_players")
+async def get_media_players():
+    """Lấy danh sách các loa / Media Player từ Home Assistant."""
+    players = []
+    if ha_bridge and hasattr(ha_bridge, "entities") and ha_bridge.entities:
+        for eid, data in ha_bridge.entities.items():
+            if eid.startswith("media_player."):
+                f_name = data.get("attributes", {}).get("friendly_name", eid)
+                state = data.get("state", "idle")
+                players.append({"entity_id": eid, "friendly_name": f_name, "state": state})
+    return JSONResponse({"status": "success", "players": players})
 
 class AIChatRequest(BaseModel):
     message: str
@@ -2399,6 +2545,252 @@ async def delete_history_session(session_id: str):
     return JSONResponse({"status": "error", "message": "Phiên không tồn tại"}, status_code=404)
 
 # -----------------------------------------------------------------------------
+# REST ENDPOINTS FOR SPEAKER VOICEPRINT IDENTIFICATION (CAM++)
+# -----------------------------------------------------------------------------
+def convert_audio_to_pcm16k(audio_bytes: bytes) -> Optional[bytes]:
+    """Chuyển đổi mọi định dạng âm thanh (WebM, OGG, MP3, WAV, AAC, raw PCM) sang 16kHz 16-bit Mono Linear PCM."""
+    if not audio_bytes or len(audio_bytes) < 4:
+        return None
+
+    # 1. Fast path: Nếu là chuẩn file WAV 16kHz mono 16-bit
+    if audio_bytes.startswith(b"RIFF") and b"WAVE" in audio_bytes[:12]:
+        try:
+            import io, wave
+            with wave.open(io.BytesIO(audio_bytes), 'rb') as wf:
+                if wf.getnchannels() == 1 and wf.getsampwidth() == 2 and wf.getframerate() == 16000:
+                    return wf.readframes(wf.getnframes())
+        except Exception:
+            pass
+
+    # 2. Sử dụng ffmpeg chuyển đổi tự động (hỗ trợ WebM, OGG, MP3, WAV đa kênh/tần số khác)
+    import subprocess
+    try:
+        proc = subprocess.Popen(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-f", "s16le", "-ac", "1", "-ar", "16000", "pipe:1"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        out, err = proc.communicate(input=audio_bytes, timeout=8)
+        if proc.returncode == 0 and out and len(out) > 0:
+            return out
+    except Exception as e:
+        logger.warning("[FFMPEG] Convert warning: %s", e)
+
+    # 3. Fallback: Nếu là raw PCM s16le không header
+    if len(audio_bytes) % 2 == 0 and len(audio_bytes) >= 8000:
+        return audio_bytes
+
+    return None
+
+class VoiceprintEnrollRequest(BaseModel):
+    name: Optional[str] = None
+    speaker_name: Optional[str] = None
+    description: Optional[str] = None
+    audio_base64: Optional[str] = None
+    audio_list_base64: Optional[List[str]] = None
+    record_id: Optional[str] = None
+    filename: Optional[str] = None
+    filenames: Optional[List[str]] = None
+
+@app.get("/api/voiceprint/speakers")
+async def get_voiceprint_speakers():
+    """Lấy danh sách tất cả người dùng đã đăng ký vân giọng CAM++."""
+    if not voiceprintManager or not getattr(voiceprintManager, "is_ready", False):
+        return JSONResponse({"status": "unavailable", "speakers": [], "message": "Động cơ vân giọng chưa sẵn sàng"})
+    speakers = voiceprintManager.list_speakers()
+    return JSONResponse({"status": "success", "speakers": speakers, "count": len(speakers)})
+
+@app.post("/api/voiceprint/enroll")
+async def enroll_voiceprint_speaker(req: VoiceprintEnrollRequest):
+    """Đăng ký vân giọng mới qua Base64 (WebM/WAV) hoặc từ file ghi âm trong lịch sử (đơn mẫu hoặc đa mẫu XiaoZhi style)."""
+    if not voiceprintManager or not getattr(voiceprintManager, "is_ready", False):
+        return JSONResponse({"status": "error", "message": "Động cơ vân giọng chưa được khởi tạo"}, status_code=503)
+
+    target_name = (req.name or req.speaker_name or "").strip()
+    if not target_name:
+        return JSONResponse({"status": "error", "message": "Tên người dùng không được để trống"}, status_code=400)
+
+    pcm_list: List[bytes] = []
+
+    # 1. Đa mẫu từ Base64 (Micro trình duyệt)
+    if req.audio_list_base64:
+        import base64
+        for b64 in req.audio_list_base64:
+            try:
+                raw = base64.b64decode(b64)
+                pcm = convert_audio_to_pcm16k(raw)
+                if pcm and len(pcm) >= 8000:
+                    pcm_list.append(pcm)
+            except Exception as e:
+                logger.warning("Lỗi giải mã audio_list item: %s", e)
+
+    # 2. Đơn mẫu từ Base64
+    if req.audio_base64:
+        import base64
+        try:
+            raw = base64.b64decode(req.audio_base64)
+            pcm = convert_audio_to_pcm16k(raw)
+            if pcm and len(pcm) >= 8000:
+                pcm_list.append(pcm)
+        except Exception as e:
+            logger.warning("Lỗi giải mã audio_base64: %s", e)
+
+    # 3. Đa mẫu từ filenames trong lịch sử ghi âm
+    if req.filenames:
+        for fn in req.filenames:
+            audio_path = history_mgr.get_audio_path(fn)
+            if audio_path and os.path.isfile(audio_path):
+                try:
+                    with open(audio_path, 'rb') as f:
+                        raw = f.read()
+                    pcm = convert_audio_to_pcm16k(raw)
+                    if pcm and len(pcm) >= 8000:
+                        pcm_list.append(pcm)
+                except Exception as e:
+                    logger.warning("Lỗi đọc file %s: %s", fn, e)
+
+    # 4. Đơn mẫu từ filename/record_id
+    if req.filename or req.record_id:
+        target_fn = req.filename or f"{req.record_id}.wav"
+        audio_path = history_mgr.get_audio_path(target_fn)
+        if audio_path and os.path.isfile(audio_path):
+            try:
+                with open(audio_path, 'rb') as f:
+                    raw = f.read()
+                pcm = convert_audio_to_pcm16k(raw)
+                if pcm and len(pcm) >= 8000:
+                    pcm_list.append(pcm)
+            except Exception as e:
+                logger.warning("Lỗi đọc file %s: %s", target_fn, e)
+
+    if not pcm_list:
+        return JSONResponse({"status": "error", "message": "Không tìm thấy hoặc không thể chuyển đổi dữ liệu âm thanh hợp lệ (tối thiểu 0.5s)"}, status_code=400)
+
+    ok, msg = voiceprintManager.enroll_multi(target_name, pcm_list, description=req.description or "")
+    if ok:
+        await broadcast_to_admins({"type": "voiceprint_updated", "speakers": voiceprintManager.list_speakers()})
+        return JSONResponse({"status": "success", "message": msg, "name": target_name, "samples_count": len(pcm_list)})
+    else:
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+
+@app.delete("/api/voiceprint/speakers/{speaker_name}")
+async def delete_voiceprint_speaker(speaker_name: str):
+    """Xóa hồ sơ vân giọng của một người dùng."""
+    if not voiceprintManager or not getattr(voiceprintManager, "is_ready", False):
+        return JSONResponse({"status": "error", "message": "Động cơ vân giọng chưa sẵn sàng"}, status_code=503)
+    ok = voiceprintManager.delete(speaker_name)
+    if ok:
+        await broadcast_to_admins({"type": "voiceprint_updated", "speakers": voiceprintManager.list_speakers()})
+        return JSONResponse({"status": "success", "message": f"Đã xóa hồ sơ giọng của {speaker_name}"})
+    return JSONResponse({"status": "error", "message": f"Không tìm thấy hồ sơ giọng {speaker_name}"}, status_code=404)
+
+class VoiceprintIdentifyRequest(BaseModel):
+    audio_base64: Optional[str] = None
+    filename: Optional[str] = None
+    threshold: Optional[float] = 0.58
+
+@app.post("/api/voiceprint/identify")
+async def identify_voiceprint_api(req: VoiceprintIdentifyRequest):
+    """Thử nghiệm so khớp nhận diện vân giọng từ Audio Base64 (WebM/WAV) hoặc file ghi âm."""
+    if not voiceprintManager or not getattr(voiceprintManager, "is_ready", False):
+        return JSONResponse({"status": "error", "message": "Động cơ vân giọng chưa sẵn sàng"}, status_code=503)
+
+    raw_bytes = None
+    if req.audio_base64:
+        try:
+            import base64
+            raw_bytes = base64.b64decode(req.audio_base64)
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": f"Base64 không hợp lệ: {e}"}, status_code=400)
+    elif req.filename:
+        audio_path = history_mgr.get_audio_path(req.filename)
+        if not audio_path or not os.path.isfile(audio_path):
+            return JSONResponse({"status": "error", "message": f"Không tìm thấy file: {req.filename}"}, status_code=404)
+        try:
+            with open(audio_path, 'rb') as f:
+                raw_bytes = f.read()
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": f"Lỗi đọc file: {e}"}, status_code=500)
+
+    if not raw_bytes:
+        return JSONResponse({"status": "error", "message": "Thiếu dữ liệu audio"}, status_code=400)
+
+    pcm_bytes = convert_audio_to_pcm16k(raw_bytes)
+    if not pcm_bytes:
+        return JSONResponse({"status": "error", "message": "Không thể chuyển đổi âm thanh sang 16kHz PCM"}, status_code=400)
+
+    th = req.threshold or 0.58
+    best_spk, best_sc, all_sc = voiceprintManager.identify(pcm_bytes, threshold=th)
+    return JSONResponse({
+        "status": "success",
+        "matched_speaker": best_spk,
+        "score": round(best_sc, 3),
+        "threshold": th,
+        "scores": all_sc
+    })
+
+@app.get("/api/living-context")
+async def get_all_living_contexts():
+    """Lấy danh sách ngữ cảnh sống thực tế (FSM) của các phòng."""
+    if not livingContextEngine:
+        return JSONResponse({"status": "unavailable", "contexts": {}})
+    return JSONResponse({"status": "success", "contexts": livingContextEngine.get_all_contexts()})
+
+@app.get("/api/automations")
+async def get_automations():
+    """Lấy danh sách các quy tắc tự động hóa phi tuyến tính."""
+    if not automationEngine:
+        return JSONResponse({"status": "unavailable", "rules": []})
+    return JSONResponse({"status": "success", "rules": automationEngine.list_rules()})
+
+@app.post("/api/automations")
+async def add_automation(rule: Dict[str, Any]):
+    """Thêm kịch bản tự động hóa mới."""
+    if not automationEngine:
+        return JSONResponse({"status": "error", "message": "Automation engine chưa sẵn sàng"}, status_code=503)
+    created = automationEngine.add_rule(rule)
+    return JSONResponse({"status": "success", "rule": created})
+
+@app.put("/api/automations/{rule_id}")
+async def update_automation(rule_id: str, rule: Dict[str, Any]):
+    """Cập nhật kịch bản tự động hóa."""
+    if not automationEngine:
+        return JSONResponse({"status": "error", "message": "Automation engine chưa sẵn sàng"}, status_code=503)
+    updated = automationEngine.update_rule(rule_id, rule)
+    if updated:
+        return JSONResponse({"status": "success", "rule": updated})
+    return JSONResponse({"status": "error", "message": "Không tìm thấy kịch bản"}, status_code=404)
+
+@app.delete("/api/automations/{rule_id}")
+async def delete_automation(rule_id: str):
+    """Xóa kịch bản tự động hóa."""
+    if not automationEngine:
+        return JSONResponse({"status": "error", "message": "Automation engine chưa sẵn sàng"}, status_code=503)
+    ok = automationEngine.delete_rule(rule_id)
+    if ok:
+        return JSONResponse({"status": "success", "message": f"Đã xóa kịch bản {rule_id}"})
+    return JSONResponse({"status": "error", "message": "Không tìm thấy kịch bản"}, status_code=404)
+
+@app.post("/api/automations/{rule_id}/toggle")
+async def toggle_automation(rule_id: str, payload: Optional[Dict[str, Any]] = None):
+    """Bật/tắt kịch bản tự động hóa (nghịch đảo nếu không truyền payload)."""
+    if not automationEngine:
+        return JSONResponse({"status": "error", "message": "Automation engine chưa sẵn sàng"}, status_code=503)
+    
+    current_rule = next((r for r in automationEngine.rules if r.get("id") == rule_id), None)
+    if not current_rule:
+        return JSONResponse({"status": "error", "message": "Không tìm thấy kịch bản"}, status_code=404)
+        
+    if payload and "enabled" in payload:
+        new_state = bool(payload["enabled"])
+    else:
+        new_state = not current_rule.get("enabled", False)
+        
+    ok = automationEngine.toggle_rule(rule_id, new_state)
+    return JSONResponse({"status": "success", "rule_id": rule_id, "enabled": new_state})
+
+# -----------------------------------------------------------------------------
 # WEBSOCKET ENDPOINTS FOR ESP32 PANELS, NODES & WEB ADMIN
 # -----------------------------------------------------------------------------
 @app.websocket("/")
@@ -2645,6 +3037,25 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str = "default_pan
                         "type": "time_sync",
                         "epoch": int(time.time())
                     })
+
+                # Cập nhật Telemetry từ Radar mmWave HLK-LD2410 & Động cơ Ngữ cảnh sống FSM
+                elif msg_type == "radar_event":
+                    payload = data.get("payload", {})
+                    if dev_code and dev_code in devices_db:
+                        devices_db[dev_code]["radar"] = payload
+                        r_name = devices_db[dev_code].get("room_name", dev_code)
+                        living_state = "empty"
+                        if livingContextEngine:
+                            living_state = await livingContextEngine.update_radar_telemetry(dev_code, r_name, payload)
+                            devices_db[dev_code]["living_context"] = living_state
+
+                        # Broadcast trực tiếp cho Web Admin hiển thị trạng thái Real-time
+                        await broadcast_to_admins({
+                            "type": "radar_telemetry",
+                            "device_id": dev_code,
+                            "radar": payload,
+                            "living_context": living_state
+                        })
 
                 # Đồng bộ cập nhật cài đặt từ Panel lên Server và Web Admin
                 elif msg_type == "settings_update":
@@ -2951,6 +3362,11 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
         await ws.send_json({"type": "ack_chime"})
         await ws.send_json({"type": "ai_state", "payload": {"state": "thinking", "text": "Đang suy nghĩ..."}})
 
+        # 🎯 Nhận diện vân giọng (CAM++ 192-dim vector, ~20ms CPU) chạy song song với STT
+        vp_task = None
+        if voiceprintManager and getattr(voiceprintManager, "is_ready", False):
+            vp_task = asyncio.create_task(asyncio.to_thread(voiceprintManager.identify, pcm_audio, 0.58))
+
         # 1. Speech-to-Text: Tự động ưu tiên Groq Whisper Turbo 0.15s (0% GPU NAS), fallback Faster-Whisper
         groq_cfg = ai_router.config.get("groq", {})
         groq_key = groq_cfg.get("api_key", "")
@@ -2975,6 +3391,86 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             logger.info("[AI] Không có giọng nói hoặc phát hiện âm thanh rác từ [%s] -> Đưa về IDLE an toàn, dập tắt vòng lặp.", device_id)
             await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
             return
+
+        # Thu hoạch kết quả nhận diện vân giọng
+        identified_speaker = None
+        vp_score = 0.0
+        if vp_task:
+            try:
+                best_spk, best_sc, _ = await vp_task
+                if best_spk:
+                    spk_info = voiceprintManager.get_speaker_info(best_spk) if hasattr(voiceprintManager, "get_speaker_info") else {}
+                    spk_desc = spk_info.get("description", "")
+                    identified_speaker = f"{best_spk} ({spk_desc})" if spk_desc else best_spk
+                    vp_score = best_sc
+                    logger.info("[VOICEPRINT] 🎯 Xác thực thành công người nói: %s (score: %.3f)", identified_speaker, best_sc)
+                    if livingContextEngine:
+                        livingContextEngine.set_speaker_for_room(device_id, best_spk)
+                    await broadcast_to_admins({
+                        "type": "ai_speaker_identified",
+                        "device_id": device_id,
+                        "speaker": best_spk,
+                        "score": round(best_sc, 3)
+                    })
+            except Exception as e:
+                logger.warning("[VOICEPRINT] Lỗi khi nhận diện vân giọng: %s", e)
+
+        # -------------------------------------------------------------
+        # 🎙️ KIỂM TRA LỆNH ĐĂNG KÝ / HỌC VÂN GIỌNG (Voiceprint Enrollment)
+        # -------------------------------------------------------------
+        norm_text_lower = text.lower().strip()
+        is_enroll_cmd = any(kw in norm_text_lower for kw in [
+            "ghi nhớ giọng", "nhớ giọng của", "học giọng của", "học giọng", "lưu giọng", "đây là giọng của", "nhớ giọng tôi", "nhớ giọng anh"
+        ])
+        if is_enroll_cmd and voiceprintManager and getattr(voiceprintManager, "is_ready", False):
+            import re
+            m = re.search(r"(?:tên(?: là)?|tôi là|anh là|chị là|em là|giọng của)\s+([a-zA-ZÀ-ỹ0-9_]+)", text, re.IGNORECASE)
+            spk_name = None
+            if m:
+                cand = m.group(1).strip()
+                if cand.lower() not in ["tôi", "bạn", "anh", "em", "chị", "ai", "gì", "nào", "mình", "người", "nhà"]:
+                    spk_name = cand.capitalize()
+
+            if spk_name:
+                ok, msg = voiceprintManager.enroll(spk_name, pcm_audio)
+                if ok:
+                    reply_msg = f"Dạ, Nala đã ghi nhớ đặc trưng giọng nói của {spk_name} thành công rồi ạ! Từ bây giờ em sẽ nhận diện được {spk_name}."
+                    await broadcast_to_admins({
+                        "type": "voiceprint_updated",
+                        "speakers": voiceprintManager.list_speakers()
+                    })
+                else:
+                    reply_msg = f"Dạ, Nala chưa thể ghi nhớ giọng nói: {msg}"
+            else:
+                reply_msg = "Dạ, bạn muốn Nala ghi nhớ giọng với tên là gì ạ? Bạn hãy nói ví dụ: Ghi nhớ giọng của tôi, tôi tên là Tý."
+
+            await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": reply_msg}})
+            confirm_pcm = await audio_pipeline.text_to_pcm(reply_msg, voice=tts_voice)
+            if confirm_pcm:
+                is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                last_seq = await send_audio_chunks(ws, confirm_pcm, is_opus=is_opus, start_seq=0)
+                await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+            await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+            return
+
+        # -------------------------------------------------------------
+        # ⚙️ KIỂM TRA LỆNH CÀI ĐẶT TỰ ĐỘNG HÓA NGỮ CẢNH (Natural Language Automation)
+        # -------------------------------------------------------------
+        if automationEngine:
+            auto_reply = automationEngine.parse_and_register_automation(
+                text=text,
+                context_room=room_name,
+                speaker_name=identified_speaker
+            )
+            if auto_reply:
+                await ws.send_json({"type": "ai_state", "payload": {"state": "speaking", "text": auto_reply}})
+                confirm_pcm = await audio_pipeline.text_to_pcm(auto_reply, voice=tts_voice)
+                if confirm_pcm:
+                    is_opus = (client_format == "opus" or (client_format == "auto" and client_audio_formats.get(device_id) == "opus")) and OPUS_AVAILABLE and not device_id.startswith("web_admin")
+                    last_seq = await send_audio_chunks(ws, confirm_pcm, is_opus=is_opus, start_seq=0)
+                    await send_audio_end(ws, is_opus=is_opus, seq=last_seq)
+                await ws.send_json({"type": "ai_state", "payload": {"state": "idle", "text": ""}})
+                return
 
         # -------------------------------------------------------------
         # 📞 KIỂM TRA LỚP 1: CÚP MÁY BẰNG GIỌNG NÓI (Hands-Free Hangup)
@@ -3134,7 +3630,8 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
                 pcm_data=pcm_audio,
                 session_id=sess_id,
                 turn_index=turn_idx,
-                ai_model="⚡ Fast Rule (0ms)"
+                ai_model="⚡ Fast Rule (0ms)",
+                speaker=identified_speaker
             )
             asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
 
@@ -3213,7 +3710,7 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             last_ws_send_time = 0.0
             try:
                 loop = asyncio.get_event_loop()
-                async for token in ai_router.stream_intent(text, context_room=room_name, device_id=device_id):
+                async for token in ai_router.stream_intent(text, context_room=room_name, device_id=device_id, speaker_name=identified_speaker):
                     accumulated_text += token
                     sentence_buffer += token
 
@@ -3330,7 +3827,8 @@ async def handle_ai_voice_flow(device_id: str, ws: WebSocket, pcm_audio: bytes, 
             pcm_data=pcm_audio,
             session_id=sess_id,
             turn_index=turn_idx,
-            ai_model=target_ai_model
+            ai_model=target_ai_model,
+            speaker=identified_speaker
         )
         asyncio.create_task(broadcast_to_admins({"type": "history_new", "record": rec}))
 

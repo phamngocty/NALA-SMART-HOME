@@ -24,6 +24,9 @@ struct SystemConfig_t {
     uint8_t room_view_timeout; // Thời gian tự động trở về phòng chính (giây, mặc định 15, 0 = tắt)
     uint16_t standby_timeout;  // Thời gian chờ ra màn hình chờ (giây, mặc định 30, 0 = tắt)
     bool wake_word_enabled;    // Bật/Tắt tính năng đánh thức rảnh tay Wake Word (Hey Nala)
+    bool radar_enabled;        // Bật/Tắt cảm biến Radar mmWave HLK-LD2410
+    uint16_t radar_wake_dist;  // Khoảng cách đánh thức màn hình (cm, mặc định 150)
+    bool radar_wave_hangup;    // Bật/Tắt cử chỉ vẫy tay cúp máy Intercom (mặc định true)
 };
 
 class NVSConfigStore {
@@ -95,6 +98,9 @@ public:
         config.room_view_timeout = prefs.getUChar("rm_timeout", 15); // Mặc định 15 giây
         config.standby_timeout = prefs.getUShort("stb_timeout", 30); // Mặc định 30 giây
         config.wake_word_enabled = prefs.getBool("wake_en", true);   // Mặc định BẬT Wake Word rảnh tay
+        config.radar_enabled = prefs.getBool("rad_en", true);        // Mặc định BẬT Radar
+        config.radar_wake_dist = prefs.getUShort("rad_dist", 150);   // Mặc định 150cm (1.5m)
+        config.radar_wave_hangup = prefs.getBool("rad_wave", true);  // Mặc định BẬT cử chỉ cúp máy
     }
 
     bool is_wifi_configured() const {
@@ -118,6 +124,9 @@ public:
         prefs.putUChar("rm_timeout", config.room_view_timeout);
         prefs.putUShort("stb_timeout", config.standby_timeout);
         prefs.putBool("wake_en", config.wake_word_enabled);
+        prefs.putBool("rad_en", config.radar_enabled);
+        prefs.putUShort("rad_dist", config.radar_wake_dist);
+        prefs.putBool("rad_wave", config.radar_wave_hangup);
         dirty = false;
         Serial.println("[NVS] Configuration saved to Flash!");
     }
